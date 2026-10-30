@@ -187,7 +187,7 @@ h1{font-size:1.2rem;margin:0}
 .stsum{font-size:.9rem;line-height:1.5}
 .stsum svg{width:100%;height:auto;display:block}
 
-#fsBtn{opacity:.3;position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);right:6px;z-index:2147483000;min-width:40px;height:40px;padding:0 12px;border:1.5px solid rgba(255,255,255,.7);border-radius:20px;background:rgba(30,30,34,.72);color:#fff;font:600 .85rem system-ui,sans-serif;cursor:pointer}#fsBtn[hidden]{display:none}#fsBtn:active{opacity:.9}
+#fsBtn{opacity:.6;position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);right:6px;z-index:2147483000;min-width:40px;height:40px;padding:0 12px;border:1.5px solid rgba(255,255,255,.7);border-radius:20px;background:rgba(30,30,34,.72);color:#fff;font:600 .85rem system-ui,sans-serif;cursor:pointer}#fsBtn[hidden]{display:none}#fsBtn:active{opacity:.9}
 </style>
 <div class="wrap">
   <div class="stats">
@@ -264,6 +264,11 @@ h1{font-size:1.2rem;margin:0}
     </tbody></table>
     <p>A mondat első szava és az „I” automatikusan nagybetű lesz. A parancsokat külön, érthetően mondd, pl. „… tickets, full stop”.</p>
   </details>
+  <details class="backup"><summary>Megjelenés</summary>
+    <div class="vrow"><select id="uiTheme" aria-label="Téma"><option value="auto">Téma: automatikus (a telefon szerint)</option><option value="light">Téma: világos</option><option value="dark">Téma: sötét</option></select></div>
+    <div class="vrow"><select id="uiFs" aria-label="Teljes képernyő gomb"><option value="txt">Teljes képernyő gomb: ikon és felirat</option><option value="ico">Teljes képernyő gomb: csak ikon</option><option value="off">Teljes képernyő gomb: rejtett</option></select></div>
+    <p class="msg">A program mindig teljes képernyőn indul (az első koppintásra). A gomb a jobb felső sarokban van.</p>
+  </details>
   <details class="backup"><summary>Haladás törlése</summary>
     <p>Minden gombot kétszer kell megnyomni, így nem törölsz véletlenül. A beállításaid és az Excelben módosított kártyáid megmaradnak.</p>
     <div class="vrow"><select id="rzCat" aria-label="Témakör"></select><button class="reset" id="rzCatBtn" type="button">Témakör haladásának törlése</button></div>
@@ -302,13 +307,15 @@ h1{font-size:1.2rem;margin:0}
     <p class="msg" id="xMsg" role="status"></p>
   </details>
   <details class="backup"><summary>Biztonsági mentés (nem kötelező)</summary>
-    <p>Claude-ban a haladás magától mentődik, ezeket a gombokat nem kell használnod. Csak biztonsági másolathoz vagy másik böngészőbe való átvitelhez kellenek.</p>
+    <p>A haladásod és a beállításaid (a Google-kulcs kivételével) a telefonon magától mentődnek. Biztonsági másolathoz vagy másik böngészőbe, címre való átvitelhez használd ezeket. A fájl a Letöltések mappába kerül. Vasárnap este 8 után belépéskor emlékeztetőt kapsz.</p>
+    <div class="brow"><button class="reset" id="bFile" type="button">Mentés fájlba (letöltés)</button><button class="reset" id="bFileBtn" type="button">Visszatöltés fájlból</button><input type="file" id="bFileIn" accept=".txt,text/plain" hidden></div>
     <div class="brow"><button class="reset" id="bSave" type="button">Haladás és beállítások mentése</button><button class="reset" id="bLoad" type="button">Visszatöltés</button></div>
     <textarea id="code" rows="3" spellcheck="false" placeholder="Ide kerül a mentési kód. Visszatöltéshez illeszd be ide, majd nyomd meg a Visszatöltés gombot."></textarea>
     <p class="msg" id="msg" role="status"></p>
   </details>
 </div>
 <script>
+try{var _u=JSON.parse(localStorage.getItem('szokartya-ui')||'{}');if(_u.theme==='light'||_u.theme==='dark')document.documentElement.setAttribute('data-theme',_u.theme);}catch(e){}
 var B='<span class="blank"></span>', BL='<span class="blank" style="min-width:7em"></span>';
 function A(t){return '<span class="ans">'+t+'</span>';}
 var DATA=[
@@ -2231,6 +2238,7 @@ function adoptSet(s){
 function saveSet(){try{localStorage.setItem('szokartya-set',JSON.stringify(SET));}catch(e){}}
 function dkey(ms){var d=new Date(ms);return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
 function newToday(){var k=dkey(Date.now()),n=0;Object.keys(st).forEach(function(i){var c=st[i];if(c&&c.f&&dkey(c.f)===k)n++;});return n;}
+function newDone(){var k=dkey(Date.now()),n=0;Object.keys(st).forEach(function(i){var c=st[i];if(c&&c.f&&dkey(c.f)===k&&(c.reps||0)>=1)n++;});return n;}
 function newAllow(){if(!SET.limit)return Infinity;var ex=SET.xd===dkey(Date.now())?SET.x:0;return Math.max(0,SET.limit+ex-newToday());}
 var cloud=null,queued=false,writing=false;
 function setSync(t){var e=document.getElementById('sync');if(e)e.textContent=t;}
@@ -2942,7 +2950,7 @@ function noteDay(){var k=dkey(Date.now());if(SET.days.indexOf(k)<0){SET.days.pus
 function rwTarget(){var m=SET.rm;if(SET.limit){var lim=SET.limit+(SET.xd===dkey(Date.now())?SET.x:0);m=Math.min(m,lim);}return m;}
 function checkReward(){
   var now=Date.now();if(SET.rd&&dkey(SET.rd)===dkey(now))return;
-  if(newToday()<rwTarget())return;
+  if(newDone()<rwTarget())return;
   SET.rd=now;saveSet();queued=true;flush();
   showReward(SET.rw);
 }
@@ -2976,7 +2984,7 @@ function showReward(kind){
   var old=document.getElementById('rwov');if(old)old.remove();
   var seen=0;DATA.forEach(function(d,i){if(SI(i).seen)seen++;});
   var ov=document.createElement('div');ov.className='rw';ov.id='rwov';
-  ov.innerHTML='<canvas></canvas><div class="rwbox" role="dialog" aria-label="Jutalom"><h2>Szép munka!</h2><p class="big">Ma '+newToday()+' új szót tanultál.</p><p>'+streak()+' napja tanulsz egymás után.</p><p>Összesen '+seen+' szót ismersz már.</p><button class="reset" type="button">Tovább</button></div>';
+  ov.innerHTML='<canvas></canvas><div class="rwbox" role="dialog" aria-label="Jutalom"><h2>Szép munka!</h2><p class="big">Ma '+newDone()+' új szót tanultál.</p><p>'+streak()+' napja tanulsz egymás után.</p><p>Összesen '+seen+' szót ismersz már.</p><button class="reset" type="button">Tovább</button></div>';
   document.body.appendChild(ov);
   if(kind==='off'){var cvx=ov.querySelector('canvas');if(cvx)cvx.remove();ov.querySelector('button').addEventListener('click',function(){ov.remove();});return;}
   var snd=SET.rs===0?null:rwSound(kind);
@@ -3329,8 +3337,15 @@ try{if(localStorage.getItem('szokartya-ed-prev'))$('xUndo').hidden=false;}catch(
   window.statsPanel=statsPanel;
 })();
 var codeEl=document.getElementById('code'),msg=document.getElementById('msg');
+function mkCode(){return btoa(unescape(encodeURIComponent(JSON.stringify({v:4,cards:st,sx:SET,ed:ED,set:{limit:SET.limit,voice:lsGet(VKEY)||'',rate:vrate,auto:AUTO?1:0,what:WHAT,pref:PREF},ex:{cv:lsGet('szokartya-cv')||'',go:lsGet(GO)||'',gm:lsGet(GM)||'',ui:lsGet(UIK)||''}}))));}
+function dlBackup(){var code=mkCode(),d=new Date(),n='szokartya_mentes_'+d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2)+'.txt';
+  try{var bl=new Blob([code],{type:'text/plain'}),a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download=n;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},4000);return n;}catch(e){return '';}}
+window.dlBackup=dlBackup;
+document.getElementById('bFile').addEventListener('click',function(){var n=dlBackup();msg.textContent=n?('Letöltöttem: '+n+'. A telefon Letöltések (Download) mappájában találod. A Google-kulcs nincs benne.'):'A letöltés ezen a böngészőn nem sikerült, használd a vágólapos mentést.';});
+document.getElementById('bFileBtn').addEventListener('click',function(){document.getElementById('bFileIn').click();});
+document.getElementById('bFileIn').addEventListener('change',function(){var f=this.files&&this.files[0];if(!f)return;var r=new FileReader();r.onload=function(){codeEl.value=String(r.result||'').trim();document.getElementById('bLoad').click();};r.readAsText(f);this.value='';});
 document.getElementById('bSave').addEventListener('click',function(){
-  var code=btoa(unescape(encodeURIComponent(JSON.stringify({v:3,cards:st,sx:SET,ed:ED,set:{limit:SET.limit,voice:lsGet(VKEY)||'',rate:vrate,auto:AUTO?1:0,what:WHAT,pref:PREF}}))));codeEl.value=code;
+  var code=mkCode();codeEl.value=code;
   function sel(){codeEl.focus();codeEl.select();msg.textContent='Másold ki a kódot a mezőből, és mentsd el a Keepbe vagy egy Google Dokumentumba.';}
   try{navigator.clipboard.writeText(code).then(function(){msg.textContent='A kód a vágólapon van. Illeszd be a Keepbe vagy egy Google Dokumentumba.';},sel);}catch(e){sel();}
 });
@@ -3345,7 +3360,8 @@ document.getElementById('bLoad').addEventListener('click',function(){
       if(q.voice)lsSet(VKEY,q.voice);if(q.rate===0.7||q.rate===0.9){vrate=q.rate;lsSet(RKEY,String(vrate));document.getElementById('rateSel').value=String(vrate);}
       AUTO=q.auto==1;lsSet('szokartya-auto',AUTO?'1':'0');document.getElementById('autoSel').value=AUTO?'1':'0';
       WHAT=q.what==='s'?'s':'w';lsSet('szokartya-what',WHAT);document.getElementById('whatSel').value=WHAT;loadVoices();if(q.pref)setPref(q.pref);}
-    queued=true;flush();render();
+    var rl=false;if(o.ex){try{if(o.ex.cv)lsSet('szokartya-cv',o.ex.cv);if(o.ex.go)lsSet(GO,o.ex.go);if(o.ex.gm)lsSet(GM,o.ex.gm);if(o.ex.ui)lsSet(UIK,o.ex.ui);rl=true;}catch(e){}}
+    queued=true;flush();render();if(rl)setTimeout(function(){location.reload();},1200);
     msg.textContent=n?('Visszatöltve: '+n+' kártya haladása frissült. A meglévő haladásod megmaradt.'):'Nincs újabb adat a kódban, a haladásod változatlan.';
   }catch(e){msg.textContent='A kód nem olvasható. Másold be teljes egészében.';}
 });
@@ -3375,22 +3391,43 @@ render();
 })();
 (function(){var u=document.getElementById('uiWords');if(u){u.value=uiGet().words==='0'?'0':'1';u.addEventListener('change',function(){var o=uiGet();o.words=u.value;try{localStorage.setItem(UIK,JSON.stringify(o));}catch(e){}if(typeof QS!=='undefined'&&QS&&VIEW==='q')renderQ();});}})();
 (function(){
-  var de=document.documentElement,FSK='szokartya-fs';
+  var de=document.documentElement;
+  var th=document.getElementById('uiTheme'),fsS=document.getElementById('uiFs');
+  function applyTheme(){var t=uiGet().theme;if(t==='light'||t==='dark')de.setAttribute('data-theme',t);else de.removeAttribute('data-theme');}
+  if(th){th.value=uiGet().theme||'auto';th.addEventListener('change',function(){var o=uiGet();o.theme=th.value;try{localStorage.setItem(UIK,JSON.stringify(o));}catch(e){}applyTheme();});}
   var can=!!(de.requestFullscreen||de.webkitRequestFullscreen)&&document.fullscreenEnabled!==false;
   var b=document.createElement('button');b.type='button';b.id='fsBtn';b.hidden=true;document.body.appendChild(b);
-  if(!can)return;
+  var pwa=false;try{pwa=window.matchMedia('(display-mode: fullscreen)').matches;}catch(e){}
   function inFs(){return !!(document.fullscreenElement||document.webkitFullscreenElement);}
   function enter(){try{var r=(de.requestFullscreen||de.webkitRequestFullscreen).call(de);if(r&&r.catch)r.catch(function(){});}catch(e){}}
   function leave(){try{var r=(document.exitFullscreen||document.webkitExitFullscreen).call(document);if(r&&r.catch)r.catch(function(){});}catch(e){}}
-  function ui(){b.hidden=false;b.textContent=inFs()?'✕ Kilépés':'⛶ Teljes képernyő';b.setAttribute('aria-label',inFs()?'Kilépés a teljes képernyőből':'Teljes képernyő');}
-  function pref(v){try{localStorage.setItem(FSK,v);}catch(e){}}
-  function want(){try{return localStorage.getItem(FSK)!=='0';}catch(e){return true;}}
-  b.addEventListener('click',function(e){e.stopPropagation();if(inFs()){pref('0');leave();}else{pref('1');enter();}});
+  function ui(){var m=uiGet().fs||'txt';if(!can||pwa||m==='off'){b.hidden=true;return;}b.hidden=false;var f=inFs();b.textContent=(f?'✕':'⛶')+(m==='txt'?(f?' Kilépés':' Teljes képernyő'):'');b.setAttribute('aria-label',f?'Kilépés a teljes képernyőből':'Teljes képernyő');}
+  if(fsS){fsS.value=uiGet().fs||'txt';fsS.addEventListener('change',function(){var o=uiGet();o.fs=fsS.value;try{localStorage.setItem(UIK,JSON.stringify(o));}catch(e){}ui();});}
+  b.addEventListener('click',function(e){e.stopPropagation();if(inFs()){tried=true;leave();}else{enter();}});
   ['fullscreenchange','webkitfullscreenchange'].forEach(function(n){document.addEventListener(n,ui);});
   ui();
-  var tried=false;
-  function first(ev){if(tried)return;if(ev.target&&ev.target.id==='fsBtn')return;tried=true;document.removeEventListener('pointerup',first,true);if(want()&&!inFs())enter();}
+  var tried=!can||pwa;
+  function first(ev){if(tried)return;if(ev.target&&ev.target.id==='fsBtn')return;tried=true;document.removeEventListener('pointerup',first,true);if(!inFs())enter();}
   document.addEventListener('pointerup',first,true);
+})();
+// heti mentési emlékeztető
+(function(){
+  var RK='szokartya-rem';
+  function dk(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+  function check(){
+    var now=new Date(),last='';try{last=localStorage.getItem(RK)||'';}catch(e){}
+    if(!last){try{localStorage.setItem(RK,dk(now));}catch(e){}return;}
+    var days=(now-new Date(last+'T00:00:00'))/86400000;
+    var due=(now.getDay()===0&&now.getHours()>=20&&last!==dk(now))||days>8;
+    if(!due||document.getElementById('remov'))return;
+    try{localStorage.setItem(RK,dk(now));}catch(e){}
+    var ov=document.createElement('div');ov.className='rw';ov.id='remov';
+    ov.innerHTML='<div class="rwbox" role="dialog" aria-label="Heti mentés"><h2>Heti mentés</h2><p>Ideje biztonsági mentést készíteni a haladásodról és a beállításaidról.</p><button class="reset" id="remGo" type="button">Mentés fájlba most</button><button class="reset" id="remLater" type="button">Később</button></div>';
+    document.body.appendChild(ov);
+    document.getElementById('remLater').addEventListener('click',function(){ov.remove();});
+    document.getElementById('remGo').addEventListener('click',function(){var n=window.dlBackup?window.dlBackup():'';ov.querySelector('p').textContent=n?('Kész: '+n+' a Letöltések mappában van.'):'A letöltés nem sikerült. Nyisd meg a Beállítások, Biztonsági mentés részt.';document.getElementById('remGo').remove();});}
+  setTimeout(check,1500);
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)setTimeout(check,500);});
 })();
 </script>
 
