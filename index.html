@@ -153,6 +153,7 @@ h1{font-size:1.2rem;margin:0}
 .qw+.chips,#wChips{max-height:4cm;overflow-y:auto;overscroll-behavior:contain;padding-right:4px}
 .wt{display:inline-flex;align-items:center;gap:6px}.wb{border:1.5px solid var(--fg);background:transparent;color:inherit;border-radius:8px;min-width:32px;height:28px;font-size:1.1rem;line-height:1}
 #vmsg{display:none}
+#setWrap[hidden]{display:none}
 #setAll{display:block;width:100%;margin:8px 0}
 .cmd{width:100%;border-collapse:collapse;font-size:.92rem;margin:6px 0}.cmd th,.cmd td{border:1px solid rgba(128,128,128,.45);padding:6px 8px;text-align:left;vertical-align:top}.cmd th{opacity:.8}
 .chat{display:flex;flex-direction:column;gap:6px;max-height:55vh;overflow-y:auto}.chat[hidden]{display:none}
@@ -2891,7 +2892,7 @@ function buildHome(){
   var now=Date.now(),du=dueInfo(null).el.length;
   var na=newAllow(),un=0;DATA.forEach(function(d,i){if(!SI(i).seen)un++;});
   var nn=Math.min(na,un);
-  function b(m,col,t,sub,n,cls){return '<div class="hr"><button type="button" class="hb'+(cls||'')+'" data-m="'+m+'"><i style="background:'+col+'"></i><span>'+t+(sub?'<small>'+sub+'</small>':'')+'</span><em>'+n+'</em></button>'+(m.indexOf('cat:')===0?'<label class="pk"><input type="checkbox" data-k="'+m.slice(4)+'" aria-label="Kijelölés"'+(PICK.indexOf(m.slice(4))>=0?' checked':'')+'></label>':'')+'</div>';}
+  function b(m,col,t,sub,n,cls){return '<div class="hr"><button type="button" class="hb'+(cls||'')+'" data-m="'+m+'"><i style="background:'+col+'"></i><span>'+t+'</span><em>'+n+'</em></button>'+(m.indexOf('cat:')===0?'<label class="pk"><input type="checkbox" data-k="'+m.slice(4)+'" aria-label="Kijelölés"'+(PICK.indexOf(m.slice(4))>=0?' checked':'')+'></label>':'')+'</div>';}
   var o=b('learn','var(--fg)','Tanulás','Esedékes ismétlések és mai új szavak',du+' + '+(nn===Infinity?un:nn),' main');
   o+='<h2>Témakörök</h2><p class="hint">Koppints egy témakörre, vagy jelölj ki többet a négyzettel, és indítsd el őket együtt. Ugyanúgy tanulás, mint a Tanulás gomb (Újra, Nehéz, Jó, Könnyű, 15 nap, 30 nap), csak a választott témakör szavaival, véletlen sorrendben.</p><button type="button" class="hb main" id="goPick" '+(PICK.length?'':'hidden ')+'><span>Kijelölt témakörök indítása<small>Véletlen sorrend</small></span><em>'+DATA.filter(function(d){return PICK.indexOf(d.cat)>=0;}).length+'</em></button>';
   Object.keys(CATS).forEach(function(k){if(cnt[k])o+=b('cat:'+k,CATS[k].c,esc(CATS[k].n),'',cnt[k]);});
@@ -3409,10 +3410,11 @@ render();
 })();
 (function(){var u=document.getElementById('uiWords');if(u){u.value=uiGet().words==='0'?'0':'1';u.addEventListener('change',function(){var o=uiGet();o.words=u.value;try{localStorage.setItem(UIK,JSON.stringify(o));}catch(e){}if(typeof QS!=='undefined'&&QS&&VIEW==='q')renderQ();});}})();
 (function(){var btn=document.getElementById('setAll');if(!btn)return;
-  function ds(){return document.querySelectorAll('details.backup');}
-  function apply(o){Array.prototype.forEach.call(ds(),function(d){d.open=o;});btn.textContent=o?'⚙ Beállítások bezárása ▴':'⚙ Beállítások megnyitása ▾';btn.setAttribute('aria-expanded',o?'true':'false');}
-  apply(uiGet().setOpen==='1');
-  btn.addEventListener('click',function(){var o=!(uiGet().setOpen==='1'),u=uiGet();u.setOpen=o?'1':'0';try{localStorage.setItem(UIK,JSON.stringify(u));}catch(e){}apply(o);});
+  var wrap=document.createElement('div');wrap.id='setWrap';var ds=document.querySelectorAll('details.backup');
+  if(ds.length){ds[0].parentNode.insertBefore(wrap,ds[0]);Array.prototype.forEach.call(ds,function(d){wrap.appendChild(d);});}
+  function apply(o,reset){wrap.hidden=!o;if(o&&reset)Array.prototype.forEach.call(wrap.querySelectorAll('details.backup'),function(d){d.open=false;});btn.textContent=o?'⚙ Beállítások bezárása ▴':'⚙ Beállítások megnyitása ▾';btn.setAttribute('aria-expanded',o?'true':'false');}
+  apply(uiGet().setOpen==='1',true);
+  btn.addEventListener('click',function(){var o=!(uiGet().setOpen==='1'),u=uiGet();u.setOpen=o?'1':'0';try{localStorage.setItem(UIK,JSON.stringify(u));}catch(e){}apply(o,true);if(o){try{wrap.scrollIntoView({block:'nearest'});}catch(e){}}});
 })();
 (function(){
   var de=document.documentElement;
