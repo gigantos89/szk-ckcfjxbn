@@ -153,6 +153,18 @@ h1{font-size:1.2rem;margin:0}
 .qw+.chips,#wChips{max-height:4cm;overflow-y:auto;overscroll-behavior:contain;padding-right:4px}
 .wt{display:inline-flex;align-items:center;gap:6px}.wb{border:1.5px solid var(--fg);background:transparent;color:inherit;border-radius:8px;min-width:32px;height:28px;font-size:1.1rem;line-height:1}
 #vmsg{display:none}
+html[data-sp="1"] .backup summary{padding:13px 2px}
+html[data-sp="1"] .reset,html[data-sp="1"] select{min-height:48px}
+html[data-sp="1"] .vrow,html[data-sp="1"] .brow,html[data-sp="1"] .qbtns{gap:12px}
+html[data-sp="1"] .backup p{line-height:1.55}
+html[data-sp="1"] #home .hr{margin-bottom:6px}
+html[data-sp="2"] .backup summary{padding:18px 2px}
+html[data-sp="2"] .reset,html[data-sp="2"] select{min-height:54px}
+html[data-sp="2"] .vrow,html[data-sp="2"] .brow,html[data-sp="2"] .qbtns{gap:16px}
+html[data-sp="2"] .backup p{line-height:1.7}
+html[data-sp="2"] #home .hr{margin-bottom:12px}
+html[data-sp="1"] .hb:not(.chip),html[data-sp="2"] .hb:not(.chip){min-height:56px}
+
 body{zoom:var(--fs,1)}
 .msg,.hint,.tap,.foot,.backup p,small,#chipHu,.leg{zoom:var(--xz,1)}
 #setWrap[hidden]{display:none}
@@ -273,6 +285,7 @@ body{zoom:var(--fs,1)}
     <div class="vrow"><select id="uiTheme" aria-label="Téma"><option value="auto">Téma: automatikus (a telefon szerint)</option><option value="light">Téma: világos</option><option value="dark">Téma: sötét</option></select></div>
     <div class="vrow"><select id="uiSize" aria-label="Betűméret"><option value="auto">Betűméret: automatikus (a telefon szerint)</option><option value="kicsi">Betűméret: kicsi</option><option value="normal">Betűméret: normál</option><option value="nagy">Betűméret: nagy</option></select></div>
     <p class="msg">A magyarázó szövegek mindig egy mérettel kisebbek, mint a fő szöveg.</p>
+    <div class="vrow"><select id="uiSp" aria-label="Elrendezés"><option value="auto">Elrendezés: automatikus (a betűmérethez igazítva)</option><option value="0">Elrendezés: normál (jelenlegi)</option><option value="1">Elrendezés: tágas</option><option value="2">Elrendezés: extra tágas</option></select></div>
     <div class="vrow"><select id="uiFs" aria-label="Teljes képernyő gomb"><option value="txt">Teljes képernyő gomb: ikon és felirat</option><option value="ico">Teljes képernyő gomb: csak ikon</option><option value="off">Teljes képernyő gomb: rejtett</option></select></div>
     <p class="msg">A program mindig teljes képernyőn indul (az első koppintásra). A gomb a jobb felső sarokban van.</p>
   </details>
@@ -323,7 +336,7 @@ body{zoom:var(--fs,1)}
   </details>
 </div>
 <script>
-function applySize(m){var fs=1,xz=1;if(m==='kicsi'){fs=.9;xz=.92;}else if(m==='nagy'){fs=1.2;xz=.92;}else if(m==='normal'){fs=1;xz=1;}else{var px=16;try{px=parseFloat(getComputedStyle(document.documentElement).fontSize)||16;}catch(e){}fs=Math.min(1.3,Math.max(.85,px/16));xz=(fs>1.05||fs<.95)?.92:1;}var r=document.documentElement.style;r.setProperty('--fs',String(fs));r.setProperty('--xz',String(xz));}
+function applySize(m){var fs=1,xz=1;if(m==='kicsi'){fs=.9;xz=.92;}else if(m==='nagy'){fs=1.2;xz=.92;}else if(m==='normal'){fs=1;xz=1;}else{var px=16;try{px=parseFloat(getComputedStyle(document.documentElement).fontSize)||16;}catch(e){}fs=Math.min(1.3,Math.max(.85,px/16));xz=(fs>1.05||fs<.95)?.92:1;}var r=document.documentElement.style;r.setProperty('--fs',String(fs));r.setProperty('--xz',String(xz));var sp='auto';try{sp=JSON.parse(localStorage.getItem('szokartya-ui')||'{}').sp||'auto';}catch(e){}var lv=sp==='1'?1:sp==='2'?2:sp==='0'?0:((m==='kicsi'||fs<.95)?2:1);document.documentElement.setAttribute('data-sp',String(lv));}
 try{var _u=JSON.parse(localStorage.getItem('szokartya-ui')||'{}');applySize(_u.size||'auto');if(_u.theme==='light'||_u.theme==='dark')document.documentElement.setAttribute('data-theme',_u.theme);}catch(e){}
 var B='<span class="blank"></span>', BL='<span class="blank" style="min-width:7em"></span>';
 function A(t){return '<span class="ans">'+t+'</span>';}
@@ -3432,7 +3445,8 @@ render();
 })();
 (function(){
   var de=document.documentElement;
-  var th=document.getElementById('uiTheme'),fsS=document.getElementById('uiFs'),szS=document.getElementById('uiSize');
+  var th=document.getElementById('uiTheme'),fsS=document.getElementById('uiFs'),szS=document.getElementById('uiSize'),spS=document.getElementById('uiSp');
+  if(spS){spS.value=uiGet().sp||'auto';spS.addEventListener('change',function(){var o=uiGet();o.sp=spS.value;try{localStorage.setItem(UIK,JSON.stringify(o));}catch(e){}applySize(uiGet().size||'auto');});}
   if(szS){szS.value=uiGet().size||'auto';szS.addEventListener('change',function(){var o=uiGet();o.size=szS.value;try{localStorage.setItem(UIK,JSON.stringify(o));}catch(e){}applySize(szS.value);});}
   function applyTheme(){var t=uiGet().theme;if(t==='light'||t==='dark')de.setAttribute('data-theme',t);else de.removeAttribute('data-theme');}
   if(th){th.value=uiGet().theme||'auto';th.addEventListener('change',function(){var o=uiGet();o.theme=th.value;try{localStorage.setItem(UIK,JSON.stringify(o));}catch(e){}applyTheme();});}
