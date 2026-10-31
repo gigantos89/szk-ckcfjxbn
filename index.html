@@ -153,6 +153,8 @@ h1{font-size:1.2rem;margin:0}
 .qw+.chips,#wChips{max-height:4cm;overflow-y:auto;overscroll-behavior:contain;padding-right:4px}
 .wt{display:inline-flex;align-items:center;gap:6px}.wb{border:1.5px solid var(--fg);background:transparent;color:inherit;border-radius:8px;min-width:32px;height:28px;font-size:1.1rem;line-height:1}
 #vmsg{display:none}
+body{zoom:var(--fs,1)}
+.msg,.hint,.tap,.foot,.backup p,small,#chipHu,.leg{zoom:var(--xz,1)}
 #setWrap[hidden]{display:none}
 #setAll{display:block;width:100%;margin:8px 0}
 .cmd{width:100%;border-collapse:collapse;font-size:.92rem;margin:6px 0}.cmd th,.cmd td{border:1px solid rgba(128,128,128,.45);padding:6px 8px;text-align:left;vertical-align:top}.cmd th{opacity:.8}
@@ -206,7 +208,7 @@ h1{font-size:1.2rem;margin:0}
   <p class="tap" id="tap">Koppints a kártyára a megfordításhoz. Húzd jobbra, ha tudtad (Jó), balra, ha nem (Újra).</p>
   <div class="rates" id="rates"></div>
   <p class="msg" id="vmsg" role="status"></p>
-  <div class="modebar"><button class="reset" id="homeBtn" type="button">‹ Témakörök</button><b id="modeName"></b></div>
+  <div class="modebar"><button class="reset" id="homeBtn" type="button">‹ Főoldal</button><b id="modeName"></b></div>
   </div>
   <div class="foot"><span id="sync" hidden></span><button type="button" class="reset" id="setAll">⚙ Beállítások megnyitása ▾</button></div>
   <details class="backup"><summary>Napi új szavak</summary>
@@ -269,6 +271,8 @@ h1{font-size:1.2rem;margin:0}
   </details>
   <details class="backup"><summary>Megjelenés</summary>
     <div class="vrow"><select id="uiTheme" aria-label="Téma"><option value="auto">Téma: automatikus (a telefon szerint)</option><option value="light">Téma: világos</option><option value="dark">Téma: sötét</option></select></div>
+    <div class="vrow"><select id="uiSize" aria-label="Betűméret"><option value="auto">Betűméret: automatikus (a telefon szerint)</option><option value="kicsi">Betűméret: kicsi</option><option value="normal">Betűméret: normál</option><option value="nagy">Betűméret: nagy</option></select></div>
+    <p class="msg">A magyarázó szövegek mindig egy mérettel kisebbek, mint a fő szöveg.</p>
     <div class="vrow"><select id="uiFs" aria-label="Teljes képernyő gomb"><option value="txt">Teljes képernyő gomb: ikon és felirat</option><option value="ico">Teljes képernyő gomb: csak ikon</option><option value="off">Teljes képernyő gomb: rejtett</option></select></div>
     <p class="msg">A program mindig teljes képernyőn indul (az első koppintásra). A gomb a jobb felső sarokban van.</p>
   </details>
@@ -291,6 +295,7 @@ h1{font-size:1.2rem;margin:0}
     <div class="vrow"><select id="gModel" aria-label="Modell"></select><button class="reset" id="gList" type="button">Elérhető modellek lekérése</button></div>
     <p class="msg" id="gModelInfo"></p>
     <div class="vrow"><button class="reset" id="gTest" type="button">Kapcsolat próbája</button></div>
+    <p class="msg" id="gTestMsg" role="status"></p>
     <div class="vrow"><select id="gExp" aria-label="Magyarázat nyelve"><option value="hu">Magyarázat: magyarul</option><option value="en">Magyarázat: angolul</option><option value="none">Magyarázat nélkül (csak jelölés és javaslat)</option></select></div>
     <div class="vrow"><select id="gLvl" aria-label="Szint"><option value="B1">Elvárt szint: B1</option><option value="B2">Elvárt szint: B2</option><option value="C1">Elvárt szint: C1</option></select></div>
     <div class="vrow"><select id="gStr" aria-label="Szigorúság"><option value="lenient">Enyhe: csak a világos hibák</option><option value="normal">Normál: hibák és hibás szóhasználat</option><option value="strict">Szigorú: stílus és természetesség is</option></select></div>
@@ -318,7 +323,8 @@ h1{font-size:1.2rem;margin:0}
   </details>
 </div>
 <script>
-try{var _u=JSON.parse(localStorage.getItem('szokartya-ui')||'{}');if(_u.theme==='light'||_u.theme==='dark')document.documentElement.setAttribute('data-theme',_u.theme);}catch(e){}
+function applySize(m){var fs=1,xz=1;if(m==='kicsi'){fs=.9;xz=.92;}else if(m==='nagy'){fs=1.2;xz=.92;}else if(m==='normal'){fs=1;xz=1;}else{var px=16;try{px=parseFloat(getComputedStyle(document.documentElement).fontSize)||16;}catch(e){}fs=Math.min(1.3,Math.max(.85,px/16));xz=(fs>1.05||fs<.95)?.92:1;}var r=document.documentElement.style;r.setProperty('--fs',String(fs));r.setProperty('--xz',String(xz));}
+try{var _u=JSON.parse(localStorage.getItem('szokartya-ui')||'{}');applySize(_u.size||'auto');if(_u.theme==='light'||_u.theme==='dark')document.documentElement.setAttribute('data-theme',_u.theme);}catch(e){}
 var B='<span class="blank"></span>', BL='<span class="blank" style="min-width:7em"></span>';
 function A(t){return '<span class="ans">'+t+'</span>';}
 var DATA=[
@@ -2495,8 +2501,14 @@ function gPrompt(g,md,q,text,words,fup){
   $('gModel').addEventListener('change',function(){var v=this.value.trim();lsSet(GM,v||GDEF);modelInfo();say('Modell: '+(v||GDEF));});
   $('gList').addEventListener('click',function(){refreshList(false);});
   (function(){var l=gListGet();if(gGet().key&&(!l||Date.now()-l.t>7*86400000))setTimeout(function(){refreshList(true);},2500);})();
-  $('gTest').addEventListener('click',function(){var g=gGet();if(!g.key){say('Előbb mentsd el a kulcsot.');return;}say('Próba…');
-    var t0=Date.now();gCall(g,{sys:'Return only JSON: {"ok":true}',user:'ping'},true).then(function(){say('Működik. A kapcsolat és a kulcs rendben, modell: '+g.model+', válaszidő: '+((Date.now()-t0)/1000).toFixed(1)+' mp.');}).catch(function(e){say(gErr(e));});});
+  $('gTest').addEventListener('click',function(){
+    var tm=$('gTestMsg');function ts(t){tm.textContent=t;}ts('Próba…');
+    if(navigator.onLine===false){ts('Nincs kapcsolat: a telefon offline módban van.');return;}
+    var ctl=typeof AbortController!=='undefined'?new AbortController():null,to=setTimeout(function(){if(ctl)ctl.abort();},8000);
+    fetch('https://generativelanguage.googleapis.com/',{mode:'no-cors',cache:'no-store',signal:ctl?ctl.signal:undefined}).then(function(){clearTimeout(to);
+      var g=gGet();if(!g.key){ts('Van internet, a Google elérhető. A Google-kulcs még nincs elmentve.');return;}
+      var t0=Date.now();return gCall(g,{sys:'Return only JSON: {"ok":true}',user:'ping'},true).then(function(){ts('Működik. Van internet, a kulcs és a modell rendben ('+g.model+'), válaszidő: '+((Date.now()-t0)/1000).toFixed(1)+' mp.');},function(e){ts('Van internet, de: '+gErr(e));});
+    },function(){clearTimeout(to);ts('Nincs kapcsolat a Google-lel. Ellenőrizd az internetet.');});});
   [['gExp','exp'],['gLvl','lvl'],['gStr','str'],['gCor','cor'],['gRel','rel'],['gFlu','flu']].forEach(function(x){
     var el=$(x[0]);el.value=gGet().o[x[1]];
     el.addEventListener('change',function(){var o=gGet().o;o[x[1]]=el.value;lsSet(GO,JSON.stringify(o));say('Beállítás elmentve.');});});
@@ -2647,8 +2659,9 @@ function vApply(txt){
   return out.join(' ').replace(/ ?\n ?/g,'\n').trim();}
 function vJoin(base,t){return vApply((base?base+' ':'')+t);}
 function chatAdd(role,text){var c=document.getElementById('qChat');if(!c)return null;c.hidden=false;var d=document.createElement('div');d.className='cb '+role;var b=document.createElement('b');b.textContent=role==='me'?'Én':(cvGet().teach==='f'?'Tanárnő':'Tanár úr');var sp=document.createElement('span');sp.textContent=text||'…';d.appendChild(b);d.appendChild(sp);c.appendChild(d);try{c.scrollTop=c.scrollHeight;d.scrollIntoView({block:'nearest'});}catch(e){}return sp;}
+function vSend(t){var m=String(t||'').match(/^(.*?)[\s,.;:!?]*\b(send|done)\b[\s.!?]*$/i);return m&&m[1].trim()?{text:m[1],send:true}:{text:String(t||''),send:false};}
 function chatFb(o){var l=[];if(!o.M.length)l.push('Nagyon jó, nem találtam hibát.');else{l.push('Találtam '+o.M.length+' javítanivalót:');o.M.slice(0,4).forEach(function(m){l.push('• „'+(m.orig||'')+'” → „'+(m.rep[0]||'')+'”'+(m.msg?' ('+m.msg+')':''));});}
-  if(o.j&&o.j.corrected)l.push('Javított változat: '+o.j.corrected);if(o.j&&o.j.content)l.push(o.j.content);return l.join('\n');}
+  if(o.j&&o.j.content)l.push(o.j.content);return l.join('\n');}
 function cvErrMsg(err){
   if(err==='not-allowed'||err==='service-not-allowed')return 'A mikrofon nincs engedélyezve. Engedélyezd a böngésző címsorában vagy a telefon beállításaiban.';
   if(err==='network')return 'A diktáláshoz internet kell (a Google szervere ismeri fel a beszédet).';
@@ -2675,6 +2688,7 @@ async function cvHelp(){
   var A=window.CVAPI,last=window.CVLAST;if(!A||!last){var m=document.getElementById('qCvS');if(m)m.textContent='Előbb mondj valamit, utána kérhetsz magyarázatot.';return;}
   var sv=A.ta.value;A.ta.value=last;var out=await A.run('gr');
   ['qFb','qLeg','qEd'].forEach(function(i){var e=document.getElementById(i);if(e)e.hidden=true;});A.ta.hidden=true;
+  var xe=document.getElementById('qEx');if(xe)xe.innerHTML='';
   if(out)chatAdd('t',chatFb(out));}
 async function cvConverse(){
   if(window.CONVON||!canMic())return;
@@ -2688,9 +2702,9 @@ async function cvConverse(){
       if(!cvAlive(tok))return;
       cvSet('🎤 Hallgatlak. Mondd angolul, szünetet tarthatsz. Ha végeztél, nyomd meg a „Kész a válaszom” gombot.');
       var meB=chatAdd('me','🎤 …');
-      CVLIST=cvListen(function(t){var v=vApply(t);A.ta.value=v;if(meB)meB.textContent=v||'…';});
+      var sentFlag=false;CVLIST=cvListen(function(t){var sd=vSend(t),v=vApply(sd.text);A.ta.value=v;if(meB)meB.textContent=v||'…';if(sd.send&&v&&!sentFlag){sentFlag=true;cvDone();}});
       var res=await CVLIST.promise;CVLIST=null;if(!cvAlive(tok))return;
-      var got=vApply(res.text||'');
+      var got=vApply(vSend(res.text||'').text);
       if(!got){
         if(meB&&meB.parentNode)meB.parentNode.remove();
         if(res.err&&res.err!=='no-speech'&&res.err!=='aborted'){var em=cvErrMsg(res.err);chatAdd('t',em);cvStop();return;}
@@ -2825,7 +2839,7 @@ function renderQ(){
   var q=document.getElementById('qview');if(!QS){return;}
   var T=QT[QS.k],n=T.items.length;
   if(QS.i>=QS.list.length){
-    q.innerHTML='<div class="done"><h2>Végigértél a kérdéseken</h2><p>Remek munka. A(z) '+esc(T.hu)+' témakör kérdései elfogytak.</p><button class="reset" id="qAgain" type="button">Még egyszer, új sorrendben</button><button class="reset" id="qHome" type="button">‹ Témakörök</button></div>';
+    q.innerHTML='<div class="done"><h2>Végigértél a kérdéseken</h2><p>Remek munka. A(z) '+esc(T.hu)+' témakör kérdései elfogytak.</p><button class="reset" id="qAgain" type="button">Még egyszer, új sorrendben</button><button class="reset" id="qHome" type="button">‹ Főoldal</button></div>';
     document.getElementById('qAgain').addEventListener('click',function(){openQ(QS.k);});
     document.getElementById('qHome').addEventListener('click',function(){showView('home');});return;}
   var it=T.items[QS.list[QS.i]],w=qWords(QS.k);
@@ -2841,7 +2855,7 @@ function renderQ(){
    '<div class="qbtns"><button type="button" class="hb" id="qSp"><span style="text-align:center">Helyesírás</span></button><button type="button" class="hb" id="qGr"><span style="text-align:center">Beküldés nyelvtanra</span></button></div>'+
    '<button type="button" class="hb" id="qConvBtn"><span style="text-align:center">🎤 Beszélgessünk (hanggal)</span></button><div class="cvst" id="qCv" hidden><div id="qCvS"></div><div class="qbtns"><button type="button" class="reset" id="qCvDone">Kész a válaszom</button><button type="button" class="reset" id="qCvHelp">Magyarázat kérése</button><button type="button" class="reset" id="qCvStop">Leállítás</button></div></div><button type="button" class="reset" id="qEd" hidden>✎ Szerkesztés</button><p class="msg" id="qMsg" role="status"></p><div id="qEx" class="myans"></div></div>'+
    '<div class="qbtns"><button type="button" class="hb" id="qPrev"'+(QS.i>0?'':' disabled')+'><span style="text-align:center">‹ Előző kérdés</span></button><button type="button" class="hb" id="qNext"><span style="text-align:center">'+(QS.i+1<QS.list.length?'Következő kérdés ›':'Befejezés ✓')+'</span></button></div>'+
-   '<div class="qbtns"><button type="button" class="reset" id="qHome">‹ Témakörök</button></div></div></div>';
+   '<div class="qbtns"><button type="button" class="reset" id="qHome">‹ Főoldal</button></div></div></div>';
   var ws=[];
   function cnt(){var u=0;ws.forEach(function(d){if(QS.used[d.id])u++;});var e=document.getElementById('qCnt');if(e)e.textContent=ws.length?('Használt: '+u+' / '+ws.length):'';}
   function drawWords(){
@@ -3418,7 +3432,8 @@ render();
 })();
 (function(){
   var de=document.documentElement;
-  var th=document.getElementById('uiTheme'),fsS=document.getElementById('uiFs');
+  var th=document.getElementById('uiTheme'),fsS=document.getElementById('uiFs'),szS=document.getElementById('uiSize');
+  if(szS){szS.value=uiGet().size||'auto';szS.addEventListener('change',function(){var o=uiGet();o.size=szS.value;try{localStorage.setItem(UIK,JSON.stringify(o));}catch(e){}applySize(szS.value);});}
   function applyTheme(){var t=uiGet().theme;if(t==='light'||t==='dark')de.setAttribute('data-theme',t);else de.removeAttribute('data-theme');}
   if(th){th.value=uiGet().theme||'auto';th.addEventListener('change',function(){var o=uiGet();o.theme=th.value;try{localStorage.setItem(UIK,JSON.stringify(o));}catch(e){}applyTheme();});}
   var can=!!(de.requestFullscreen||de.webkitRequestFullscreen)&&document.fullscreenEnabled!==false;
