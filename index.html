@@ -216,6 +216,7 @@ body{zoom:var(--fs,1)}
   <select id="modeSel" aria-label="Mód" hidden></select>
   <div id="home"></div>
   <div id="qview" hidden></div>
+  <div id="lview" hidden></div>
   <div id="study" hidden>
   <div id="stage"></div>
   <p class="tap" id="tap">Koppints a kártyára a megfordításhoz. Húzd jobbra, ha tudtad (Jó), balra, ha nem (Újra).</p>
@@ -289,6 +290,16 @@ body{zoom:var(--fs,1)}
     <div class="vrow"><select id="uiSp" aria-label="Elrendezés"><option value="auto">Elrendezés: automatikus (a betűmérethez igazítva)</option><option value="0">Elrendezés: normál (jelenlegi)</option><option value="1">Elrendezés: tágas</option><option value="2">Elrendezés: extra tágas</option></select></div>
     <div class="vrow"><select id="uiFs" aria-label="Teljes képernyő gomb"><option value="txt">Teljes képernyő gomb: ikon és felirat</option><option value="ico">Teljes képernyő gomb: csak ikon</option><option value="off">Teljes képernyő gomb: rejtett</option></select></div>
     <p class="msg">A program mindig teljes képernyőn indul (az első koppintásra). A gomb a jobb felső sarokban van.</p>
+  </details>
+  <details class="backup"><summary>Hallgatás</summary>
+    <p>A főoldali Hallgatás a megtanult szavakat felolvassa angolul, majd magyarul. Az ismétlési ütemezést nem változtatja.</p>
+    <div class="vrow"><select id="lsMin" aria-label="Mely szavak"><option value="4">Mely szavak: Könnyű (4 nap) vagy jobb</option><option value="1">Mely szavak: minden, ami nem Újra</option><option value="0">Mely szavak: minden látott szó</option></select></div>
+    <div class="vrow"><select id="lsCont" aria-label="Mit mondjon"><option value="w">Mit mondjon: csak a kifejezést</option><option value="s">Mit mondjon: kifejezés és példamondat</option></select></div>
+    <div class="vrow"><select id="lsRep" aria-label="Ismétlés"><option value="1">Ismétlés szavanként: 1×</option><option value="2">Ismétlés szavanként: 2×</option><option value="3">Ismétlés szavanként: 3×</option></select></div>
+    <div class="vrow"><select id="lsGap" aria-label="Szünet"><option value="0">Szünetek: rövid</option><option value="1">Szünetek: közepes</option><option value="2">Szünetek: hosszú</option></select></div>
+    <div class="vrow"><select id="lsRate" aria-label="Tempó"><option value="0.7">Tempó: lassú</option><option value="0.9">Tempó: normál</option></select></div>
+    <div class="vrow"><select id="lsOrd" aria-label="Sorrend"><option value="rot">Sorrend: körforgás (a régen hallottak előre)</option><option value="rnd">Sorrend: véletlen</option><option value="cat">Sorrend: témakörönként</option></select></div>
+    <div class="vrow"><select id="lsWake" aria-label="Képernyő"><option value="0">Képernyő: a telefon szabályai szerint</option><option value="1">Képernyő bekapcsolva marad lejátszás közben</option></select></div>
   </details>
   <details class="backup"><summary>Haladás törlése</summary>
     <p>Minden gombot kétszer kell megnyomni, így nem törölsz véletlenül. A beállításaid és az Excelben módosított kártyáid megmaradnak.</p>
@@ -3914,20 +3925,23 @@ function buildHome(){
   o+='<h2>Témakörök</h2><p class="hint">Koppints egy témakörre, vagy jelölj ki többet a négyzettel, és indítsd el őket együtt. Ugyanúgy tanulás, mint a Tanulás gomb (Újra, Nehéz, Jó, Könnyű, 15 nap, 30 nap), csak a választott témakör szavaival, véletlen sorrendben.</p><button type="button" class="hb main" id="goPick" '+(PICK.length?'':'hidden ')+'><span>Kijelölt témakörök indítása<small>Véletlen sorrend</small></span><em>'+DATA.filter(function(d){return PICK.indexOf(d.cat)>=0;}).length+'</em></button>';
   Object.keys(CATS).forEach(function(k){if(cnt[k])o+=b('cat:'+k,CATS[k].c,esc(CATS[k].n),'',cnt[k]);});
   o+='<h2>Beszélgetés</h2><p class="hint">Szóbeli témakártyák: kérdések magyar magyarázattal és szósegítővel.</p>'+Object.keys(QT).map(function(k){return '<div class="hr"><button type="button" class="hb" data-q="'+k+'"><i style="background:'+QT[k].c+'"></i><span>'+esc(QT[k].n)+'<small>'+esc(QT[k].hu)+'</small></span><em>'+QT[k].items.length+'</em></button></div>';}).join('');
+  var lsN=0;try{lsN=lsElig(lsCfg()).length;}catch(e){}
+  o+='<h2>Hallgatás</h2><div class="hr"><button type="button" class="hb" data-l="1"><i style="background:#7a5cc7"></i><span>Szavak hallgatása<small>Angolul, majd magyarul, ismételve, a megtanult szavakból</small></span><em>'+lsN+'</em></button></div>';
   o+='<h2>Egyéb</h2>'+b('hard','var(--red)','Nehéz szavak','Legalább kétszer Újra',hardList().length)+b('star','#d9a400','Csillagozottak','',starList().length)+b('all','var(--muted)','Minden kártya','Gyakorlás',DATA.length);
   h.innerHTML=o;
   h.querySelectorAll('.hb[data-m]').forEach(function(x){x.addEventListener('click',function(){MODE=x.dataset.m;QUEUE=null;showView('study');});});
   h.querySelectorAll('.pk input').forEach(function(x){x.addEventListener('change',function(){var k=x.dataset.k,i=PICK.indexOf(k);if(x.checked&&i<0)PICK.push(k);if(!x.checked&&i>=0)PICK.splice(i,1);buildHome();});});
+  h.querySelectorAll('.hb[data-l]').forEach(function(x){x.addEventListener('click',function(){showView('listen');});});
   h.querySelectorAll('.hb[data-q]').forEach(function(x){x.addEventListener('click',function(){openQ(x.dataset.q);});});
   var gp=document.getElementById('goPick');if(gp)gp.addEventListener('click',function(){if(!PICK.length)return;MODE=PICK.length===1?'cat:'+PICK[0]:'cats:'+PICK.join(',');QUEUE=null;showView('study');});
 }
 function showView(v){
-  VIEW=v;document.getElementById('home').hidden=v!=='home';document.getElementById('study').hidden=v!=='study';document.getElementById('qview').hidden=v!=='q';
+  VIEW=v;document.getElementById('home').hidden=v!=='home';document.getElementById('study').hidden=v!=='study';document.getElementById('qview').hidden=v!=='q';document.getElementById('lview').hidden=v!=='listen';if(v!=='listen'&&typeof L!=='undefined'&&L.on)lsStop();
   if(v==='study'){var nm=document.getElementById('modeName'),s=document.getElementById('modeSel');buildModeSel();var op=s.options[s.selectedIndex];nm.textContent=op?op.textContent.replace(/\s*\(\d+\)$/,''):'';}
-  if(v==='q'){renderQ();}else render();try{window.scrollTo(0,0);}catch(e){}
+  if(v==='q'){renderQ();}else if(v==='listen'){renderL();}else render();try{window.scrollTo(0,0);}catch(e){}
 }
 function render(){
-  if(VIEW==='q'){return;}
+  if(VIEW==='q'||VIEW==='listen'){return;}
   if(VIEW==='home'){stats();buildHome();return;}
   stats();flipped=false;busy=false;TYPED=null;cur=pick();
   if(cur<0){
@@ -4373,7 +4387,98 @@ try{if(localStorage.getItem('szokartya-ed-prev'))$('xUndo').hidden=false;}catch(
   window.statsPanel=statsPanel;
 })();
 var codeEl=document.getElementById('code'),msg=document.getElementById('msg');
-function mkCode(){return btoa(unescape(encodeURIComponent(JSON.stringify({v:4,cards:st,sx:SET,ed:ED,set:{limit:SET.limit,voice:lsGet(VKEY)||'',rate:vrate,auto:AUTO?1:0,what:WHAT,pref:PREF},ex:{cv:lsGet('szokartya-cv')||'',go:lsGet(GO)||'',gm:lsGet(GM)||'',ui:lsGet(UIK)||''}}))));}
+/* ===== Hallgatás ===== */
+var LSK='szokartya-ls',HLK='szokartya-hl',LSEL=[];
+var L={on:false,tok:0,paused:false,list:[],i:0,au:null,wl:null,sl:null,sleep:0};
+function lsCfg(){var o={cont:'w',rep:'2',gap:'1',rate:'0.9',min:'4',ord:'rot',wake:'0'};try{var x=JSON.parse(lsGet(LSK)||'{}');for(var k in o)if(x&&x[k]!=null)o[k]=String(x[k]);}catch(e){}return o;}
+function hlGet(){try{return JSON.parse(lsGet(HLK)||'{}')||{};}catch(e){return {};}}
+function lsElig(cfg){var min=+cfg.min,r=[];DATA.forEach(function(d,i){var c=SI(i);if(!c.seen)return;if(min>0&&(c.ivl||0)<min)return;r.push(i);});return r;}
+function lsBuild(cfg){
+  var hl=hlGet(),sel=LSEL.length?LSEL:null;
+  var ids=lsElig(cfg).filter(function(i){return !sel||sel.indexOf(DATA[i].cat)>=0;});
+  if(cfg.ord==='cat'){ids.sort(function(a,b){var x=DATA[a].cat,y=DATA[b].cat;return x<y?-1:x>y?1:Math.random()-.5;});}
+  else if(cfg.ord==='rnd'){ids=shuffle(ids);}
+  else{
+    ids.sort(function(a,b){var x=(hl[DATA[a].id]||[0,0])[1],y=(hl[DATA[b].id]||[0,0])[1];return (x-y)||(Math.random()-.5);});
+    var n=ids.length,out=ids.slice(),j=0;
+    ids.forEach(function(i,k){if((SI(i).ivl||0)<7){out.splice(Math.min(out.length,k+Math.floor(n/2)+j),0,i);j++;}});
+    ids=out;}
+  return ids;}
+function lsSil(){var n=16000,b=new Uint8Array(44+n),dv=new DataView(b.buffer);function s(o,t){for(var i=0;i<t.length;i++)b[o+i]=t.charCodeAt(i);}
+  s(0,'RIFF');dv.setUint32(4,36+n,true);s(8,'WAVEfmt ');dv.setUint32(16,16,true);dv.setUint16(20,1,true);dv.setUint16(22,1,true);dv.setUint32(24,8000,true);dv.setUint32(28,8000,true);dv.setUint16(32,1,true);dv.setUint16(34,8,true);s(36,'data');dv.setUint32(40,n,true);
+  var i;for(i=0;i<n;i++)b[44+i]=128+(i%2);var bin='';for(i=0;i<b.length;i++)bin+=String.fromCharCode(b[i]);return 'data:audio/wav;base64,'+btoa(bin);}
+function lsSay(text,lang,tok,cfg){return new Promise(function(res){
+  if(!text||tok!==L.tok||!('speechSynthesis' in window)){res();return;}
+  var u=new SpeechSynthesisUtterance(text);
+  if(lang==='hu'){var hv=huVoice();if(hv){u.voice=hv;u.lang=hv.lang;}else u.lang='hu-HU';}
+  else{if(!voices.length)loadVoices();if(curVoice){u.voice=curVoice;u.lang=curVoice.lang;}else u.lang='en-GB';}
+  u.rate=parseFloat(cfg.rate)||0.9;var d=false;function f(){if(!d){d=true;res();}}
+  u.onend=f;u.onerror=f;setTimeout(f,Math.max(7000,text.length*220));
+  try{speechSynthesis.speak(u);}catch(e){f();}});}
+function lsWait(ms){return new Promise(function(r){setTimeout(r,ms);});}
+function lsShow(d){
+  var a=document.getElementById('lEn');if(!a)return;
+  a.textContent=sayText(d);document.getElementById('lHu').textContent=plain(d.hu);document.getElementById('lEx').textContent=lsCfg().cont==='s'?plain(d.back):'';
+  document.getElementById('lCnt').textContent=(L.i+1)+' / '+L.list.length;
+  try{if('mediaSession' in navigator)navigator.mediaSession.metadata=new MediaMetadata({title:sayText(d),artist:plain(d.hu),album:'Angol szókártyák'});}catch(e){}}
+async function lsRun(tok){
+  var cfg=lsCfg();
+  while(tok===L.tok&&L.on){
+    if(L.i>=L.list.length||L.i<0){L.list=lsBuild(cfg);L.i=0;if(!L.list.length)break;}
+    var d=DATA[L.list[L.i]];lsShow(d);
+    var hl=hlGet(),h=hl[d.id]||[0,0];hl[d.id]=[h[0]+1,Date.now()];lsSet(HLK,JSON.stringify(hl));
+    var gap=[500,1100,2000][+cfg.gap]||1100,reps=+cfg.rep||1;
+    for(var r=0;r<reps&&tok===L.tok;r++){
+      await lsSay(sayText(d),'en',tok,cfg);if(tok!==L.tok)break;await lsWait(gap);if(tok!==L.tok)break;
+      await lsSay(plain(d.hu),'hu',tok,cfg);if(tok!==L.tok)break;await lsWait(gap);if(tok!==L.tok)break;
+      if(cfg.cont==='s'){await lsSay(plain(d.back),'en',tok,cfg);if(tok!==L.tok)break;await lsWait(gap);}
+    }
+    if(tok!==L.tok)break;await lsWait(Math.round(gap*1.5));if(tok!==L.tok)break;L.i++;
+  }}
+function lsCancel(){L.tok++;try{speechSynthesis.cancel();}catch(e){}}
+function lsGo(dl){if(!L.on)return;lsCancel();L.i=Math.max(0,L.i+dl);L.paused=false;lsPlayUi();lsRun(L.tok);}
+function lsPause(){if(!L.on||L.paused)return;lsCancel();L.paused=true;lsPlayUi();}
+function lsResume(){if(!L.on||!L.paused)return;L.paused=false;lsCancel();lsPlayUi();lsRun(L.tok);}
+function lsPlayUi(){var b=document.getElementById('lPause');if(b)b.firstChild.textContent=L.paused?'▶ Folytatás':'❚❚ Szünet';}
+function lsWake(on){try{if(L.wl){L.wl.release();L.wl=null;}if(on&&navigator.wakeLock)navigator.wakeLock.request('screen').then(function(w){L.wl=w;}).catch(function(){});}catch(e){}}
+function lsStart(){
+  var cfg=lsCfg();L.list=lsBuild(cfg);if(!L.list.length)return;
+  L.on=true;L.paused=false;L.i=0;lsCancel();
+  try{if(!L.au){L.au=new Audio(lsSil());L.au.loop=true;L.au.volume=0.01;}L.au.play().catch(function(){});}catch(e){}
+  try{if('mediaSession' in navigator){var ms=navigator.mediaSession;ms.setActionHandler('play',lsResume);ms.setActionHandler('pause',lsPause);ms.setActionHandler('nexttrack',function(){lsGo(1);});ms.setActionHandler('previoustrack',function(){lsGo(-1);});}}catch(e){}
+  lsWake(cfg.wake==='1');
+  clearTimeout(L.sl);if(L.sleep>0)L.sl=setTimeout(lsStop,L.sleep*60000);
+  renderL();lsRun(L.tok);}
+function lsStop(){lsCancel();L.on=false;L.paused=false;clearTimeout(L.sl);try{if(L.au)L.au.pause();}catch(e){}lsWake(false);try{if('mediaSession' in navigator)navigator.mediaSession.metadata=null;}catch(e){}if(VIEW==='listen')renderL();}
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&L.on&&lsCfg().wake==='1')lsWake(true);});
+function renderL(){
+  var v=document.getElementById('lview');if(!v)return;var cfg=lsCfg();
+  if(L.on){
+    v.innerHTML='<div class="qc"><div class="qh" style="background:#7a5cc7"><span>Hallgatás</span><span id="lCnt"></span></div><div class="qb"><p class="qen" id="lEn"></p><div class="qhu" id="lHu"></div><p class="hint" id="lEx"></p>'+
+    '<div class="qbtns"><button type="button" class="hb" id="lPrev"><span style="text-align:center">‹ Előző</span></button><button type="button" class="hb" id="lPause"><span style="text-align:center">❚❚ Szünet</span></button><button type="button" class="hb" id="lNext"><span style="text-align:center">Következő ›</span></button></div>'+
+    '<div class="vrow"><select id="lSleep" aria-label="Alvásidőzítő"><option value="0">Alvásidőzítő: nincs</option><option value="15">Leáll 15 perc múlva</option><option value="30">Leáll 30 perc múlva</option><option value="60">Leáll 60 perc múlva</option></select></div>'+
+    '<div class="qbtns"><button type="button" class="reset" id="lStop">■ Leállítás</button></div><p class="hint">Lezárt képernyőn is szólhat. Ha leáll, kapcsold be a Beállítások > Hallgatás menüben a „Képernyő bekapcsolva marad” opciót.</p></div></div>';
+    document.getElementById('lPrev').addEventListener('click',function(){lsGo(-1);});document.getElementById('lNext').addEventListener('click',function(){lsGo(1);});
+    document.getElementById('lPause').addEventListener('click',function(){if(L.paused)lsResume();else lsPause();});
+    document.getElementById('lStop').addEventListener('click',lsStop);
+    var sl=document.getElementById('lSleep');sl.value=String(L.sleep);sl.addEventListener('change',function(){L.sleep=+sl.value;clearTimeout(L.sl);if(L.sleep>0)L.sl=setTimeout(lsStop,L.sleep*60000);});
+    lsPlayUi();if(L.list.length)lsShow(DATA[L.list[Math.min(L.i,L.list.length-1)]]);
+    return;}
+  var el=lsElig(cfg),cnt={};el.forEach(function(i){cnt[DATA[i].cat]=(cnt[DATA[i].cat]||0)+1;});
+  var minT={'4':'Könnyű (4 nap) vagy jobb','1':'minden, amit nem nyomtál Újra gombbal','0':'minden látott szó'}[cfg.min];
+  var chips=Object.keys(CATS).filter(function(k){return cnt[k];}).map(function(k){return '<button type="button" class="chip'+(LSEL.indexOf(k)>=0?' used':'')+'" data-k="'+k+'">'+esc(CATS[k].n)+' ('+cnt[k]+')</button>';}).join('');
+  var tot=LSEL.length?LSEL.reduce(function(a,k){return a+(cnt[k]||0);},0):el.length;
+  v.innerHTML='<div class="qc"><div class="qh" style="background:#7a5cc7"><span>Hallgatás</span><span>'+tot+' szó</span></div><div class="qb"><p class="hint">A már megtanult szavakat és kifejezéseket olvassa fel: angolul, aztán magyarul, egymás után, ismételve. Most ez számít megtanultnak: '+minT+'.</p>'+
+  '<div class="chips" id="lChips"><button type="button" class="chip'+(LSEL.length?'':' used')+'" data-k="">Minden témakör</button>'+chips+'</div>'+
+  '<p class="hint">Beállítások: '+(cfg.cont==='s'?'kifejezés és példamondat':'csak kifejezés')+', '+cfg.rep+'× ismétlés, '+(cfg.rate==='0.7'?'lassú':'normál')+' tempó. Módosítás: Beállítások > Hallgatás.</p>'+
+  '<button type="button" class="hb main" id="lGo"'+(tot?'':' disabled')+'><span style="text-align:center">▶ Indítás</span></button>'+(el.length?'':'<p class="msg">Még nincs ilyen szint feletti szavad. Tanulj, és értékeld Könnyű vagy jobb gombbal.</p>')+
+  '<div class="qbtns"><button type="button" class="reset" id="lHome">‹ Főoldal</button></div></div></div>';
+  v.querySelectorAll('#lChips .chip').forEach(function(b){b.addEventListener('click',function(){var k=b.dataset.k;if(!k)LSEL=[];else{var i=LSEL.indexOf(k);if(i>=0)LSEL.splice(i,1);else LSEL.push(k);}renderL();});});
+  document.getElementById('lGo').addEventListener('click',lsStart);document.getElementById('lHome').addEventListener('click',function(){showView('home');});}
+(function(){var c=lsCfg(),ids={lsCont:'cont',lsRep:'rep',lsGap:'gap',lsRate:'rate',lsMin:'min',lsOrd:'ord',lsWake:'wake'};
+  Object.keys(ids).forEach(function(id){var e=document.getElementById(id);if(!e)return;e.value=c[ids[id]];e.addEventListener('change',function(){var o=lsCfg();o[ids[id]]=e.value;lsSet(LSK,JSON.stringify(o));if(VIEW==='home')buildHome();});});})();
+
+function mkCode(){return btoa(unescape(encodeURIComponent(JSON.stringify({v:4,cards:st,sx:SET,ed:ED,set:{limit:SET.limit,voice:lsGet(VKEY)||'',rate:vrate,auto:AUTO?1:0,what:WHAT,pref:PREF},ex:{cv:lsGet('szokartya-cv')||'',go:lsGet(GO)||'',gm:lsGet(GM)||'',ui:lsGet(UIK)||'',ls:lsGet(LSK)||'',hl:lsGet(HLK)||''}}))));}
 function dlBackup(){var code=mkCode(),d=new Date(),n='szokartya_mentes_'+d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2)+'.txt';
   try{var bl=new Blob([code],{type:'text/plain'}),a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download=n;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},4000);return n;}catch(e){return '';}}
 window.dlBackup=dlBackup;
@@ -4396,7 +4501,7 @@ document.getElementById('bLoad').addEventListener('click',function(){
       if(q.voice)lsSet(VKEY,q.voice);if(q.rate===0.7||q.rate===0.9){vrate=q.rate;lsSet(RKEY,String(vrate));document.getElementById('rateSel').value=String(vrate);}
       AUTO=q.auto==1;lsSet('szokartya-auto',AUTO?'1':'0');document.getElementById('autoSel').value=AUTO?'1':'0';
       WHAT=q.what==='s'?'s':'w';lsSet('szokartya-what',WHAT);document.getElementById('whatSel').value=WHAT;loadVoices();if(q.pref)setPref(q.pref);}
-    var rl=false;if(o.ex){try{if(o.ex.cv)lsSet('szokartya-cv',o.ex.cv);if(o.ex.go)lsSet(GO,o.ex.go);if(o.ex.gm)lsSet(GM,o.ex.gm);if(o.ex.ui)lsSet(UIK,o.ex.ui);rl=true;}catch(e){}}
+    var rl=false;if(o.ex){try{if(o.ex.cv)lsSet('szokartya-cv',o.ex.cv);if(o.ex.go)lsSet(GO,o.ex.go);if(o.ex.gm)lsSet(GM,o.ex.gm);if(o.ex.ui)lsSet(UIK,o.ex.ui);if(o.ex.ls)lsSet(LSK,o.ex.ls);if(o.ex.hl)lsSet(HLK,o.ex.hl);rl=true;}catch(e){}}
     queued=true;flush();render();if(rl)setTimeout(function(){location.reload();},1200);
     msg.textContent=n?('Visszatöltve: '+n+' kártya haladása frissült. A meglévő haladásod megmaradt.'):'Nincs újabb adat a kódban, a haladásod változatlan.';
   }catch(e){msg.textContent='A kód nem olvasható. Másold be teljes egészében.';}
