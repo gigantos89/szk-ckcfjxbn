@@ -3614,18 +3614,22 @@ var ENG='szokartya-eng',PPMOBT=0,NETP=null;
 function netType(){try{var c=navigator.connection;if(!c)return 'unsupported';return c.type||'unknown';}catch(e){return 'unsupported';}}
 function netCheck(){return new Promise(function(res){
   var t=netType(),c=navigator.connection||{};
-  if(navigator.onLine===false)return res({ok:false,why:'Nincs internetkapcsolat.'});
-  if(c.saveData)return res({ok:false,why:'Az adatforgalom-takarékos mód be van kapcsolva.'});
-  if(t==='cellular')return res({ok:false,why:'Most mobilnetet használsz, nem wifit.'});
-  if(t!=='wifi'&&t!=='ethernet')return res({ok:false,why:'Nem tudom megállapítani, hogy wifin vagy-e (a böngésző nem árulja el), ezért mobilnetnek veszem.'});
+  if(navigator.onLine===false)return res({ok:false,why:'Nincs internetkapcsolat.',cur:'nincs kapcsolat',unk:false});
+  if(c.saveData)return res({ok:false,why:'Az adatforgalom-takarékos mód be van kapcsolva.',cur:t==='cellular'?'mobilnet':(t==='wifi'?'wifi':'ismeretlen'),unk:false});
+  if(t==='cellular')return res({ok:false,why:'Most mobilnetet használsz, nem wifit.',cur:'mobilnet',unk:false});
+  if(t!=='wifi'&&t!=='ethernet')return res({ok:false,why:'Nem tudom megállapítani, hogy wifin vagy-e (a böngésző nem árulja el), ezért mobilnetnek veszem.',cur:'ismeretlen (a böngésző nem árulja el)',unk:true});
   var ctl=typeof AbortController!=='undefined'?new AbortController():null,tm=setTimeout(function(){if(ctl)ctl.abort();},4000);
-  fetch('https://connectivitycheck.gstatic.com/generate_204?_='+Date.now(),{mode:'no-cors',cache:'no-store',signal:ctl?ctl.signal:undefined}).then(function(){clearTimeout(tm);res({ok:true,why:''});},function(){clearTimeout(tm);res({ok:false,why:'A wifi be van kapcsolva, de nincs rajta működő internet.'});});});}
-function netAsk(why,what,verb){return new Promise(function(res){var o=document.createElement('div');o.className='rw';o.id='netmod';
-  o.innerHTML='<div class="rwbox" role="dialog" aria-modal="true"><h2>Nagy adatforgalom mobilneten?</h2><p></p><button class="reset" id="netGo" type="button">Folytatás mobilneten</button><button class="reset" id="netNo" type="button">Megvárom a wifit</button></div>';
+  fetch('https://connectivitycheck.gstatic.com/generate_204?_='+Date.now(),{mode:'no-cors',cache:'no-store',signal:ctl?ctl.signal:undefined}).then(function(){clearTimeout(tm);res({ok:true,why:'',cur:t==='wifi'?'wifi (működő internettel)':'vezetékes (működő internettel)',unk:false});},function(){clearTimeout(tm);res({ok:false,why:'A wifi be van kapcsolva, de nincs rajta működő internet.',cur:'wifi, de nincs rajta működő internet',unk:false});});});}
+function netAsk(why,what,verb,cur,unk){return new Promise(function(res){var o=document.createElement('div');o.className='rw';o.id='netmod';
+  o.innerHTML='<div class="rwbox" role="dialog" aria-modal="true"><h2>Nagy adatforgalom mobilneten?</h2><p></p><p class="netcur"></p><button class="reset" id="netWifi" type="button" hidden>A jelenlegi wifit használom</button><button class="reset" id="netGo" type="button">Folytatás mobilneten</button><button class="reset" id="netNo" type="button">Megvárom a wifit</button></div>';
   o.querySelector('p').textContent=why+' '+(verb||'Letöltenék')+' '+what+'. Mobilneten ez adatforgalmat fogyaszt. Folytassam?';
-  document.body.appendChild(o);o.querySelector('#netGo').addEventListener('click',function(){o.remove();res(true);});o.querySelector('#netNo').addEventListener('click',function(){o.remove();res(false);});});}
+  o.querySelector('.netcur').textContent='Jelenlegi kapcsolat: '+(cur||'ismeretlen')+'.';
+  if(unk)o.querySelector('#netWifi').hidden=false;
+  document.body.appendChild(o);
+  o.querySelector('#netWifi').addEventListener('click',function(){o.remove();res(true);});
+  o.querySelector('#netGo').addEventListener('click',function(){o.remove();res(true);});o.querySelector('#netNo').addEventListener('click',function(){o.remove();res(false);});});}
 function netEnsure(what,verb){if(NETP)return NETP;
-  NETP=netCheck().then(function(r){if(r.ok||Date.now()-PPMOBT<600000)return;return netAsk(r.why,what,verb).then(function(yes){if(!yes){var e=new Error('A letöltés várakozik: nem engedélyezted mobilneten.');e.declined=true;throw e;}PPMOBT=Date.now();});});
+  NETP=netCheck().then(function(r){if(r.ok||Date.now()-PPMOBT<600000)return;return netAsk(r.why,what,verb,r.cur,r.unk).then(function(yes){if(!yes){var e=new Error('A letöltés várakozik: nem engedélyezted mobilneten.');e.declined=true;throw e;}PPMOBT=Date.now();});});
   var done=function(){NETP=null;};NETP.then(done,done);return NETP;}
 function ppAbortNet(){try{if(PPW)PPW.terminate();}catch(e){}PPW=null;Object.keys(PPQ).forEach(function(k){var q=PPQ[k];delete PPQ[k];var e=new Error('Megszakítva: a telefon mobilnetre váltott. Wifin folytathatod.');e.net=true;q.rej(e);});}
 function ppCall(m,prog){var big=m.t==='download',eng=!lsGet(ENG)&&m.t!=='remove';
@@ -4751,20 +4755,40 @@ function ppFirst(){
   if(d==='wait'&&!wifi&&lsGet(PPASK)===today)return;
   lsSet(PPASK,today);
   var resume=d==='go',o=document.createElement('div');o.className='rw';o.id='ppmod';
-  o.innerHTML='<div class="rwbox" role="dialog" aria-modal="true"><h2></h2><p id="ppmT"></p><button class="reset" id="ppmGo" type="button"></button><button class="reset" id="ppmWait" type="button">Megvárom a wifit</button><button class="reset" id="ppmSkip" type="button">Kilépés, a telefon hangjával folytatom</button></div>';
+  o.innerHTML='<div class="rwbox" role="dialog" aria-modal="true"><h2></h2><p id="ppmT"></p><button class="reset" id="ppmGo" type="button"></button><button class="reset" id="ppmWifi" type="button" hidden>A jelenlegi wifit használom</button><button class="reset" id="ppmWait" type="button">Megvárom a wifit</button><button class="reset" id="ppmSkip" type="button">Kilépés, a telefon hangjával folytatom</button></div>';
   o.querySelector('h2').textContent=resume?'A letöltés megszakadt':'Magyar hangok letöltése';
-  o.querySelector('#ppmT').textContent=(resume?'A magyar hangok letöltése nem fejeződött be. ':'')+(wifi?'Ellenőriztem: működő wifin vagy, most jó alkalom. ':r.why+' ')+'A magyar felolvasáshoz hangfájlok kellenek (Imre, Anna, Berta), összesen nagyjából 200 MB. Mobilneten ez adatforgalmat fogyaszt. A letöltés a háttérben fut, közben használhatod az appot, a végén szólok.';
+  o.querySelector('#ppmT').textContent=(resume?'A magyar hangok letöltése nem fejeződött be. ':'')+(wifi?'Ellenőriztem: működő wifin vagy, most jó alkalom. ':r.why+' ')+'Jelenlegi kapcsolat: '+r.cur+'. '+'A magyar felolvasáshoz hangfájlok kellenek (Imre, Anna, Berta), összesen nagyjából 200 MB. Mobilneten ez adatforgalmat fogyaszt. A letöltés a háttérben fut, közben használhatod az appot, a végén szólok.';
   o.querySelector('#ppmGo').textContent=resume?'Folytatás':(wifi?'Letöltés most':'Letöltés most (mobilneten)');
   o.querySelector('#ppmWait').textContent=resume?'Később':'Megvárom a wifit';
   document.body.appendChild(o);
+  if(r.unk)o.querySelector('#ppmWifi').hidden=false;
+  o.querySelector('#ppmWifi').addEventListener('click',function(){o.remove();PPMOBT=Date.now();ppStartAll();});
   o.querySelector('#ppmGo').addEventListener('click',function(){o.remove();if(!wifi)PPMOBT=Date.now();ppStartAll();});
   o.querySelector('#ppmWait').addEventListener('click',function(){lsSet(PPDEC,resume?'go':'wait');o.remove();});
   o.querySelector('#ppmSkip').addEventListener('click',function(){lsSet(PPDEC,'skip');o.remove();});
   });
 }
-setTimeout(function(){try{if(lsGet('szokartya-pgrun')!=='1'||PG.run||PPBUSY||!window.pgResume||!ppHave())return;if(document.querySelector('.rw'))return;
-  var o=document.createElement('div');o.className='rw';o.id='pgmod';o.innerHTML='<div class="rwbox" role="dialog" aria-modal="true"><h2>Az előre elkészítés megszakadt</h2><p>Folytathatom onnan, ahol abbamaradt: a már kész hangokat a telefon és a Hangtár őrzi, csak a hiányzókat készítem el.</p><button class="reset" id="pgmGo" type="button">Folytatás</button><button class="reset" id="pgmNo" type="button">Később</button></div>';
-  document.body.appendChild(o);o.querySelector('#pgmGo').addEventListener('click',function(){o.remove();window.pgResume();});o.querySelector('#pgmNo').addEventListener('click',function(){lsSet('szokartya-pgrun','');o.remove();});}catch(e){}},4000);
+/* --- Hangtár: automatikus indítás --- */
+var HSAUTO=false;
+function hsToast(t,ms){try{ppChip(t,-1);setTimeout(function(){var c=document.getElementById('ppChip');if(c&&!PG.run&&!PPBUSY&&c.firstChild&&c.firstChild.textContent===t)ppChipHide();},ms||7000);}catch(e){}}
+async function hsMan(){try{return JSON.parse(new TextDecoder().decode(await hsFetch('manifest.json',true)));}catch(e){return {clips:{}};}}
+function hsCount(M){var n=0;Object.keys(M.clips||{}).forEach(function(v){n+=Object.keys(M.clips[v]).length;});return n;}
+async function hsCountToast(){try{var M=await hsMan();hsToast('Hangtár: '+hsCount(M)+' hang van a tárolóban.');}catch(e){}}
+async function hsStartup(){
+  if(HSAUTO||PG.run||PPBUSY)return;
+  if(document.querySelector('.rw')||!window.pgResume)return;
+  HSAUTO=true;
+  try{
+    var M=await hsMan(),cnt=hsCount(M),vs=pgVoices(),texts=pgTexts(),miss=0;
+    vs.forEach(function(v){var cl=(M.clips||{})[v]||{};texts.forEach(function(t){if(!cl[hsHash(t)])miss++;});});
+    if(!vs.length||!miss){if(!miss)lsSet('szokartya-pgrun','');hsToast('Hangtár: '+cnt+' hang van a tárolóban.');return;}
+    var r=await netCheck();
+    if(!(lsGet(HST)||'')||!r.ok){hsToast('Hangtár: '+cnt+' hang a tárolóban, '+miss+' hiányzik'+(r.ok?'.':' (wifin és GitHub kulccsal automatikusan elkészül).'),9000);return;}
+    await window.pgResume();
+    await hsCountToast();
+  }catch(e){}
+}
+setTimeout(hsStartup,6000);setTimeout(hsStartup,40000);
 setTimeout(ppFirst,2500);setTimeout(ppFirst,9000);
 try{if(navigator.connection&&navigator.connection.addEventListener)navigator.connection.addEventListener('change',function(){if(lsGet(PPDEC)==='wait')netCheck().then(function(r){if(r.ok)setTimeout(ppFirst,800);});});}catch(e){}
 window.addEventListener('online',function(){setTimeout(ppFirst,1500);});
@@ -4816,13 +4840,15 @@ function hsMu(buf){var dv=new DataView(buf),sr=22050,off=12,dOff=0,dLen=0;
   return out;}
 function hsB64(u8){var s='',i,ch=0x8000;for(i=0;i<u8.length;i+=ch)s+=String.fromCharCode.apply(null,u8.subarray(i,i+ch));return btoa(s);}
 function hsApi(path,opt){var c=hsCfg();opt=opt||{};opt.headers=Object.assign({'Accept':'application/vnd.github+json','Authorization':'Bearer '+(lsGet(HST)||'')},opt.headers||{});return fetch('https://api.github.com/repos/'+c.o+'/'+c.r+'/contents/'+path,opt);}
-async function hsGetManifest(){var r=await hsApi('manifest.json?ref=main');if(r.status===404)return {m:{v:1,clips:{}},sha:null};
+async function hsGetManifest(){var r=await hsApi('manifest.json?ref=main&_='+Date.now(),{cache:'no-store'});if(r.status===404)return {m:{v:1,clips:{}},sha:null};
   if(r.status===401||r.status===403)throw new Error('a GitHub kulcs nem jó vagy nincs jogosultsága (Contents: Read and write)');if(!r.ok)throw new Error('GitHub hiba '+r.status);
   var j=await r.json();return {m:JSON.parse(decodeURIComponent(escape(atob(String(j.content).replace(/\s/g,''))))),sha:j.sha};}
 async function hsPut(path,u8,sha,msg){var body={message:msg,content:hsB64(u8),branch:'main'};if(sha)body.sha=sha;
   var r=await hsApi(path,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   if(!r.ok){var t='';try{t=(await r.json()).message;}catch(e){}throw new Error('GitHub '+r.status+(t?': '+t:''));}return (await r.json()).content.sha;}
-async function hsUpload(st){
+var HSQ=Promise.resolve();
+function hsUpload(st){var r=HSQ.then(function(){return hsUpload0(st);});HSQ=r.then(function(){},function(){});return r;}
+async function hsUpload0(st){
   if(!(lsGet(HST)||''))throw new Error('előbb add meg a GitHub kulcsot');
   var keys=(await hAllKeys()).filter(function(k){return k.indexOf('pp|')===0;});
   st('A hangtár ellenőrzése...',-1);var mf=await hsGetManifest(),M=mf.m,sha=mf.sha;M.clips=M.clips||{};
@@ -4838,8 +4864,9 @@ async function hsUpload(st){
     st('Feltöltés: '+n+' / '+todo.length,100*n/todo.length);
     await hsPut(name,all,null,'hangok');
     ent.forEach(function(e){(M.clips[e[0]]=M.clips[e[0]]||{})[e[1]]=[name,e[2],e[3]];});
-    try{sha=await hsPut('manifest.json',new TextEncoder().encode(JSON.stringify(M)),sha,'tartalomjegyzék');}
-    catch(e){var f=await hsGetManifest();f.m.clips=f.m.clips||{};ent.forEach(function(x){(f.m.clips[x[0]]=f.m.clips[x[0]]||{})[x[1]]=[name,x[2],x[3]];});M=f.m;sha=await hsPut('manifest.json',new TextEncoder().encode(JSON.stringify(M)),f.sha,'tartalomjegyzék');}
+    for(var at=0;;at++){try{sha=await hsPut('manifest.json',new TextEncoder().encode(JSON.stringify(M)),sha,'tartalomjegyzék');break;}
+      catch(e){if(!/\b(409|422)\b/.test(String(e&&e.message))||at>=4)throw e;await new Promise(function(r){setTimeout(r,700*(at+1));});
+        var f=await hsGetManifest();f.m.clips=f.m.clips||{};ent.forEach(function(x){(f.m.clips[x[0]]=f.m.clips[x[0]]||{})[x[1]]=[name,x[2],x[3]];});M=f.m;sha=f.sha;}}
     n+=ent.length;}
   return n;}
 async function hsFetch(path,fresh){var c=hsCfg(),q=fresh?'?_='+Date.now():'',urls=['https://'+c.o+'.github.io/'+c.r+'/'+path+q,'https://raw.githubusercontent.com/'+c.o+'/'+c.r+'/main/'+path+q];
