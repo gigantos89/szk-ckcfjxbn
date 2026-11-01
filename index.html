@@ -306,9 +306,9 @@ body{zoom:var(--fs,1)}
     <p class="msg">A program mindig teljes képernyőn indul (az első koppintásra). A gomb a jobb felső sarokban van.</p>
   </details>
   <details class="backup" id="pgBox"><summary>Hangok előre elkészítése</summary>
-    <p>Elkészíti és eltárolja a telefonon a magyar szavak és a beszélgetés magyar mondatainak hangját az összes kártyához, hogy lejátszáskor ne kelljen várni. Előbb töltsd le a Piper hangot (Hang beállítása). Közben tartsd nyitva az appot, érdemes töltőre tenni a telefont.</p>
+    <p>Elkészíti és eltárolja a telefonon a magyar szavak és a beszélgetés magyar mondatainak hangját az összes kártyához, hogy lejátszáskor ne kelljen várni. Előbb töltsd le a Piper hangot (Hang beállítása). Közben tartsd nyitva az appot, érdemes töltőre tenni a telefont. Ha a Hangtárban el van mentve a GitHub kulcs, a kész hangokat 10 hangonként automatikusan feltölti a Hangtárba, induláskor pedig automatikusan letölti a már feltöltötteket, így megszakadás után onnan folytatódik.</p>
     <div class="vrow"><select id="pgWho" aria-label="Mely hangokkal"><option value="s">Mely hangokkal: a kiválasztott hanggal</option><option value="a">Mely hangokkal: az összes letöltött hanggal</option></select></div>
-    <div class="vrow"><select id="pgSync" aria-label="Hangtár"><option value="1">Hangtár: közben feltölti és induláskor letölti a kész hangokat</option><option value="0">Hangtár: ne használja</option></select></div>
+        <div class="vrow"><select id="pgPar" aria-label="Párhuzamos hangmotorok"><option value="1">Párhuzamos hangmotorok: 1 (lassú, kímélő)</option><option value="2">Párhuzamos hangmotorok: 2</option><option value="4">Párhuzamos hangmotorok: 4 (ajánlott)</option><option value="6">Párhuzamos hangmotorok: 6 (turbó, sok memória, melegszik)</option></select></div>
     <div class="vrow"><button class="reset" id="pgGo" type="button">Becslés</button><button class="reset" id="pgPause" type="button" disabled>Szünet</button><button class="reset" id="pgStop" type="button" disabled>Leállítás</button></div>
     <progress id="pgBar" max="100" value="0" hidden style="width:100%"></progress>
     <p class="msg" id="pgMsg" role="status"></p>
@@ -3637,7 +3637,21 @@ function ppCall1(m,prog,watch){var mon=null,c=null;
   return ppCall0(m,prog).then(function(r){un();if(!lsGet(ENG))lsSet(ENG,'1');return r;},function(e){un();throw e;});}
 var PPN=0;
 function ppReset(){try{if(PPW)PPW.terminate();}catch(e){}PPW=null;PPH=null;Object.keys(PPQ).forEach(function(k){var q=PPQ[k];delete PPQ[k];try{q.rej(new Error('Hangmotor újraindítva'));}catch(e){}});}
-function ppCall0(m,prog){if(m.t==='predict'&&++PPN%100===0)ppReset();ppStart();var q=Object.assign({},m);q.urls=PPLIBS;q.id=++PPID;
+var PPP=[],PPPAR=1;
+function ppParN(){var v=parseInt(lsGet('szokartya-ppar')||'4',10);return [1,2,4,6].indexOf(v)>=0?v:4;}
+function ppPoolKill(){PPP.forEach(function(w){try{w.terminate();}catch(e){}});PPP=[];}
+function ppPoolGet(){if(PPP.length<PPPAR){var src='var mk='+ppMk.toString()+';var h=mk(function(x,t){postMessage(x,t||[]);});onmessage=function(e){h(e.data);};',w=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));
+    w.load=0;w.n=0;w.onmessage=function(e){ppOnMsg(e.data);};
+    w.onerror=function(){Object.keys(PPQ).forEach(function(k){var q=PPQ[k];if(q.wk===w){delete PPQ[k];q.rej(new Error('Worker hiba'));}});};PPP.push(w);return w;}
+  var b=PPP[0];PPP.forEach(function(w){if(w.load<b.load)b=w;});return b;}
+function ppCallPool(m,prog){var w;try{w=ppPoolGet();}catch(e){PPPAR=1;ppPoolKill();return ppCall0(m,prog);}
+  var q=Object.assign({},m);q.urls=PPLIBS;q.id=++PPID;w.load++;w.n++;
+  function drop(){try{w.terminate();}catch(x){}PPP=PPP.filter(function(x){return x!==w;});}
+  return new Promise(function(res,rej){PPQ[q.id]={res:res,rej:rej,prog:prog,wk:w};w.postMessage(q);}).then(function(r){w.load--;if(w.n>=100&&w.load<=0)drop();return r;},function(e){w.load--;
+    if(/abort|runtime|memory|unreachable|out of bounds|null function|Worker hiba|nem tölthető/i.test(String(e&&e.message||e))){drop();if(PPPAR>1)PPPAR=Math.max(1,Math.floor(PPPAR/2));if(!m.rt)return ppCall0(Object.assign({},m,{rt:1}),prog);}
+    throw e;});}
+function ppCall0(m,prog){if(m.t==='predict'&&PPPAR>1&&PPWK&&typeof Worker!=='undefined')return ppCallPool(m,prog);
+  if(m.t==='predict'&&++PPN%100===0)ppReset();ppStart();var q=Object.assign({},m);q.urls=PPLIBS;q.id=++PPID;
   return new Promise(function(res,rej){PPQ[q.id]={res:res,rej:rej,prog:prog};if(PPW)PPW.postMessage(q);else PPH(q);}).catch(function(e){
     if(PPW&&/nem tölthető be|Worker hiba/.test(String(e&&e.message))){try{PPW.terminate();}catch(x){}PPW=null;PPWK=false;return ppCall0(m,prog);}
     if(m.t==='predict'&&!m.rt&&/abort|runtime|memory|unreachable|out of bounds|null function/i.test(String(e&&e.message||e))){ppReset();return ppCall0(Object.assign({},m,{rt:1}),prog);}
@@ -3651,7 +3665,7 @@ function ppActive(){return hgGet()==='p'&&cvGet().hv==='hu'&&ppHave()&&!PPBAD;}
 function ppLs(){return lsGet(PPHL)==='p'&&ppHave()&&!PPBAD;}
 function ppErrText(){var e=window.ppErr;return 'A letöltött magyar hang nem indult el'+(e&&e.message?' ('+String(e.message).slice(0,90)+')':'')+', ezért a telefon hangja szól.';}
 function ppGen(text,v){var k='pp|'+v+'|'+text;if(PPFL[k])return PPFL[k];
-  var p=gtGetC(k).then(function(c){if(c)return c;return ppSerial(function(){return ppCall({t:'predict',text:text,voice:v});}).then(function(r){return gtPutC(k,r.buf).then(function(){return r.buf;});});});
+  var p=gtGetC(k).then(function(c){if(c)return c;return (PPPAR>1?ppCall({t:'predict',text:text,voice:v}):ppSerial(function(){return ppCall({t:'predict',text:text,voice:v});})).then(function(r){return gtPutC(k,r.buf).then(function(){return r.buf;});});});
   PPFL[k]=p;var d=function(){delete PPFL[k];};p.then(d,d);return p;}
 var PPS=Promise.resolve(),PPBUSY=false;
 function ppSerial(f){var r=PPS.then(f,f);PPS=r.then(function(){},function(){});return r;}
@@ -4767,19 +4781,22 @@ async function pgPlan(){var keys=new Set(await hAllKeys()),texts=pgTexts(),vs=pg
   vs.forEach(function(v){texts.forEach(function(t){if(!keys.has('pp|'+v+'|'+t)){todo.push([v,t]);chars+=t.length;}});});
   var have=0;keys.forEach(function(k){if(k.indexOf('pp|')===0)have++;});try{lsSet('szokartya-pn',String(have));}catch(e){}
   return {todo:todo,total:texts.length*vs.length,chars:chars,voices:vs};}
-async function pgRun(plan,tick){PG.run=true;PG.stop=false;PG.pause=false;var n=plan.todo.length,fail=0,t0=Date.now(),done=0,last=null,skipped=0,vf={},bad={};wake();try{navigator.storage.persist();}catch(e){}lsSet('szokartya-pgrun','1');
-  for(var i=0;i<n&&!PG.stop;i++){
-    while(PG.pause&&!PG.stop)await new Promise(function(r){setTimeout(r,400);});
-    if(PG.stop)break;
-    var v=plan.todo[i][0];
-    if(bad[v]){skipped++;tick(i+1,n,Date.now()-t0);continue;}
-    try{await ppGen(plan.todo[i][1],v);done++;fail=0;vf[v]=0;if(PGSYNC&&done%50===0)PGSYNC();}
-    catch(e){fail++;last=e;skipped++;vf[v]=(vf[v]||0)+1;
-      if(vf[v]>=5){bad[v]=1;}
-      if(fail>=30)break;
-      try{ppReset();}catch(x){}}
-    tick(i+1,n,Date.now()-t0);}
-  PG.run=false;unwake();lsSet('szokartya-pgrun','');var bv=Object.keys(bad);return {done:done,n:n,stopped:PG.stop,failed:fail>=30,err:last,skipped:skipped,bad:bv};}
+async function pgRun(plan,tick){PG.run=true;PG.stop=false;PG.pause=false;var n=plan.todo.length,fail=0,t0=Date.now(),done=0,last=null,skipped=0,vf={},bad={},next=0,fin=0,giveup=false,par=Math.max(1,ppParN());wake();try{navigator.storage.persist();}catch(e){}lsSet('szokartya-pgrun','1');
+  PPPAR=PPWK?par:1;
+  function sl(ms){return new Promise(function(r){setTimeout(r,ms);});}
+  async function lane(li){if(li>0)await sl(li*1000);
+    while(!PG.stop&&!giveup){
+      while(PG.pause&&!PG.stop)await sl(400);
+      if(PG.stop)break;
+      var i=next++;if(i>=n)break;var v=plan.todo[i][0];
+      if(bad[v]){skipped++;fin++;tick(fin,n,Date.now()-t0);continue;}
+      try{await ppGen(plan.todo[i][1],v);done++;fail=0;vf[v]=0;if(PGSYNC&&done%10===0)PGSYNC();}
+      catch(e){fail++;last=e;skipped++;vf[v]=(vf[v]||0)+1;if(vf[v]>=5)bad[v]=1;if(fail>=30){giveup=true;}if(PPPAR<=1){try{ppReset();}catch(x){}}}
+      fin++;tick(fin,n,Date.now()-t0);}}
+  var lanes=[];for(var k=0;k<PPPAR;k++)lanes.push(lane(k));
+  await Promise.all(lanes);
+  PPPAR=1;ppPoolKill();
+  PG.run=false;unwake();lsSet('szokartya-pgrun','');var bv=Object.keys(bad);return {done:done,n:n,stopped:PG.stop,failed:giveup,err:last,skipped:skipped,bad:bv};}
 async function pgClearAll(onlyUnused){var texts=new Set(pgTexts()),keys=await hAllKeys(),del=[];
   keys.forEach(function(k){if(k.indexOf('pp|')!==0)return;if(!onlyUnused){del.push(k);return;}var i=k.indexOf('|',3),t=k.slice(i+1);if(!texts.has(t))del.push(k);});
   if(!del.length)return 0;var db=await gtDb();
@@ -4890,20 +4907,20 @@ async function hLoad(fl,over,prog){var dec=new TextDecoder(),have=over?null:new 
   try{var pn=lsGet('szokartya-pnote');if(pn){msg.textContent='A visszatöltött mentés idején '+pn+' hang volt eltárolva. Ezeket a Biztonsági mentés, Hangok visszatöltése fájlból gombbal töltheted vissza, vagy itt újra elkészítheted.';lsSet('szokartya-pnote','');}}catch(e){}
   who.addEventListener('change',function(){idle();});
   var SYNCED=0,SYBUSY=false,AUTO=false,SYERR='';
-  function syncOn(){var e=document.getElementById('pgSync');return !(e&&e.value==='0')&&!!(lsGet(HST)||'');}
+  var pr=document.getElementById('pgPar');if(pr){pr.value=String(ppParN());pr.addEventListener('change',function(){lsSet('szokartya-ppar',pr.value);});}
+  function syncOn(){return !!(lsGet(HST)||'');}
   function syncNow(){if(!syncOn()||SYBUSY||!AUTOUP)return Promise.resolve(0);SYBUSY=true;
     return hsUpload(function(){}).then(function(n){SYBUSY=false;SYNCED+=n||0;return n;},function(e){SYBUSY=false;if(e&&e.declined)AUTOUP=false;else SYERR=String(e&&e.message||e).slice(0,80);return 0;});}
   async function prepare(){
     if(!pgVoices().length){msg.textContent='Előbb töltsd le a Piper hangot: Hang beállítása, Magyar hang, letöltött (Piper).';return null;}
     msg.textContent='Számolás...';go.disabled=true;
-    var sd=document.getElementById('pgSync');
-    if(!(sd&&sd.value==='0')){try{msg.textContent='A Hangtár ellenőrzése, a már kész hangok letöltése...';await hsDownload(function(t){msg.textContent=t;});}catch(e){if(!(e&&e.declined))msg.textContent='Hangtár: '+String(e&&e.message||e).slice(0,100)+' (a legyártás ettől még mehet).';}}
+    try{msg.textContent='A Hangtár ellenőrzése, a már kész hangok letöltése...';await hsDownload(function(t){msg.textContent=t;});}catch(e){if(!(e&&e.declined))msg.textContent='Hangtár: '+String(e&&e.message||e).slice(0,100)+' (a legyártás ettől még mehet).';}
     var pl=await pgPlan();go.disabled=false;return pl;}
   async function runPlan(pl){
     SYNCED=0;SYERR='';AUTOUP=true;PGSYNC=syncOn()?function(){syncNow();}:null;
     go.disabled=true;pa.disabled=sp.disabled=false;bar.hidden=false;bar.value=0;
     var r=await pgRun(pl,function(i,n,ms){bar.value=100*i/n;var eta=Math.round(ms/i*(n-i)/60000);var t='Elkészült: '+i+' / '+n+(i>3?', még kb. '+eta+' perc':'')+(PG.pause?' (szünet)':'')+(PGSYNC?' · a tárban: '+SYNCED:'');msg.textContent=t;if(AUTO)ppChip(t,100*i/n);});
-    if(PGSYNC){msg.textContent='Utolsó hangok feltöltése...';await syncNow();}
+    if(PGSYNC){msg.textContent='Utolsó hangok feltöltése...';while(SYBUSY)await new Promise(function(r){setTimeout(r,200);});await syncNow();}
     PGSYNC=null;if(AUTO){ppChipHide();AUTO=false;}
     idle();pgPlan().catch(function(){});
     msg.textContent=(r.failed?'Megállt: sok egymás utáni hang nem készült el ('+String(r.err&&r.err.message||r.err).slice(0,100)+'). Zárd be és nyisd újra az appot, majd Indítás.':(r.stopped?'Leállítva: '+r.done+' hang elkészült. Az Indítással később folytatható.':'Kész: '+r.done+' hang elkészült.')+(r.skipped?' Kihagyva: '+r.skipped+' hang'+(r.bad&&r.bad.length?' (hibás hang: '+r.bad.join(', ')+', töltsd le újra a Hang beállításánál)':'')+'. Az Indítással újra megpróbálja.':''))+(SYNCED?' A tárba feltöltve: '+SYNCED+' hang.':'')+(SYERR?' Feltöltési hiba: '+SYERR+'.':'');}
@@ -4911,7 +4928,7 @@ async function hLoad(fl,over,prog){var dec=new TextDecoder(),have=over?null:new 
     if(PG.run||PPBUSY)return;
     if(!plan){plan=await prepare();if(!plan)return;
       if(!plan.todo.length){msg.textContent='Minden hang kész ('+plan.total+' hang, '+plan.voices.length+' hang).';plan=null;return;}
-      var est=plan.chars/14*44100,txt='Hiányzik '+plan.todo.length+' hang ('+plan.voices.length+' hangból). Új tárhely: kb. '+mb(est)+' MB.'+(syncOn()?' Közben 50 hangonként feltölti a Hangtárba, így megszakadás után onnan folytatódik.':'');
+      var est=plan.chars/14*44100,txt='Hiányzik '+plan.todo.length+' hang ('+plan.voices.length+' hangból). Új tárhely: kb. '+mb(est)+' MB.'+(syncOn()?' Közben 10 hangonként feltölti a Hangtárba, így megszakadás után onnan folytatódik.':'');
       try{navigator.storage.estimate().then(function(e){var free=(e.quota||0)-(e.usage||0);if(free>0&&est>free*0.8)msg.textContent=txt+' Figyelem: a szabad hely kevés lehet (kb. '+mb(free)+' MB)!';});}catch(e){}
       msg.textContent=txt+' Az Indítás gombbal kezdődik.';go.textContent='Indítás';return;}
     var pl=plan;plan=null;await runPlan(pl);});
