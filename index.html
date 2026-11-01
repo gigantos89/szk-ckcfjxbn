@@ -3599,9 +3599,34 @@ function ppStart(){
     PPW.onerror=function(){Object.keys(PPQ).forEach(function(k){var q=PPQ[k];delete PPQ[k];q.rej(new Error('Worker hiba'));});};
     return;}catch(e){PPW=null;PPWK=false;}}
   PPH=ppMk(function(x){setTimeout(function(){ppOnMsg(x);},0);});}
-function ppCall(m,prog){ppStart();var q=Object.assign({},m);q.urls=PPLIBS;q.id=++PPID;
+var ENG='szokartya-eng',PPMOBT=0,NETP=null;
+function netType(){try{var c=navigator.connection;if(!c)return 'unsupported';return c.type||'unknown';}catch(e){return 'unsupported';}}
+function netCheck(){return new Promise(function(res){
+  var t=netType(),c=navigator.connection||{};
+  if(navigator.onLine===false)return res({ok:false,why:'Nincs internetkapcsolat.'});
+  if(c.saveData)return res({ok:false,why:'Az adatforgalom-takarékos mód be van kapcsolva.'});
+  if(t==='cellular')return res({ok:false,why:'Most mobilnetet használsz, nem wifit.'});
+  if(t!=='wifi'&&t!=='ethernet')return res({ok:false,why:'Nem tudom megállapítani, hogy wifin vagy-e (a böngésző nem árulja el), ezért mobilnetnek veszem.'});
+  var ctl=typeof AbortController!=='undefined'?new AbortController():null,tm=setTimeout(function(){if(ctl)ctl.abort();},4000);
+  fetch('https://connectivitycheck.gstatic.com/generate_204?_='+Date.now(),{mode:'no-cors',cache:'no-store',signal:ctl?ctl.signal:undefined}).then(function(){clearTimeout(tm);res({ok:true,why:''});},function(){clearTimeout(tm);res({ok:false,why:'A wifi be van kapcsolva, de nincs rajta működő internet.'});});});}
+function netAsk(why,what){return new Promise(function(res){var o=document.createElement('div');o.className='rw';o.id='netmod';
+  o.innerHTML='<div class="rwbox" role="dialog" aria-modal="true"><h2>Nagy letöltés mobilneten?</h2><p></p><button class="reset" id="netGo" type="button">Letöltés most (mobilnet)</button><button class="reset" id="netNo" type="button">Megvárom a wifit</button></div>';
+  o.querySelector('p').textContent=why+' Letöltenék '+what+'. Mobilneten ez adatforgalmat fogyaszt. Folytassam?';
+  document.body.appendChild(o);o.querySelector('#netGo').addEventListener('click',function(){o.remove();res(true);});o.querySelector('#netNo').addEventListener('click',function(){o.remove();res(false);});});}
+function netEnsure(what){if(NETP)return NETP;
+  NETP=netCheck().then(function(r){if(r.ok||Date.now()-PPMOBT<600000)return;return netAsk(r.why,what).then(function(yes){if(!yes){var e=new Error('A letöltés várakozik: nem engedélyezted mobilneten.');e.declined=true;throw e;}PPMOBT=Date.now();});});
+  var done=function(){NETP=null;};NETP.then(done,done);return NETP;}
+function ppAbortNet(){try{if(PPW)PPW.terminate();}catch(e){}PPW=null;Object.keys(PPQ).forEach(function(k){var q=PPQ[k];delete PPQ[k];var e=new Error('Megszakítva: a telefon mobilnetre váltott. Wifin folytathatod.');e.net=true;q.rej(e);});}
+function ppCall(m,prog){var big=m.t==='download',eng=!lsGet(ENG)&&m.t!=='remove';
+  if(big||eng)return netEnsure(big?'egy hangfájlt (kb. 60-70 MB)':'a hangmotort (több tíz MB)').then(function(){return ppCall1(m,prog,big);});
+  return ppCall1(m,prog,false);}
+function ppCall1(m,prog,watch){var mon=null,c=null;
+  if(watch&&Date.now()-PPMOBT>=600000){try{c=navigator.connection;if(c&&c.addEventListener){mon=function(){if(!(c.type==='wifi'||c.type==='ethernet'))ppAbortNet();};c.addEventListener('change',mon);}}catch(e){}}
+  function un(){if(mon)try{c.removeEventListener('change',mon);}catch(e){}}
+  return ppCall0(m,prog).then(function(r){un();if(!lsGet(ENG))lsSet(ENG,'1');return r;},function(e){un();throw e;});}
+function ppCall0(m,prog){ppStart();var q=Object.assign({},m);q.urls=PPLIBS;q.id=++PPID;
   return new Promise(function(res,rej){PPQ[q.id]={res:res,rej:rej,prog:prog};if(PPW)PPW.postMessage(q);else PPH(q);}).catch(function(e){
-    if(PPW&&/nem tölthető be|Worker hiba/.test(String(e&&e.message))){try{PPW.terminate();}catch(x){}PPW=null;PPWK=false;return ppCall(m,prog);}
+    if(PPW&&/nem tölthető be|Worker hiba/.test(String(e&&e.message))){try{PPW.terminate();}catch(x){}PPW=null;PPWK=false;return ppCall0(m,prog);}
     throw e;});}
 function ppList(){var l=[];try{l=JSON.parse(lsGet(PPLK)||'[]');}catch(e){}return l&&l.length?l:PPDEF;}
 function ppVoice(){var l=ppList(),v=lsGet(PPVK);return l.indexOf(v)>=0?v:l[0];}
@@ -4683,7 +4708,7 @@ function ppAll(st){
 function ppStartAll(){if(PPBUSY)return;PPBUSY=true;PPBAD=false;lsSet(PPDEC,'go');wake();ppChip('Magyar hangok letöltése...',-1);
   ppAll(function(t,pc){ppChip(t,pc);}).then(function(names){PPBUSY=false;unwake();lsSet(PPDEC,'done');ppChipHide();if(window.ppUi)window.ppUi();
     ppNotice('Kész','A magyar hangok le vannak töltve ('+names+'). A hangot a Beállítások, Hang beállítása menüben választhatod ki. A Hangok előre elkészítése menüben a kártyák hangját is előre elkészítheted.');
-  }).catch(function(e){PPBUSY=false;unwake();ppChip('Nem sikerült: '+String(e&&e.message||e).slice(0,120)+'. Koppints ide az újrapróbáláshoz.',-1,true);});}
+  }).catch(function(e){if(e&&e.declined){PPBUSY=false;unwake();ppChipHide();lsSet(PPDEC,'wait');return;}PPBUSY=false;unwake();ppChip('Nem sikerült: '+String(e&&e.message||e).slice(0,120)+'. Koppints ide az újrapróbáláshoz.',-1,true);});}
 function ppWifi(){try{var c=navigator.connection;return !!(c&&(c.type==='wifi'||c.type==='ethernet'));}catch(e){return false;}}
 function ppAllHave(){return ppList().every(function(v){return ppHave(v);});}
 function ppFirst(){
@@ -4692,22 +4717,25 @@ function ppFirst(){
   if(ppAllHave())return;
   var d=lsGet(PPDEC)||'';if(d==='skip'||d==='done')return;
   if(d!=='go'&&ppDlSet().length>0)return;
-  var now=new Date(),today=now.getFullYear()+'-'+(now.getMonth()+1)+'-'+now.getDate(),wifi=ppWifi();
+  netCheck().then(function(r){
+  if(PPBUSY||document.getElementById('ppmod')||document.querySelector('.rw'))return;
+  var now=new Date(),today=now.getFullYear()+'-'+(now.getMonth()+1)+'-'+now.getDate(),wifi=r.ok;
   if(d==='wait'&&!wifi&&lsGet(PPASK)===today)return;
   lsSet(PPASK,today);
   var resume=d==='go',o=document.createElement('div');o.className='rw';o.id='ppmod';
   o.innerHTML='<div class="rwbox" role="dialog" aria-modal="true"><h2></h2><p id="ppmT"></p><button class="reset" id="ppmGo" type="button"></button><button class="reset" id="ppmWait" type="button">Megvárom a wifit</button><button class="reset" id="ppmSkip" type="button">Kilépés, a telefon hangjával folytatom</button></div>';
   o.querySelector('h2').textContent=resume?'A letöltés megszakadt':'Magyar hangok letöltése';
-  o.querySelector('#ppmT').textContent=(resume?'A magyar hangok letöltése nem fejeződött be. ':'')+(wifi?'Wifin vagy, most jó alkalom. ':'')+'A magyar felolvasáshoz hangfájlok kellenek (Imre, Anna, Berta), összesen nagyjából 200 MB. Mobilneten ez adatforgalmat fogyaszt. A letöltés a háttérben fut, közben használhatod az appot, a végén szólok.';
+  o.querySelector('#ppmT').textContent=(resume?'A magyar hangok letöltése nem fejeződött be. ':'')+(wifi?'Ellenőriztem: működő wifin vagy, most jó alkalom. ':r.why+' ')+'A magyar felolvasáshoz hangfájlok kellenek (Imre, Anna, Berta), összesen nagyjából 200 MB. Mobilneten ez adatforgalmat fogyaszt. A letöltés a háttérben fut, közben használhatod az appot, a végén szólok.';
   o.querySelector('#ppmGo').textContent=resume?'Folytatás':(wifi?'Letöltés most':'Letöltés most (mobilneten)');
   o.querySelector('#ppmWait').textContent=resume?'Később':'Megvárom a wifit';
   document.body.appendChild(o);
-  o.querySelector('#ppmGo').addEventListener('click',function(){o.remove();ppStartAll();});
+  o.querySelector('#ppmGo').addEventListener('click',function(){o.remove();if(!wifi)PPMOBT=Date.now();ppStartAll();});
   o.querySelector('#ppmWait').addEventListener('click',function(){lsSet(PPDEC,resume?'go':'wait');o.remove();});
   o.querySelector('#ppmSkip').addEventListener('click',function(){lsSet(PPDEC,'skip');o.remove();});
+  });
 }
 setTimeout(ppFirst,2500);setTimeout(ppFirst,9000);
-try{if(navigator.connection&&navigator.connection.addEventListener)navigator.connection.addEventListener('change',function(){if(lsGet(PPDEC)==='wait'&&ppWifi())setTimeout(ppFirst,800);});}catch(e){}
+try{if(navigator.connection&&navigator.connection.addEventListener)navigator.connection.addEventListener('change',function(){if(lsGet(PPDEC)==='wait')netCheck().then(function(r){if(r.ok)setTimeout(ppFirst,800);});});}catch(e){}
 window.addEventListener('online',function(){setTimeout(ppFirst,1500);});
 /* --- előre elkészítés --- */
 var PG={run:false,pause:false,stop:false,plan:null};
