@@ -3634,9 +3634,12 @@ function ppCall1(m,prog,watch){var mon=null,c=null;
   if(watch&&Date.now()-PPMOBT>=600000){try{c=navigator.connection;if(c&&c.addEventListener){mon=function(){if(!(c.type==='wifi'||c.type==='ethernet'))ppAbortNet();};c.addEventListener('change',mon);}}catch(e){}}
   function un(){if(mon)try{c.removeEventListener('change',mon);}catch(e){}}
   return ppCall0(m,prog).then(function(r){un();if(!lsGet(ENG))lsSet(ENG,'1');return r;},function(e){un();throw e;});}
-function ppCall0(m,prog){ppStart();var q=Object.assign({},m);q.urls=PPLIBS;q.id=++PPID;
+var PPN=0;
+function ppReset(){try{if(PPW)PPW.terminate();}catch(e){}PPW=null;PPH=null;Object.keys(PPQ).forEach(function(k){var q=PPQ[k];delete PPQ[k];try{q.rej(new Error('Hangmotor újraindítva'));}catch(e){}});}
+function ppCall0(m,prog){if(m.t==='predict'&&++PPN%100===0)ppReset();ppStart();var q=Object.assign({},m);q.urls=PPLIBS;q.id=++PPID;
   return new Promise(function(res,rej){PPQ[q.id]={res:res,rej:rej,prog:prog};if(PPW)PPW.postMessage(q);else PPH(q);}).catch(function(e){
     if(PPW&&/nem tölthető be|Worker hiba/.test(String(e&&e.message))){try{PPW.terminate();}catch(x){}PPW=null;PPWK=false;return ppCall0(m,prog);}
+    if(m.t==='predict'&&!m.rt&&/abort|runtime|memory|unreachable|out of bounds|null function/i.test(String(e&&e.message||e))){ppReset();return ppCall0(Object.assign({},m,{rt:1}),prog);}
     throw e;});}
 function ppList(){var l=[];try{l=JSON.parse(lsGet(PPLK)||'[]');}catch(e){}return l&&l.length?l:PPDEF;}
 function ppVoice(){var l=ppList(),v=lsGet(PPVK);return l.indexOf(v)>=0?v:l[0];}
@@ -4760,13 +4763,19 @@ async function pgPlan(){var keys=new Set(await hAllKeys()),texts=pgTexts(),vs=pg
   vs.forEach(function(v){texts.forEach(function(t){if(!keys.has('pp|'+v+'|'+t)){todo.push([v,t]);chars+=t.length;}});});
   var have=0;keys.forEach(function(k){if(k.indexOf('pp|')===0)have++;});try{lsSet('szokartya-pn',String(have));}catch(e){}
   return {todo:todo,total:texts.length*vs.length,chars:chars,voices:vs};}
-async function pgRun(plan,tick){PG.run=true;PG.stop=false;PG.pause=false;var n=plan.todo.length,fail=0,t0=Date.now(),done=0,last=null;wake();
+async function pgRun(plan,tick){PG.run=true;PG.stop=false;PG.pause=false;var n=plan.todo.length,fail=0,t0=Date.now(),done=0,last=null,skipped=0,vf={},bad={};wake();
   for(var i=0;i<n&&!PG.stop;i++){
     while(PG.pause&&!PG.stop)await new Promise(function(r){setTimeout(r,400);});
     if(PG.stop)break;
-    try{await ppGen(plan.todo[i][1],plan.todo[i][0]);done++;fail=0;}catch(e){fail++;last=e;if(fail>=4)break;}
+    var v=plan.todo[i][0];
+    if(bad[v]){skipped++;tick(i+1,n,Date.now()-t0);continue;}
+    try{await ppGen(plan.todo[i][1],v);done++;fail=0;vf[v]=0;}
+    catch(e){fail++;last=e;skipped++;vf[v]=(vf[v]||0)+1;
+      if(vf[v]>=5){bad[v]=1;}
+      if(fail>=30)break;
+      try{ppReset();}catch(x){}}
     tick(i+1,n,Date.now()-t0);}
-  PG.run=false;unwake();return {done:done,n:n,stopped:PG.stop,failed:fail>=4,err:last};}
+  PG.run=false;unwake();var bv=Object.keys(bad);return {done:done,n:n,stopped:PG.stop,failed:fail>=30,err:last,skipped:skipped,bad:bv};}
 async function pgClearAll(onlyUnused){var texts=new Set(pgTexts()),keys=await hAllKeys(),del=[];
   keys.forEach(function(k){if(k.indexOf('pp|')!==0)return;if(!onlyUnused){del.push(k);return;}var i=k.indexOf('|',3),t=k.slice(i+1);if(!texts.has(t))del.push(k);});
   if(!del.length)return 0;var db=await gtDb();
@@ -4886,7 +4895,7 @@ async function hLoad(fl,over,prog){var dec=new TextDecoder(),have=over?null:new 
     var pl=plan;plan=null;go.disabled=true;pa.disabled=sp.disabled=false;bar.hidden=false;bar.value=0;
     var r=await pgRun(pl,function(i,n,ms){bar.value=100*i/n;var eta=Math.round(ms/i*(n-i)/60000);msg.textContent='Elkészült: '+i+' / '+n+(i>3?', még kb. '+eta+' perc':'')+(PG.pause?' (szünet)':'');});
     idle();pgPlan().catch(function(){});
-    msg.textContent=r.failed?'Megállt: a hang nem készül el ('+String(r.err&&r.err.message||r.err).slice(0,100)+'). Ellenőrizd a letöltött hangot.':(r.stopped?'Leállítva: '+r.done+' mondat elkészült. Az Indítással később folytatható.':'Kész: '+r.done+' mondat elkészült.');});
+    msg.textContent=r.failed?'Megállt: sok egymás utáni hang nem készült el ('+String(r.err&&r.err.message||r.err).slice(0,100)+'). Zárd be és nyisd újra az appot, majd Indítás.':(r.stopped?'Leállítva: '+r.done+' hang elkészült. Az Indítással később folytatható.':'Kész: '+r.done+' hang elkészült.')+(r.skipped?' Kihagyva: '+r.skipped+' hang'+(r.bad&&r.bad.length?' (hibás hang: '+r.bad.join(', ')+' — töltsd le újra a Hang beállításánál)':'')+'. Az Indítással újra megpróbálja.':'');});
   pa.addEventListener('click',function(){if(!PG.run)return;PG.pause=!PG.pause;pa.textContent=PG.pause?'Folytatás':'Szünet';});
   sp.addEventListener('click',function(){PG.stop=true;PG.pause=false;});
   cl.addEventListener('click',async function(){if(PG.run)return;var n=await pgClearAll(true);msg.textContent=n?n+' nem használt hang törölve.':'Nincs nem használt hang.';pgPlan().catch(function(){});});
