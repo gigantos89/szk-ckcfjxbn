@@ -247,8 +247,13 @@ body{zoom:var(--fs,1)}
     <p class="msg" id="rwMsg" role="status"></p>
   </details>
   <details class="backup vbox"><summary>Hang beállítása</summary>
-    <p>Az „Előző hang” és „Következő hang” gombokkal válthatsz a telefonon elérhető angol hangok között (a brit hangok vannak elöl). A választott hang megmarad.</p>
+    <p>Válaszd ki az angol akcentust: a brit hang férfi, az amerikai női. Az „Előző hang” és „Következő hang” gombokkal ugyanazon az akcentuson belül válthatsz, ha több hang van a telefonon. A választás megmarad. A kártyák, a hangszóró gombok és a Hallgatás ezt a hangot használják.</p>
+    <div class="vrow"><select id="accSel" aria-label="Angol hang"><option value="gb">Angol hang: Egyesült Királyság (férfi)</option><option value="us">Angol hang: Egyesült Államok (női)</option></select></div>
     <div class="vrow"><button class="reset" id="voicePrev" type="button">Előző hang</button><button class="reset" id="voiceNext" type="button">Következő hang</button><button class="reset" id="voiceTest" type="button">Próba</button></div>
+    <p class="msg">Magyar hang (a magyarázatok és a Hallgatás magyar része):</p>
+    <div class="vrow"><button class="reset" id="huPrev" type="button">Előző magyar hang</button><button class="reset" id="huNext" type="button">Következő magyar hang</button><button class="reset" id="huTest" type="button">Próba</button></div>
+    <div class="vrow"><select id="huLow" aria-label="Magyar hang tanár úrnál"><option value="1">Magyar hang a tanár úrnál: mélyebb, férfiasabb</option><option value="0">Magyar hang a tanár úrnál: ugyanaz, mint a tanárnőnél</option></select></div>
+    <p class="msg" id="huMsg" role="status"></p>
     <div class="vrow"><select id="rateSel" aria-label="Sebesség"><option value="0.9">Sebesség: normál</option><option value="0.7">Sebesség: lassú</option></select></div>
     <div class="vrow"><select id="autoSel" aria-label="Mikor olvasson fel"><option value="0">Csak gombnyomásra</option><option value="1">Magától, amikor megfordul a kártya</option></select></div>
     <div class="vrow"><select id="whatSel" aria-label="Mit olvasson fel"><option value="w">Csak a szó / kifejezés</option><option value="s">Kifejezés + példamondat</option></select></div>
@@ -260,7 +265,6 @@ body{zoom:var(--fs,1)}
     <div class="vrow"><select id="uiWords" aria-label="Szósegítő"><option value="1">Szósegítő a kérdéseknél: be</option><option value="0">Szósegítő a kérdéseknél: ki</option></select></div>
     <p class="msg">Chat: a tanár angolul, röviden reagál és új kérdést tesz fel, magyarázat és javítás nélkül. Javítást és magyarázatot csak a „Magyarázat kérése” gombbal kapsz.</p>
     <div class="vrow"><select id="cvTeach" aria-label="Tanár"><option value="m">Beszélgetőpartner: Tanár úr</option><option value="f">Beszélgetőpartner: Tanárnő</option></select></div>
-    <div class="vrow"><select id="cvLang" aria-label="Nyelv"><option value="en-GB">Beszéd nyelve: angol (brit)</option><option value="en-US">Beszéd nyelve: angol (amerikai)</option></select></div>
     <div class="vrow"><select id="cvEng" aria-label="Felismerés módja"><option value="auto">Felismerés: automatikus</option><option value="gemini">Felismerés: felvétel + Google-kulcs (pontosabb)</option><option value="browser">Felismerés: a böngésző felismerője</option></select></div>
     <div class="vrow"><select id="cvRead" aria-label="Kérdés magyarázata"><option value="0">Kérdés magyarázata: csak a hangszóró gombbal szól</option><option value="1">Kérdés magyarázata: magától felolvassa</option></select></div>
     <div class="vrow"><select id="cvHv" aria-label="Magyarázat hangja"><option value="hu">Magyar szöveg hangja: a telefon magyar hangja</option><option value="same">Magyar szöveg hangja: ugyanaz, mint az angol</option></select></div>
@@ -3528,19 +3532,23 @@ function gPrompt(g,md,q,text,words,fup){
 })();
 var MICSVG='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg>';
 var CVK='szokartya-cv';
-function cvGet(){var o={mic:'1',lang:'en-GB',read:'0',hv:'hu',conv:'0',fup:'1',next:'0',eng:'auto',mode:'dict',teach:'m'};try{var x=JSON.parse(lsGet(CVK)||'{}');for(var k in o)if(x&&x[k]!=null)o[k]=String(x[k]);}catch(e){}return o;}
+function cvGet(){var o={mic:'1',lang:'en-GB',read:'0',hv:'hu',conv:'0',fup:'1',next:'0',eng:'auto',mode:'dict',teach:'m'};try{var x=JSON.parse(lsGet(CVK)||'{}');for(var k in o)if(x&&x[k]!=null)o[k]=String(x[k]);}catch(e){}o.lang='en-GB';return o;}
 var SRC=window.SpeechRecognition||window.webkitSpeechRecognition;
 window.CONVON=false;var CONVTOK=0,CVSTOP=null,CVLIST=null,CVMIC=null;
 function cvAlive(t){return window.CONVON&&t===CONVTOK;}
-function huVoice(){try{var all=speechSynthesis.getVoices()||[];var h=all.filter(function(v){return /^hu/i.test(v.lang);});return h.filter(function(v){return !v.localService;})[0]||h[0]||null;}catch(e){return null;}}
+function enVoiceFor(acc,g){try{var all=speechSynthesis.getVoices()||[],rx=acc==='gb'?/^en[-_]GB/i:/^en[-_]US/i;var c=all.filter(function(v){return rx.test(v.lang);});if(!c.length)return curVoice;
+  c.sort(function(a,b){function sc(v){return (vgender(v)===g?4:vgender(v)==='?'?1:0)+(/natural|neural|online/i.test(v.name)?1:0);}return sc(b)-sc(a);});return c[0];}catch(e){return curVoice;}}
+function huList(){try{return (speechSynthesis.getVoices()||[]).filter(function(v){return /^hu/i.test(v.lang);});}catch(e){return [];}}
+function huVoice(){try{var h=huList(),sv=lsGet('szokartya-hvoice'),m=h.filter(function(v){return v.voiceURI===sv;})[0];return m||h.filter(function(v){return !v.localService;})[0]||h[0]||null;}catch(e){return null;}}
 function cvChunks(t){t=String(t||'').replace(/\s+/g,' ').trim();if(!t)return [];var out=[],parts=t.match(/[^.!?;:]+[.!?;:]*\s*/g)||[t];var cur='';parts.forEach(function(p){if((cur+p).length>160&&cur){out.push(cur.trim());cur=p;}else cur+=p;});if(cur.trim())out.push(cur.trim());return out;}
 function cvSayOne(text,lang){
   return new Promise(function(res){
     if(!('speechSynthesis' in window)||!text){res();return;}
     var cv=cvGet(),u=new SpeechSynthesisUtterance(text);
     if(!voices.length)loadVoices();
-    if(lang==='hu'&&cv.hv==='hu'){var hv=huVoice();if(hv){u.voice=hv;u.lang=hv.lang;}else u.lang='hu-HU';}
-    else{if(curVoice){u.voice=curVoice;u.lang=curVoice.lang;}else u.lang=lang==='hu'?'hu-HU':'en-GB';}
+    if(lang==='hu'&&cv.hv==='hu'){var hv=huVoice();if(hv){u.voice=hv;u.lang=hv.lang;}else u.lang='hu-HU';if(cv.teach==='m'&&lsGet('szokartya-hlow')!=='0')u.pitch=0.65;}
+    else if(lang==='hu'){if(curVoice){u.voice=curVoice;u.lang=curVoice.lang;}else u.lang='hu-HU';}
+    else{var tv=cv.teach==='f'?enVoiceFor('us','f'):enVoiceFor('gb','m');if(tv){u.voice=tv;u.lang=tv.lang;}else u.lang=cv.teach==='f'?'en-US':'en-GB';}
     u.rate=vrate;var done=false;function fin(){if(!done){done=true;res();}}
     u.onend=fin;u.onerror=fin;setTimeout(fin,Math.max(6000,text.length*140));
     try{speechSynthesis.speak(u);}catch(e){fin();}});}
@@ -3773,7 +3781,7 @@ function cvBind(it){
 }
 (function(){
   var $=function(i){return document.getElementById(i);},msg=$('cvMsg');
-  var cv=cvGet();[['cvEng','eng'],['cvLang','lang'],['cvRead','read'],['cvHv','hv'],['cvMode','mode'],['cvTeach','teach']].forEach(function(x){
+  var cv=cvGet();[['cvEng','eng'],['cvRead','read'],['cvHv','hv'],['cvMode','mode'],['cvTeach','teach']].forEach(function(x){
     var el=$(x[0]);el.value=cv[x[1]];el.addEventListener('change',function(){var o=cvGet();o[x[1]]=el.value;lsSet(CVK,JSON.stringify(o));msg.textContent='Beállítás elmentve.';});});
   if(!canMic())msg.textContent='Ebben a böngészőben nincs mikrofon-hozzáférés.';
   $('cvTest').addEventListener('click',async function(){
@@ -4156,19 +4164,21 @@ function vmsg(t){var a=document.getElementById('vmsg'),b=document.getElementById
 var GKEY='szokartya-gender';
 function vgender(v){
   var n=v.name+' '+v.voiceURI;
+  if(/-x-(iob|iog|tpc|tpf|sfg)\b/i.test(n))return 'f';
+  if(/-x-(iol|iom|tpd)\b/i.test(n))return 'm';
   if(/\bmale\b|george|ryan|daniel|oliver|arthur|thomas|james|alex|fred|ralph|gbb|gbd|fis/i.test(n)&&!/female/i.test(n))return 'm';
   if(/female|hazel|sonia|libby|maisie|susan|serena|kate|martha|fiona|stephanie|amy|emma|moira|karen|samantha|zira|jenny|aria|olivia|lucy|gba|gbc|rjs/i.test(n))return 'f';
   return '?';
 }
 function loadVoices(){
   if(!('speechSynthesis' in window))return;
-  var all=speechSynthesis.getVoices()||[],g='f';
+  var all=speechSynthesis.getVoices()||[],acc=lsGet('szokartya-acc')==='us'?'us':'gb',g=acc==='gb'?'m':'f';
   var gb=all.filter(function(v){return /^en[-_]GB/i.test(v.lang);}),en=all.filter(function(v){return /^en/i.test(v.lang)&&!/^en[-_](NG|IN|AU)/i.test(v.lang)&&!/nigeria|india|australia/i.test(v.name+' '+v.voiceURI);});
   var pool=en;
-  function sc(v){return (/^en[-_]GB/i.test(v.lang)?10:0)+(vgender(v)===g?4:vgender(v)==='?'?1:0)+(/natural|neural|online/i.test(v.name)?1:0)+(v.localService?0:0);}
+  function sc(v){return ((acc==='gb'?/^en[-_]GB/i:/^en[-_]US/i).test(v.lang)?10:0)+(vgender(v)===g?4:vgender(v)==='?'?1:0)+(/natural|neural|online/i.test(v.name)?1:0)+(v.localService?0:0);}
   voices=pool.slice().sort(function(a,b){return sc(b)-sc(a);});
   var saved=lsGet(VKEY);
-  curVoice=voices.filter(function(v){return v.voiceURI===saved;})[0]||voices[0]||null;
+  curVoice=voices.filter(function(v){return v.voiceURI===saved&&(acc==='gb'?/^en[-_]GB/i:/^en[-_]US/i).test(v.lang);})[0]||voices[0]||null;
 }
 function speak(t){
   if(!('speechSynthesis' in window)){vmsg('Ez a böngésző nem tud felolvasni.');return;}
@@ -4478,7 +4488,20 @@ function renderL(){
 (function(){var c=lsCfg(),ids={lsCont:'cont',lsRep:'rep',lsGap:'gap',lsRate:'rate',lsMin:'min',lsOrd:'ord',lsWake:'wake'};
   Object.keys(ids).forEach(function(id){var e=document.getElementById(id);if(!e)return;e.value=c[ids[id]];e.addEventListener('change',function(){var o=lsCfg();o[ids[id]]=e.value;lsSet(LSK,JSON.stringify(o));if(VIEW==='home')buildHome();});});})();
 
-function mkCode(){return btoa(unescape(encodeURIComponent(JSON.stringify({v:4,cards:st,sx:SET,ed:ED,set:{limit:SET.limit,voice:lsGet(VKEY)||'',rate:vrate,auto:AUTO?1:0,what:WHAT,pref:PREF},ex:{cv:lsGet('szokartya-cv')||'',go:lsGet(GO)||'',gm:lsGet(GM)||'',ui:lsGet(UIK)||'',ls:lsGet(LSK)||'',hl:lsGet(HLK)||''}}))));}
+(function(){
+  function show(){var h=huList(),m=document.getElementById('huMsg');if(!m)return;var c=huVoice();
+    m.textContent=!h.length?'Nem található magyar hang a telefonon. Telepíts magyar hangot a telefon beszédszolgáltatásánál.':'Magyar hang: '+(c?c.name:'')+' ('+(h.indexOf(c)+1)+'/'+h.length+')'+(h.length===1?'. Csak ez az egy magyar hang van a telefonon.':'.');}
+  function step(d){var h=huList();if(!h.length){show();return;}var i=(h.indexOf(huVoice())+d+h.length)%h.length;lsSet('szokartya-hvoice',h[i].voiceURI);show();say();}
+  function say(){if(!('speechSynthesis' in window))return;try{speechSynthesis.cancel();var u=new SpeechSynthesisUtterance('Jó napot kívánok. Ez a magyar hang próbája.'),v=huVoice();if(v){u.voice=v;u.lang=v.lang;}else u.lang='hu-HU';u.rate=vrate;speechSynthesis.speak(u);}catch(e){}}
+  var as=document.getElementById('accSel');if(as){as.value=lsGet('szokartya-acc')==='us'?'us':'gb';as.addEventListener('change',function(){lsSet('szokartya-acc',as.value);lsSet(VKEY,'');loadVoices();speak('Good morning. This is the '+(as.value==='us'?'American':'British')+' voice.');var m=document.getElementById('voiceMsg');if(m&&curVoice)m.textContent='Hang: '+curVoice.name+' ('+curVoice.lang+')';});}
+  var hl=document.getElementById('huLow');if(hl){hl.value=lsGet('szokartya-hlow')==='0'?'0':'1';hl.addEventListener('change',function(){lsSet('szokartya-hlow',hl.value);});}
+  var a=document.getElementById('huPrev');if(!a)return;
+  a.addEventListener('click',function(){step(-1);});document.getElementById('huNext').addEventListener('click',function(){step(1);});document.getElementById('huTest').addEventListener('click',function(){show();say();});
+  document.querySelector('details.vbox').addEventListener('toggle',show);
+  if('speechSynthesis' in window){var o=speechSynthesis.onvoiceschanged;speechSynthesis.onvoiceschanged=function(){if(o)o();show();};}
+  setTimeout(show,800);
+})();
+function mkCode(){return btoa(unescape(encodeURIComponent(JSON.stringify({v:4,cards:st,sx:SET,ed:ED,set:{limit:SET.limit,voice:lsGet(VKEY)||'',rate:vrate,auto:AUTO?1:0,what:WHAT,pref:PREF},ex:{cv:lsGet('szokartya-cv')||'',go:lsGet(GO)||'',gm:lsGet(GM)||'',ui:lsGet(UIK)||'',ls:lsGet(LSK)||'',hl:lsGet(HLK)||'',acc:lsGet('szokartya-acc')||'',hv:lsGet('szokartya-hvoice')||'',hlow:lsGet('szokartya-hlow')||''}}))));}
 function dlBackup(){var code=mkCode(),d=new Date(),n='szokartya_mentes_'+d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2)+'.txt';
   try{var bl=new Blob([code],{type:'text/plain'}),a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download=n;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},4000);return n;}catch(e){return '';}}
 window.dlBackup=dlBackup;
@@ -4501,7 +4524,7 @@ document.getElementById('bLoad').addEventListener('click',function(){
       if(q.voice)lsSet(VKEY,q.voice);if(q.rate===0.7||q.rate===0.9){vrate=q.rate;lsSet(RKEY,String(vrate));document.getElementById('rateSel').value=String(vrate);}
       AUTO=q.auto==1;lsSet('szokartya-auto',AUTO?'1':'0');document.getElementById('autoSel').value=AUTO?'1':'0';
       WHAT=q.what==='s'?'s':'w';lsSet('szokartya-what',WHAT);document.getElementById('whatSel').value=WHAT;loadVoices();if(q.pref)setPref(q.pref);}
-    var rl=false;if(o.ex){try{if(o.ex.cv)lsSet('szokartya-cv',o.ex.cv);if(o.ex.go)lsSet(GO,o.ex.go);if(o.ex.gm)lsSet(GM,o.ex.gm);if(o.ex.ui)lsSet(UIK,o.ex.ui);if(o.ex.ls)lsSet(LSK,o.ex.ls);if(o.ex.hl)lsSet(HLK,o.ex.hl);rl=true;}catch(e){}}
+    var rl=false;if(o.ex){try{if(o.ex.cv)lsSet('szokartya-cv',o.ex.cv);if(o.ex.go)lsSet(GO,o.ex.go);if(o.ex.gm)lsSet(GM,o.ex.gm);if(o.ex.ui)lsSet(UIK,o.ex.ui);if(o.ex.ls)lsSet(LSK,o.ex.ls);if(o.ex.acc)lsSet('szokartya-acc',o.ex.acc);if(o.ex.hv)lsSet('szokartya-hvoice',o.ex.hv);if(o.ex.hlow)lsSet('szokartya-hlow',o.ex.hlow);if(o.ex.hl)lsSet(HLK,o.ex.hl);rl=true;}catch(e){}}
     queued=true;flush();render();if(rl)setTimeout(function(){location.reload();},1200);
     msg.textContent=n?('Visszatöltve: '+n+' kártya haladása frissült. A meglévő haladásod megmaradt.'):'Nincs újabb adat a kódban, a haladásod változatlan.';
   }catch(e){msg.textContent='A kód nem olvasható. Másold be teljes egészében.';}
