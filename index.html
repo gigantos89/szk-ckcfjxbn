@@ -3635,7 +3635,7 @@ function netAsk(why,what,verb,cur,unk){return new Promise(function(res){var o=do
   o.querySelector('#netWifi').addEventListener('click',function(){o.remove();res(true);});
   o.querySelector('#netGo').addEventListener('click',function(){o.remove();res(true);});o.querySelector('#netNo').addEventListener('click',function(){o.remove();res(false);});});}
 function netEnsure(what,verb,mb){if(mb&&mb<=3)return Promise.resolve();if(NETP)return NETP;
-  NETP=netCheck().then(function(r){if(r.ok||Date.now()-PPMOBT<600000)return;return netAsk(r.why,what,verb,r.cur,r.unk).then(function(yes){try{klog('hálózat','mobilnet engedély ('+what+'): '+(yes?'igen':'nem'));}catch(x){}if(!yes){var e=new Error('A letöltés várakozik: nem engedélyezted mobilneten.');e.declined=true;throw e;}PPMOBT=Date.now();});});
+  NETP=netCheck().then(function(r){if(r.ok||Date.now()-PPMOBT<600000||(r.unk&&Date.now()-KWIFI<21600000)||(r.cur==='mobilnet'&&Date.now()-KMOB<3600000))return;return netAsk(r.why,what,verb,r.cur,r.unk).then(function(yes){try{klog('hálózat','mobilnet engedély ('+what+'): '+(yes?'igen':'nem'));}catch(x){}if(!yes){var e=new Error('A letöltés várakozik: nem engedélyezted mobilneten.');e.declined=true;throw e;}PPMOBT=Date.now();});});
   var done=function(){NETP=null;};NETP.then(done,done);return NETP;}
 function ppAbortNet(){try{if(PPW)PPW.terminate();}catch(e){}PPW=null;Object.keys(PPQ).forEach(function(k){var q=PPQ[k];delete PPQ[k];var e=new Error('Megszakítva: a telefon mobilnetre váltott. Wifin folytathatod.');e.net=true;q.rej(e);});}
 function ppCall(m,prog){var big=m.t==='download',eng=!lsGet(ENG)&&m.t!=='remove';
@@ -4766,6 +4766,12 @@ function kNext(){if(KSHOW||!KQ.length)return;var q=KQ.shift();KSHOW=q;var d=docu
   if(q.btn){var b=document.createElement('button');b.type='button';b.className='reset';b.style.cssText=bs;b.textContent=q.btn;b.addEventListener('click',function(){close();try{if(q.fn)q.fn();}catch(e){}});d.appendChild(b);}
   var x=document.createElement('button');x.type='button';x.className='reset';x.style.cssText=bs;x.textContent='×';x.setAttribute('aria-label','Bezár');x.addEventListener('click',function(){close();try{if(q.later)q.later();}catch(e){}});d.appendChild(x);
   kBars().appendChild(d);}
+function kModal(id,title,text,btns){if(document.querySelector('.rw'))return false;var o=document.createElement('div');o.className='rw';o.id=id;
+  o.innerHTML='<div class="rwbox" role="dialog" aria-modal="true"><h2></h2><p></p></div>';o.querySelector('h2').textContent=title;o.querySelector('p').textContent=text;
+  btns.forEach(function(b){var x=document.createElement('button');x.type='button';x.className='reset';x.textContent=b.t;x.addEventListener('click',function(){o.remove();try{if(b.fn)b.fn();}catch(e){}});o.querySelector('.rwbox').appendChild(x);});
+  document.body.appendChild(o);return true;}
+function kOpenHs(){try{var w=document.getElementById('setWrap');if(w&&w.hidden){var bb=Array.prototype.filter.call(document.querySelectorAll('button'),function(x){return /^⚙ Beállítások megnyitása/.test(x.textContent);})[0];if(bb)bb.click();}var bx=document.getElementById('hsBox');if(bx){bx.open=true;bx.scrollIntoView({block:'start'});}}catch(e){}}
+var KWIFI=0,KMOB=0;
 function hsToast(t,ms){try{ppChip(t,-1);setTimeout(function(){var c=document.getElementById('ppChip');if(c&&!PG.run&&!PPBUSY&&c.firstChild&&c.firstChild.textContent===t)ppChipHide();},ms||7000);}catch(e){}}
 async function hsMan(){try{return JSON.parse(new TextDecoder().decode(await hsFetch('manifest.json',true)));}catch(e){return {clips:{},fail:String(e&&e.message||e).slice(0,80)};}}
 function hsCount(M){var n=0;Object.keys(M.clips||{}).forEach(function(v){n+=Object.keys(M.clips[v]).length;});return n;}
@@ -4786,9 +4792,16 @@ async function kHang(r,M){
   klog('hangtár','a tárban '+cnt+' hang; helyben hiányzik: '+loc+'; a tárból hiányzik: '+gap);
   if(loc>0&&!M.fail){try{var g=await hsDownload(function(t,pc){ppChip(t,pc);});ppChipHide();klog('hangtár','letöltve: '+g.got);}catch(e){ppChipHide();klog('hangtár',e&&e.declined?'letöltés várakozik: nem engedélyezted mobilneten':'letöltés megszakadt: '+String(e&&e.message||e).slice(0,100));}}
   if(!gap){lsSet('szokartya-pgrun','');hsToast('Hangtár: '+cnt+' hang van a tárolóban.');return;}
-  if(!(lsGet(HST)||'')){klog('hangtár','nincs GitHub kulcs, nem töltök fel');hsToast('Hangtár: '+cnt+' hang a tárolóban, '+gap+' hiányzik.',9000);return;}
-  if(!r.ok){klog('hangtár','nincs ellenőrzött wifi, nem generálok: '+r.why);hsToast('Hangtár: '+cnt+' hang, '+gap+' hiányzik (wifin automatikusan elkészül).',9000);return;}
-  if(!ppHave(ppVoice())){klog('hangtár','a hiányzó hangokhoz kell a hangmodell');if(lsGet(PPDEC)!=='skip')kBar('ppo','A '+gap+' hiányzó hang elkészítéséhez le kell tölteni a magyar hangmodellt (kb. 200 MB).','Letöltés',ppOfferGo,function(){});return;}
+  var why=[];if(!(lsGet(HST)||''))why.push('nincs GitHub kulcs megadva');if(!r.ok)why.push(r.cur==='mobilnet'?'mobilneten vagy, nem wifin':(r.unk?'nem tudom, hogy wifin vagy-e':r.why.replace(/\.$/,'').toLowerCase()));
+  if(why.length){klog('hangtár','nem generálok: '+why.join('; '));
+    if(lsGet('szokartya-hsnz')!==kDay()){var tok=!!(lsGet(HST)||''),bt=[];
+      if(!tok)bt.push({t:'Kulcs megadása',fn:kOpenHs});
+      if(tok&&!r.ok&&r.unk)bt.push({t:'A jelenlegi wifit használom',fn:function(){KWIFI=Date.now();klog('hálózat','te megerősítetted: wifin vagy');kRun('wifi megerősítve');}});
+      if(tok&&!r.ok&&!r.unk&&r.cur==='mobilnet')bt.push({t:'Folytatás mobilneten',fn:function(){KMOB=Date.now();PPMOBT=Date.now();klog('hálózat','te engedélyezted a mobilnetet');kRun('mobilnet engedélyezve');}});
+      bt.push({t:'Megvárom a wifit',fn:function(){}});bt.push({t:'Ma ne kérdezz többet',fn:function(){lsSet('szokartya-hsnz',kDay());}});
+      kModal('hsw','Hangtár: '+gap+' hang hiányzik','A tárban '+cnt+' hang van, '+gap+' hiányzik. Automatikusan nem készül el, mert '+why.join(' és ')+'. Jelenlegi kapcsolat: '+r.cur+'.',bt);}
+    return;}
+  if(!ppHave(ppVoice())){klog('hangtár','a hiányzó hangokhoz kell a hangmodell');if(lsGet(PPDEC)!=='skip'&&lsGet('szokartya-hsnz')!==kDay())kModal('ppo','Hangmodell letöltése','A '+gap+' hiányzó hang elkészítéséhez le kell tölteni a magyar hangmodellt (kb. 200 MB). Jelenlegi kapcsolat: '+r.cur+'.',[{t:'Letöltés most',fn:ppOfferGo},{t:'Később',fn:function(){}},{t:'Ma ne kérdezz többet',fn:function(){lsSet('szokartya-hsnz',kDay());}}]);return;}
   klog('hangtár','generálás és feltöltés indul: '+gap+' hiányzó hang');
   await window.pgResume();await hsCountToast();}
 async function kRun(why){
@@ -4797,7 +4810,7 @@ async function kRun(why){
     klog('karmester','futás: '+why);kWeekly();
     try{if(navigator.serviceWorker){var rg=await navigator.serviceWorker.getRegistration();if(rg)rg.update().catch(function(){});}}catch(e){}
     if(navigator.onLine===false){klog('hálózat','nincs kapcsolat');return;}
-    var rp=netCheck(),mp=hsMan(),r=await rp;klog('hálózat',r.cur+(r.ok?' (rendben)':' ('+r.why+')'));
+    var rp=netCheck(),mp=hsMan(),r=await rp;if(!r.ok&&r.unk&&Date.now()-KWIFI<21600000){r.ok=true;r.cur='wifi (te megerősítetted)';}if(!r.ok&&r.cur==='mobilnet'&&Date.now()-KMOB<600000){r.ok=true;r.cur='mobilnet (te engedélyezted)';}klog('hálózat',r.cur+(r.ok?' (rendben)':' ('+r.why+')'));
     if(lsGet(PPDEC)==='go'&&!ppAllHave()){if(r.ok){klog('hangmodell','a megszakadt letöltés folytatódik');ppStartAll();return;}kBar('ppr','A hangmodell letöltése megszakadt.','Folytatás',ppOfferGo,function(){});}
     await kHang(r,await mp);
   }catch(e){klog('hiba',String(e&&e.message||e).slice(0,120));}
