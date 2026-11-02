@@ -308,7 +308,7 @@ body{zoom:var(--fs,1)}
   <details class="backup" id="pgBox"><summary>Hangok előre elkészítése</summary>
     <p>Elkészíti és eltárolja a telefonon a magyar szavak és a beszélgetés magyar mondatainak hangját az összes kártyához, hogy lejátszáskor ne kelljen várni. Előbb töltsd le a Piper hangot (Hang beállítása). Közben tartsd nyitva az appot, érdemes töltőre tenni a telefont. Ha a Hangtárban el van mentve a GitHub kulcs, a kész hangokat 10 hangonként automatikusan feltölti a Hangtárba, induláskor pedig automatikusan letölti a már feltöltötteket, így megszakadás után onnan folytatódik.</p>
     <div class="vrow"><select id="pgWho" aria-label="Mely hangokkal"><option value="s">Mely hangokkal: a kiválasztott hanggal</option><option value="a">Mely hangokkal: az összes letöltött hanggal</option></select></div>
-        <div class="vrow"><select id="pgPar" aria-label="Párhuzamos hangmotorok"><option value="1">Párhuzamos hangmotorok: 1 (lassú, kímélő)</option><option value="2">Párhuzamos hangmotorok: 2</option><option value="4">Párhuzamos hangmotorok: 4 (ajánlott)</option><option value="6">Párhuzamos hangmotorok: 6 (turbó, sok memória, melegszik)</option></select></div>
+        <div class="vrow"><select id="pgPar" aria-label="Párhuzamos hangmotorok"><option value="a">Hangmotorok: automatikus (ajánlott, a telefonhoz és az akkuhoz igazítja)</option><option value="1">Hangmotorok: 1 (lassú, kímélő)</option><option value="2">Hangmotorok: 2</option><option value="4">Hangmotorok: 4</option><option value="6">Hangmotorok: 6 (erős, megterhelő)</option></select></div>
     <div class="vrow"><button class="reset" id="pgGo" type="button">Becslés</button><button class="reset" id="pgPause" type="button" disabled>Szünet</button><button class="reset" id="pgStop" type="button" disabled>Leállítás</button></div>
     <progress id="pgBar" max="100" value="0" hidden style="width:100%"></progress>
     <p class="msg" id="pgMsg" role="status"></p>
@@ -385,6 +385,12 @@ body{zoom:var(--fs,1)}
     <p class="msg" id="hMsg" role="status"></p>
     <textarea id="code" rows="3" spellcheck="false" placeholder="Ide kerül a mentési kód. Visszatöltéshez illeszd be ide, majd nyomd meg a Visszatöltés gombot."></textarea>
     <p class="msg" id="msg" role="status"></p>
+  </details>
+  <details class="backup" id="klBox"><summary>Karmester napló (7 nap)</summary>
+    <p class="msg">A háttérfeladatok naplója. 7 napnál régebbi sorok magától törlődnek. Másolással elküldheted nekem.</p>
+    <div class="vrow"><button class="reset" id="klCopy" type="button">Másolás</button><button class="reset" id="klRun" type="button">Karmester futtatása most</button><button class="reset" id="klClr" type="button">Napló törlése</button></div>
+    <div id="klWrap" style="max-height:40vh;overflow:auto;border:1px solid rgba(128,128,128,.4);border-radius:8px"><table id="klTab" style="width:100%;border-collapse:collapse;font-size:.8rem"><thead><tr><th style="text-align:left;padding:4px">Idő</th><th style="text-align:left;padding:4px">Feladat</th><th style="text-align:left;padding:4px">Üzenet</th></tr></thead><tbody></tbody></table></div>
+    <p class="msg" id="klMsg" role="status"></p>
   </details>
 </div>
 <script>
@@ -3628,8 +3634,8 @@ function netAsk(why,what,verb,cur,unk){return new Promise(function(res){var o=do
   document.body.appendChild(o);
   o.querySelector('#netWifi').addEventListener('click',function(){o.remove();res(true);});
   o.querySelector('#netGo').addEventListener('click',function(){o.remove();res(true);});o.querySelector('#netNo').addEventListener('click',function(){o.remove();res(false);});});}
-function netEnsure(what,verb){if(NETP)return NETP;
-  NETP=netCheck().then(function(r){if(r.ok||Date.now()-PPMOBT<600000)return;return netAsk(r.why,what,verb,r.cur,r.unk).then(function(yes){if(!yes){var e=new Error('A letöltés várakozik: nem engedélyezted mobilneten.');e.declined=true;throw e;}PPMOBT=Date.now();});});
+function netEnsure(what,verb,mb){if(mb&&mb<=3)return Promise.resolve();if(NETP)return NETP;
+  NETP=netCheck().then(function(r){if(r.ok||Date.now()-PPMOBT<600000)return;return netAsk(r.why,what,verb,r.cur,r.unk).then(function(yes){try{klog('hálózat','mobilnet engedély ('+what+'): '+(yes?'igen':'nem'));}catch(x){}if(!yes){var e=new Error('A letöltés várakozik: nem engedélyezted mobilneten.');e.declined=true;throw e;}PPMOBT=Date.now();});});
   var done=function(){NETP=null;};NETP.then(done,done);return NETP;}
 function ppAbortNet(){try{if(PPW)PPW.terminate();}catch(e){}PPW=null;Object.keys(PPQ).forEach(function(k){var q=PPQ[k];delete PPQ[k];var e=new Error('Megszakítva: a telefon mobilnetre váltott. Wifin folytathatod.');e.net=true;q.rej(e);});}
 function ppCall(m,prog){var big=m.t==='download',eng=!lsGet(ENG)&&m.t!=='remove';
@@ -3642,7 +3648,9 @@ function ppCall1(m,prog,watch){var mon=null,c=null;
 var PPN=0;
 function ppReset(){try{if(PPW)PPW.terminate();}catch(e){}PPW=null;PPH=null;Object.keys(PPQ).forEach(function(k){var q=PPQ[k];delete PPQ[k];try{q.rej(new Error('Hangmotor újraindítva'));}catch(e){}});}
 var PPP=[],PPPAR=1;
-function ppParN(){var v=parseInt(lsGet('szokartya-ppar')||'4',10);return [1,2,4,6].indexOf(v)>=0?v:4;}
+function ppParMode(){var v=lsGet('szokartya-ppar')||'a';return ['a','1','2','4','6'].indexOf(v)>=0?v:'a';}
+function ppAutoCap(){var hw=navigator.hardwareConcurrency||4,mem=navigator.deviceMemory||4,c=hw>=8&&mem>=6?6:(hw>=6?4:2),lim=parseInt(lsGet('szokartya-parcap')||'0',10);if(lim>0)c=Math.min(c,lim);return c;}
+function ppParN(){var m=ppParMode();return m==='a'?ppAutoCap():parseInt(m,10);}
 function ppPoolKill(){PPP.forEach(function(w){try{w.terminate();}catch(e){}});PPP=[];}
 function ppPoolGet(){if(PPP.length<PPPAR){var src='var mk='+ppMk.toString()+';var h=mk(function(x,t){postMessage(x,t||[]);});onmessage=function(e){h(e.data);};',w=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));
     w.load=0;w.n=0;w.onmessage=function(e){ppOnMsg(e.data);};
@@ -4743,55 +4751,73 @@ function ppStartAll(){if(PPBUSY)return;PPBUSY=true;PPBAD=false;lsSet(PPDEC,'go')
   }).catch(function(e){if(e&&e.declined){PPBUSY=false;unwake();ppChipHide();lsSet(PPDEC,'wait');return;}PPBUSY=false;unwake();ppChip('Nem sikerült: '+String(e&&e.message||e).slice(0,120)+'. Koppints ide az újrapróbáláshoz.',-1,true);});}
 function ppWifi(){try{var c=navigator.connection;return !!(c&&(c.type==='wifi'||c.type==='ethernet'));}catch(e){return false;}}
 function ppAllHave(){return ppList().every(function(v){return ppHave(v);});}
-function ppFirst(){
-  if(location.protocol.indexOf('http')!==0||PPBUSY||navigator.onLine===false)return;
-  if(document.getElementById('ppmod')||document.querySelector('.rw'))return;
-  if(ppAllHave())return;
-  var d=lsGet(PPDEC)||'';if(d==='skip'||d==='done')return;
-  if(d!=='go'&&ppDlSet().length>0)return;
-  netCheck().then(function(r){
-  if(PPBUSY||document.getElementById('ppmod')||document.querySelector('.rw'))return;
-  var now=new Date(),today=now.getFullYear()+'-'+(now.getMonth()+1)+'-'+now.getDate(),wifi=r.ok;
-  if(d==='wait'&&!wifi&&lsGet(PPASK)===today)return;
-  lsSet(PPASK,today);
-  var resume=d==='go',o=document.createElement('div');o.className='rw';o.id='ppmod';
-  o.innerHTML='<div class="rwbox" role="dialog" aria-modal="true"><h2></h2><p id="ppmT"></p><button class="reset" id="ppmGo" type="button"></button><button class="reset" id="ppmWifi" type="button" hidden>A jelenlegi wifit használom</button><button class="reset" id="ppmWait" type="button">Megvárom a wifit</button><button class="reset" id="ppmSkip" type="button">Kilépés, a telefon hangjával folytatom</button></div>';
-  o.querySelector('h2').textContent=resume?'A letöltés megszakadt':'Magyar hangok letöltése';
-  o.querySelector('#ppmT').textContent=(resume?'A magyar hangok letöltése nem fejeződött be. ':'')+(wifi?'Ellenőriztem: működő wifin vagy, most jó alkalom. ':r.why+' ')+'Jelenlegi kapcsolat: '+r.cur+'. '+'A magyar felolvasáshoz hangfájlok kellenek (Imre, Anna, Berta), összesen nagyjából 200 MB. Mobilneten ez adatforgalmat fogyaszt. A letöltés a háttérben fut, közben használhatod az appot, a végén szólok.';
-  o.querySelector('#ppmGo').textContent=resume?'Folytatás':(wifi?'Letöltés most':'Letöltés most (mobilneten)');
-  o.querySelector('#ppmWait').textContent=resume?'Később':'Megvárom a wifit';
-  document.body.appendChild(o);
-  if(r.unk)o.querySelector('#ppmWifi').hidden=false;
-  o.querySelector('#ppmWifi').addEventListener('click',function(){o.remove();PPMOBT=Date.now();ppStartAll();});
-  o.querySelector('#ppmGo').addEventListener('click',function(){o.remove();if(!wifi)PPMOBT=Date.now();ppStartAll();});
-  o.querySelector('#ppmWait').addEventListener('click',function(){lsSet(PPDEC,resume?'go':'wait');o.remove();});
-  o.querySelector('#ppmSkip').addEventListener('click',function(){lsSet(PPDEC,'skip');o.remove();});
-  });
-}
-/* --- Hangtár: automatikus indítás --- */
-var HSAUTO=false;
+/* --- Karmester: az indulási és háttérfeladatok egy helyen --- */
+var KRUN=false,KLAST=0,KQ=[],KSHOW=null;
+function kDay(){var n=new Date();return n.getFullYear()+'-'+('0'+(n.getMonth()+1)).slice(-2)+'-'+('0'+n.getDate()).slice(-2);}
+function klogGet(){try{var a=JSON.parse(lsGet('szokartya-klog')||'[]');return Array.isArray(a)?a:[];}catch(e){return [];}}
+function klog(k,m){try{var a=klogGet(),now=Date.now(),cut=now-7*86400000;a=a.filter(function(x){return x.t>cut;});a.push({t:now,k:k,m:String(m).slice(0,200)});if(a.length>400)a=a.slice(-400);lsSet('szokartya-klog',JSON.stringify(a));if(window.klUi)window.klUi();}catch(e){}}
+function kBars(){var b=document.getElementById('kBars');if(!b){b=document.createElement('div');b.id='kBars';b.style.cssText='position:fixed;left:8px;right:8px;bottom:calc(64px + env(safe-area-inset-bottom,0px));z-index:59;display:flex;flex-direction:column;gap:6px';document.body.appendChild(b);}return b;}
+function kBar(id,text,btn,fn,later){if(KSHOW&&KSHOW.id===id)return;for(var i=0;i<KQ.length;i++)if(KQ[i].id===id)return;KQ.push({id:id,text:text,btn:btn,fn:fn,later:later});kNext();}
+function kNext(){if(KSHOW||!KQ.length)return;var q=KQ.shift();KSHOW=q;var d=document.createElement('div');d.id='kbar-'+q.id;
+  d.style.cssText='background:var(--card);color:var(--fg);border:1px solid rgba(128,128,128,.5);border-radius:12px;padding:8px 12px;font-size:.9rem;box-shadow:0 4px 16px rgba(0,0,0,.35);display:flex;gap:8px;align-items:center';
+  var sp=document.createElement('span');sp.style.flex='1';sp.textContent=q.text;d.appendChild(sp);
+  function close(){d.remove();KSHOW=null;kNext();}
+  var bs='width:auto;margin:0;padding:6px 10px;flex:none';
+  if(q.btn){var b=document.createElement('button');b.type='button';b.className='reset';b.style.cssText=bs;b.textContent=q.btn;b.addEventListener('click',function(){close();try{if(q.fn)q.fn();}catch(e){}});d.appendChild(b);}
+  var x=document.createElement('button');x.type='button';x.className='reset';x.style.cssText=bs;x.textContent='×';x.setAttribute('aria-label','Bezár');x.addEventListener('click',function(){close();try{if(q.later)q.later();}catch(e){}});d.appendChild(x);
+  kBars().appendChild(d);}
 function hsToast(t,ms){try{ppChip(t,-1);setTimeout(function(){var c=document.getElementById('ppChip');if(c&&!PG.run&&!PPBUSY&&c.firstChild&&c.firstChild.textContent===t)ppChipHide();},ms||7000);}catch(e){}}
-async function hsMan(){try{return JSON.parse(new TextDecoder().decode(await hsFetch('manifest.json',true)));}catch(e){return {clips:{}};}}
+async function hsMan(){try{return JSON.parse(new TextDecoder().decode(await hsFetch('manifest.json',true)));}catch(e){return {clips:{},fail:String(e&&e.message||e).slice(0,80)};}}
 function hsCount(M){var n=0;Object.keys(M.clips||{}).forEach(function(v){n+=Object.keys(M.clips[v]).length;});return n;}
 async function hsCountToast(){try{var M=await hsMan();hsToast('Hangtár: '+hsCount(M)+' hang van a tárolóban.');}catch(e){}}
-async function hsStartup(){
-  if(HSAUTO||PG.run||PPBUSY)return;
-  if(document.querySelector('.rw')||!window.pgResume)return;
-  HSAUTO=true;
+function ppOfferGo(){netCheck().then(function(r){if(r.ok){ppStartAll();return;}netAsk(r.why,'a magyar hangmodelleket (kb. 200 MB)','Letöltenék',r.cur,r.unk).then(function(y){if(y){PPMOBT=Date.now();ppStartAll();}});});}
+function kWeekly(){var RK='szokartya-rem',now=new Date(),last=lsGet(RK)||'';
+  if(!last){lsSet(RK,kDay());return;}
+  var days=(now-new Date(last+'T00:00:00'))/86400000,due=days>=7||(now.getDay()===0&&now.getHours()>=20&&last!==kDay());
+  if(!due||lsGet('szokartya-remsnz')===kDay())return;
+  kBar('bk','Ideje biztonsági mentést készíteni a haladásodról.','Mentés fájlba',function(){var n=window.dlBackup?window.dlBackup():'';klog('mentés',n?'heti mentés kész: '+n:'a mentés nem sikerült');kBar('bk2',n?('Kész: '+n+' a Letöltések mappában van.'):'A mentés nem sikerült. Beállítások, Biztonsági mentés.');},function(){lsSet('szokartya-remsnz',kDay());});}
+function kInit(){var L=parseInt(lsGet('szokartya-parlive')||'0',10);
+  if(L){lsSet('szokartya-parlive','');klog('hang','az előző generálás váratlanul leállt ('+L+' szálnál)');if(ppParMode()==='a'&&L>=4){var nc=L>=6?4:2;lsSet('szokartya-parcap',String(nc));klog('hang','automata szálszám-korlát mostantól: '+nc);}}
+  klog('karmester','app indul, '+(navigator.hardwareConcurrency||'?')+' mag, '+(navigator.deviceMemory||'?')+' GB RAM');}
+async function kHang(r,M){
+  var cnt=hsCount(M),texts=pgTexts(),vs=pgVoices(),vs2=vs.length?vs:[ppVoice()],keys=new Set(await hAllKeys()),loc=0,gap=0;
+  if(M.fail)klog('hangtár','nincs még manifest, vagy a tároló nem érhető el ('+M.fail+'), üresnek veszem');
+  vs2.forEach(function(v){var cl=(M.clips||{})[v]||{};texts.forEach(function(t){var inM=!!cl[hsHash(t)];if(inM&&!keys.has('pp|'+v+'|'+t))loc++;if(!inM)gap++;});});
+  klog('hangtár','a tárban '+cnt+' hang; helyben hiányzik: '+loc+'; a tárból hiányzik: '+gap);
+  if(loc>0&&!M.fail){try{var g=await hsDownload(function(t,pc){ppChip(t,pc);});ppChipHide();klog('hangtár','letöltve: '+g.got);}catch(e){ppChipHide();klog('hangtár',e&&e.declined?'letöltés várakozik: nem engedélyezted mobilneten':'letöltés megszakadt: '+String(e&&e.message||e).slice(0,100));}}
+  if(!gap){lsSet('szokartya-pgrun','');hsToast('Hangtár: '+cnt+' hang van a tárolóban.');return;}
+  if(!(lsGet(HST)||'')){klog('hangtár','nincs GitHub kulcs, nem töltök fel');hsToast('Hangtár: '+cnt+' hang a tárolóban, '+gap+' hiányzik.',9000);return;}
+  if(!r.ok){klog('hangtár','nincs ellenőrzött wifi, nem generálok: '+r.why);hsToast('Hangtár: '+cnt+' hang, '+gap+' hiányzik (wifin automatikusan elkészül).',9000);return;}
+  if(!ppHave(ppVoice())){klog('hangtár','a hiányzó hangokhoz kell a hangmodell');if(lsGet(PPDEC)!=='skip')kBar('ppo','A '+gap+' hiányzó hang elkészítéséhez le kell tölteni a magyar hangmodellt (kb. 200 MB).','Letöltés',ppOfferGo,function(){});return;}
+  klog('hangtár','generálás és feltöltés indul: '+gap+' hiányzó hang');
+  await window.pgResume();await hsCountToast();}
+async function kRun(why){
+  if(KRUN||PG.run||PPBUSY)return;KRUN=true;KLAST=Date.now();
   try{
-    var M=await hsMan(),cnt=hsCount(M),vs=pgVoices(),texts=pgTexts(),miss=0;
-    vs.forEach(function(v){var cl=(M.clips||{})[v]||{};texts.forEach(function(t){if(!cl[hsHash(t)])miss++;});});
-    if(!vs.length||!miss){if(!miss)lsSet('szokartya-pgrun','');hsToast('Hangtár: '+cnt+' hang van a tárolóban.');return;}
-    var r=await netCheck();
-    if(!(lsGet(HST)||'')||!r.ok){hsToast('Hangtár: '+cnt+' hang a tárolóban, '+miss+' hiányzik'+(r.ok?'.':' (wifin és GitHub kulccsal automatikusan elkészül).'),9000);return;}
-    await window.pgResume();
-    await hsCountToast();
-  }catch(e){}
-}
-setTimeout(hsStartup,6000);setTimeout(hsStartup,40000);
-setTimeout(ppFirst,2500);setTimeout(ppFirst,9000);
-try{if(navigator.connection&&navigator.connection.addEventListener)navigator.connection.addEventListener('change',function(){if(lsGet(PPDEC)==='wait')netCheck().then(function(r){if(r.ok)setTimeout(ppFirst,800);});});}catch(e){}
-window.addEventListener('online',function(){setTimeout(ppFirst,1500);});
+    klog('karmester','futás: '+why);kWeekly();
+    try{if(navigator.serviceWorker){var rg=await navigator.serviceWorker.getRegistration();if(rg)rg.update().catch(function(){});}}catch(e){}
+    if(navigator.onLine===false){klog('hálózat','nincs kapcsolat');return;}
+    var rp=netCheck(),mp=hsMan(),r=await rp;klog('hálózat',r.cur+(r.ok?' (rendben)':' ('+r.why+')'));
+    if(lsGet(PPDEC)==='go'&&!ppAllHave()){if(r.ok){klog('hangmodell','a megszakadt letöltés folytatódik');ppStartAll();return;}kBar('ppr','A hangmodell letöltése megszakadt.','Folytatás',ppOfferGo,function(){});}
+    await kHang(r,await mp);
+  }catch(e){klog('hiba',String(e&&e.message||e).slice(0,120));}
+  finally{KRUN=false;klog('karmester','kész');}}
+setTimeout(function(){try{kInit();}catch(e){}kRun('indítás');},1200);
+document.addEventListener('visibilitychange',function(){if(document.hidden)return;try{kWeekly();}catch(e){}if(!KRUN&&Date.now()-KLAST>1800000)setTimeout(function(){kRun('az app előjött');},800);});
+window.addEventListener('pagehide',function(){lsSet('szokartya-parlive','');});
+window.addEventListener('online',function(){setTimeout(function(){kRun('újra van internet');},1500);});
+try{if(navigator.connection&&navigator.connection.addEventListener)navigator.connection.addEventListener('change',function(){setTimeout(function(){kRun('a hálózat megváltozott');},1500);});}catch(e){}
+(function(){var tb=null,box=null;function fmt(t){var d=new Date(t),z=function(n){return ('0'+n).slice(-2);};return z(d.getMonth()+1)+'-'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes())+':'+z(d.getSeconds());}
+  function ui(){if(!box)return;if(!box.open)return;var a=klogGet().slice(-150).reverse();tb.innerHTML='';a.forEach(function(x){var tr=document.createElement('tr');[fmt(x.t),x.k,x.m].forEach(function(v){var td=document.createElement('td');td.style.cssText='padding:3px 4px;border-top:1px solid rgba(128,128,128,.25);vertical-align:top';td.textContent=v;tr.appendChild(td);});tb.appendChild(tr);});}
+  window.klUi=ui;
+  function init(){box=document.getElementById('klBox');if(!box)return;tb=document.querySelector('#klTab tbody');var msg=document.getElementById('klMsg');box.addEventListener('toggle',ui);
+    document.getElementById('klClr').addEventListener('click',function(){lsSet('szokartya-klog','[]');ui();msg.textContent='Napló törölve.';});
+    document.getElementById('klRun').addEventListener('click',function(){if(KRUN||PG.run||PPBUSY){msg.textContent='Most is dolgozik valami.';return;}msg.textContent='Elindítva.';kRun('kézi indítás');});
+    document.getElementById('klCopy').addEventListener('click',function(){var txt=klogGet().map(function(x){return fmt(x.t)+'\t'+x.k+'\t'+x.m;}).join('\n');
+      function fb(){var ta=document.createElement('textarea');ta.value=txt;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();var ok=false;try{ok=document.execCommand('copy');}catch(e){}ta.remove();msg.textContent=ok?'Átmásolva ('+klogGet().length+' sor).':'A másolás nem sikerült.';}
+      if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(function(){msg.textContent='Átmásolva ('+klogGet().length+' sor).';},fb);else fb();});}
+  setTimeout(init,0);})();
+
 /* --- előre elkészítés --- */
 var PG={run:false,pause:false,stop:false,plan:null},PGSYNC=null;
 var PGFIX=['helyesen','Nagyon jó, nem találtam hibát.','Nem hallottalak, próbáld újra.','Nem hallottalak, a beszélgetést leállítom.','A javított változat:','Jó napot kívánok. Ez a magyar hang próbája.'];
@@ -4805,22 +4831,29 @@ async function pgPlan(){var keys=new Set(await hAllKeys()),texts=pgTexts(),vs=pg
   vs.forEach(function(v){texts.forEach(function(t){if(!keys.has('pp|'+v+'|'+t)){todo.push([v,t]);chars+=t.length;}});});
   var have=0;keys.forEach(function(k){if(k.indexOf('pp|')===0)have++;});try{lsSet('szokartya-pn',String(have));}catch(e){}
   return {todo:todo,total:texts.length*vs.length,chars:chars,voices:vs};}
-async function pgRun(plan,tick){PG.run=true;PG.stop=false;PG.pause=false;var n=plan.todo.length,fail=0,t0=Date.now(),done=0,last=null,skipped=0,vf={},bad={},next=0,fin=0,giveup=false,par=Math.max(1,ppParN());wake();try{navigator.storage.persist();}catch(e){}lsSet('szokartya-pgrun','1');
+async function pgRun(plan,tick){PG.run=true;PG.stop=false;PG.pause=false;var n=plan.todo.length,fail=0,t0=Date.now(),done=0,last=null,skipped=0,vf={},bad={},next=0,fin=0,giveup=false,par=Math.max(1,ppParN()),auto=ppParMode()==='a',LV=[1,2,4,6].filter(function(x){return x<=par;}),li0=Math.max(0,LV.indexOf(auto?Math.min(2,par):par)),cur=LV[li0]||1,wN=0,wT=Date.now(),prevR=0,dir=0,locked=false,skipW=1,bat=null;wake();try{if(navigator.getBattery)navigator.getBattery().then(function(b){bat=b;});}catch(e){}
+  lsSet('szokartya-parlive',String(cur));try{klog('hang','generálás indul: '+n+' hang, '+(auto?'automata, legfeljebb '+par+' szál, indulás '+cur+' szállal':par+' szál'));}catch(e){}
+  function lim(){var c=cur;if(auto&&bat&&!bat.charging&&bat.level<0.2)c=Math.min(c,2);return Math.max(1,Math.min(c,PPPAR));}
+  function setCur(i,why){if(i<0||i>=LV.length||LV[i]===cur)return;li0=i;cur=LV[i];skipW=1;lsSet('szokartya-parlive',String(cur));try{klog('hang',cur+' szál ('+why+')');}catch(e){}}
+  function adjust(rate){if(!prevR){prevR=rate;if(cur<par&&!locked){dir=1;setCur(li0+1,'gyorsítás, '+Math.round(rate)+' hang/perc');}return;}
+    if(dir>0){dir=0;if(rate>=prevR*1.12){prevR=rate;if(cur<par){dir=1;setCur(li0+1,'gyorsabb lett: '+Math.round(rate)+' hang/perc');}else locked=true;}else{locked=true;prevR=rate;setCur(li0-1,'nincs nyereség, visszaveszek: '+Math.round(rate)+' hang/perc');}}
+    else{if(rate<prevR*0.7&&li0>0){prevR=rate;setCur(li0-1,'lelassult, visszaveszek: '+Math.round(rate)+' hang/perc');}else prevR=rate;}}try{navigator.storage.persist();}catch(e){}lsSet('szokartya-pgrun','1');
   PPPAR=PPWK?par:1;
   function sl(ms){return new Promise(function(r){setTimeout(r,ms);});}
   async function lane(li){if(li>0)await sl(li*1000);
     while(!PG.stop&&!giveup){
+      while(!PG.stop&&li>=lim()&&next<n)await sl(500);
       while(PG.pause&&!PG.stop)await sl(400);
       if(PG.stop)break;
       var i=next++;if(i>=n)break;var v=plan.todo[i][0];
       if(bad[v]){skipped++;fin++;tick(fin,n,Date.now()-t0);continue;}
-      try{await ppGen(plan.todo[i][1],v);done++;fail=0;vf[v]=0;if(PGSYNC&&done%10===0)PGSYNC();}
-      catch(e){fail++;last=e;skipped++;vf[v]=(vf[v]||0)+1;if(vf[v]>=5)bad[v]=1;if(fail>=30){giveup=true;}if(PPPAR<=1){try{ppReset();}catch(x){}}}
+      try{await ppGen(plan.todo[i][1],v);done++;fail=0;vf[v]=0;if(PGSYNC&&done%10===0)PGSYNC();if(auto&&++wN>=8){var nw=Date.now();if(skipW>0)skipW--;else adjust(wN*60000/Math.max(1,nw-wT));wN=0;wT=nw;}}
+      catch(e){fail++;last=e;skipped++;if(fail<=3)try{klog('hang','hiba: '+String(e&&e.message||e).slice(0,100));}catch(x){}vf[v]=(vf[v]||0)+1;if(vf[v]>=5)bad[v]=1;if(fail>=30){giveup=true;}if(PPPAR<=1){try{ppReset();}catch(x){}}}
       fin++;tick(fin,n,Date.now()-t0);}}
   var lanes=[];for(var k=0;k<PPPAR;k++)lanes.push(lane(k));
   await Promise.all(lanes);
   PPPAR=1;ppPoolKill();
-  PG.run=false;unwake();lsSet('szokartya-pgrun','');var bv=Object.keys(bad);return {done:done,n:n,stopped:PG.stop,failed:giveup,err:last,skipped:skipped,bad:bv};}
+  PG.run=false;unwake();lsSet('szokartya-pgrun','');lsSet('szokartya-parlive','');try{klog('hang','generálás vége: kész '+done+' / '+n+(giveup?', sok hiba miatt leállt':'')+(PG.stop?', megállítva':''));}catch(e){}var bv=Object.keys(bad);return {done:done,n:n,stopped:PG.stop,failed:giveup,err:last,skipped:skipped,bad:bv};}
 async function pgClearAll(onlyUnused){var texts=new Set(pgTexts()),keys=await hAllKeys(),del=[];
   keys.forEach(function(k){if(k.indexOf('pp|')!==0)return;if(!onlyUnused){del.push(k);return;}var i=k.indexOf('|',3),t=k.slice(i+1);if(!texts.has(t))del.push(k);});
   if(!del.length)return 0;var db=await gtDb();
@@ -4878,7 +4911,7 @@ async function hsDownload(st){
   var by={},miss=0,need=0;
   vs.forEach(function(v){var cl=(M.clips||{})[v]||{};texts.forEach(function(t){var k='pp|'+v+'|'+t;if(keys.has(k))return;var e=cl[hsHash(t)];if(!e){miss++;return;}(by[e[0]]=by[e[0]]||[]).push({k:k,o:e[1],l:e[2]});need++;});});
   var names=Object.keys(by);if(!names.length)return {got:0,miss:miss};
-  await netEnsure('kb. '+Math.max(1,Math.round(need*0.035))+' MB hangot a hangtárból');
+  await netEnsure('kb. '+Math.max(1,Math.round(need*0.035))+' MB hangot a hangtárból',undefined,need*0.035);
   var got=0;
   for(var i=0;i<names.length;i++){st('Letöltés: '+got+' / '+need,100*got/need);var buf=await hsFetch(names[i],false);
     by[names[i]].forEach(function(c){gtPutC(c.k,buf.slice(c.o,c.o+c.l));got++;});}
@@ -4934,7 +4967,7 @@ async function hLoad(fl,over,prog){var dec=new TextDecoder(),have=over?null:new 
   try{var pn=lsGet('szokartya-pnote');if(pn){msg.textContent='A visszatöltött mentés idején '+pn+' hang volt eltárolva. Ezeket a Biztonsági mentés, Hangok visszatöltése fájlból gombbal töltheted vissza, vagy itt újra elkészítheted.';lsSet('szokartya-pnote','');}}catch(e){}
   who.addEventListener('change',function(){idle();});
   var SYNCED=0,SYBUSY=false,AUTO=false,SYERR='';
-  var pr=document.getElementById('pgPar');if(pr){pr.value=String(ppParN());pr.addEventListener('change',function(){lsSet('szokartya-ppar',pr.value);});}
+  var pr=document.getElementById('pgPar');if(pr){pr.value=ppParMode();pr.addEventListener('change',function(){lsSet('szokartya-ppar',pr.value);lsSet('szokartya-parcap','');try{klog('beállítás','hangmotorok: '+pr.value);}catch(e){}});}
   function syncOn(){return !!(lsGet(HST)||'');}
   function syncNow(){if(!syncOn()||SYBUSY||!AUTOUP)return Promise.resolve(0);SYBUSY=true;
     return hsUpload(function(){}).then(function(n){SYBUSY=false;SYNCED+=n||0;return n;},function(e){SYBUSY=false;if(e&&e.declined)AUTOUP=false;else SYERR=String(e&&e.message||e).slice(0,80);return 0;});}
@@ -4984,7 +5017,7 @@ async function hLoad(fl,over,prog){var dec=new TextDecoder(),have=over?null:new 
 })();
 function mkCode(){return btoa(unescape(encodeURIComponent(JSON.stringify({v:4,cards:st,sx:SET,ed:ED,set:{limit:SET.limit,voice:lsGet(VKEY)||'',rate:vrate,auto:AUTO?1:0,what:WHAT,pref:PREF},ex:{cv:lsGet('szokartya-cv')||'',go:lsGet(GO)||'',gm:lsGet(GM)||'',ui:lsGet(UIK)||'',ls:lsGet(LSK)||'',hl:lsGet(HLK)||'',acc:lsGet('szokartya-acc')||'',hv:lsGet('szokartya-hvoice')||'',gtv:lsGet(GTK)||'',hg:lsGet('szokartya-hg')||'',ppv:lsGet('szokartya-ppv')||'',lhg:lsGet('szokartya-lhg')||'',pn:lsGet('szokartya-pn')||''}}))));}
 function dlBackup(){var code=mkCode(),d=new Date(),n='szokartya_mentes_'+d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2)+'.txt';
-  try{var bl=new Blob([code],{type:'text/plain'}),a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download=n;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},4000);return n;}catch(e){return '';}}
+  try{var bl=new Blob([code],{type:'text/plain'}),a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download=n;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},4000);try{localStorage.setItem('szokartya-rem',kDay());}catch(x){}return n;}catch(e){return '';}}
 window.dlBackup=dlBackup;
 document.getElementById('bFile').addEventListener('click',function(){var n=dlBackup();msg.textContent=n?('Letöltöttem: '+n+'. A telefon Letöltések (Download) mappájában találod. A Google-kulcs nincs benne.'):'A letöltés ezen a böngészőn nem sikerült, használd a vágólapos mentést.';});
 document.getElementById('bFileBtn').addEventListener('click',function(){document.getElementById('bFileIn').click();});
@@ -5065,26 +5098,8 @@ render();
   function first(ev){if(tried)return;if(ev.target&&ev.target.id==='fsBtn')return;tried=true;document.removeEventListener('pointerup',first,true);if(!inFs())enter();}
   document.addEventListener('pointerup',first,true);document.addEventListener('touchend',first,true);document.addEventListener('click',first,true);
 })();
-// heti mentési emlékeztető
-(function(){
-  var RK='szokartya-rem';
-  function dk(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
-  function check(){
-    var now=new Date(),last='';try{last=localStorage.getItem(RK)||'';}catch(e){}
-    if(!last){try{localStorage.setItem(RK,dk(now));}catch(e){}return;}
-    var days=(now-new Date(last+'T00:00:00'))/86400000;
-    var due=(now.getDay()===0&&now.getHours()>=20&&last!==dk(now))||days>8;
-    if(!due||document.getElementById('remov'))return;
-    try{localStorage.setItem(RK,dk(now));}catch(e){}
-    var ov=document.createElement('div');ov.className='rw';ov.id='remov';
-    ov.innerHTML='<div class="rwbox" role="dialog" aria-label="Heti mentés"><h2>Heti mentés</h2><p>Ideje biztonsági mentést készíteni a haladásodról és a beállításaidról.</p><button class="reset" id="remGo" type="button">Mentés fájlba most</button><button class="reset" id="remLater" type="button">Később</button></div>';
-    document.body.appendChild(ov);
-    document.getElementById('remLater').addEventListener('click',function(){ov.remove();});
-    document.getElementById('remGo').addEventListener('click',function(){var n=window.dlBackup?window.dlBackup():'';ov.querySelector('p').textContent=n?('Kész: '+n+' a Letöltések mappában van.'):'A letöltés nem sikerült. Nyisd meg a Beállítások, Biztonsági mentés részt.';document.getElementById('remGo').remove();});}
-  setTimeout(check,1500);
-  document.addEventListener('visibilitychange',function(){if(!document.hidden)setTimeout(check,500);});
-})();
+// heti mentési emlékeztető: a karmester kezeli (kWeekly)
 </script>
 
-<script>if("serviceWorker" in navigator&&location.protocol.indexOf("http")===0){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});}</script>
+<script>if("serviceWorker" in navigator&&location.protocol.indexOf("http")===0){var had=!!navigator.serviceWorker.controller;navigator.serviceWorker.addEventListener("controllerchange",function(){if(had&&window.kBar){try{klog("frissítés","új verzió érkezett");}catch(e){}kBar("upd","Új verzió kész.","Újratöltés",function(){location.reload();});}had=true;});window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});}</script>
 </html>
