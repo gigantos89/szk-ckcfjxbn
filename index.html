@@ -308,7 +308,7 @@ body{zoom:var(--fs,1)}
   <details class="backup" id="pgBox"><summary>Hangok előre elkészítése</summary>
     <p>Elkészíti és eltárolja a telefonon a magyar szavak és a beszélgetés magyar mondatainak hangját az összes kártyához, hogy lejátszáskor ne kelljen várni. Előbb töltsd le a Piper hangot (Hang beállítása). Közben tartsd nyitva az appot, érdemes töltőre tenni a telefont. Ha a Hangtárban el van mentve a GitHub kulcs, a kész hangokat 10 hangonként automatikusan feltölti a Hangtárba, induláskor pedig automatikusan letölti a már feltöltötteket, így megszakadás után onnan folytatódik.</p>
     <div class="vrow"><select id="pgWho" aria-label="Mely hangokkal"><option value="s">Mely hangokkal: a kiválasztott hanggal</option><option value="a">Mely hangokkal: az összes letöltött hanggal</option></select></div>
-        <div class="vrow"><select id="pgPar" aria-label="Párhuzamos hangmotorok"><option value="a">Hangmotorok: automatikus (ajánlott, a telefonhoz és az akkuhoz igazítja)</option><option value="1">Hangmotorok: 1 (lassú, kímélő)</option><option value="2">Hangmotorok: 2</option><option value="4">Hangmotorok: 4</option><option value="6">Hangmotorok: 6 (erős, megterhelő)</option></select></div>
+        <div class="vrow"><select id="pgPar" aria-label="Párhuzamos hangmotorok"><option value="a">Hangmotorok: automatikus (ajánlott, legfeljebb 2)</option><option value="1">Hangmotorok: 1 (lassú, kímélő)</option><option value="2">Hangmotorok: 2</option><option value="4">Hangmotorok: 4 (sok memória, összeomolhat)</option><option value="6">Hangmotorok: 6 (nagyon sok memória, összeomolhat)</option></select></div>
     <div class="vrow"><button class="reset" id="pgGo" type="button">Becslés</button><button class="reset" id="pgPause" type="button" disabled>Szünet</button><button class="reset" id="pgStop" type="button" disabled>Leállítás</button></div>
     <progress id="pgBar" max="100" value="0" hidden style="width:100%"></progress>
     <p class="msg" id="pgMsg" role="status"></p>
@@ -3649,7 +3649,7 @@ var PPN=0;
 function ppReset(){try{if(PPW)PPW.terminate();}catch(e){}PPW=null;PPH=null;Object.keys(PPQ).forEach(function(k){var q=PPQ[k];delete PPQ[k];try{q.rej(new Error('Hangmotor újraindítva'));}catch(e){}});}
 var PPP=[],PPPAR=1;
 function ppParMode(){var v=lsGet('szokartya-ppar')||'a';return ['a','1','2','4','6'].indexOf(v)>=0?v:'a';}
-function ppAutoCap(){var hw=navigator.hardwareConcurrency||4,mem=navigator.deviceMemory||4,c=hw>=8&&mem>=6?6:(hw>=6?4:2),lim=parseInt(lsGet('szokartya-parcap')||'0',10);if(lim>0)c=Math.min(c,lim);return c;}
+function ppAutoCap(){var hw=navigator.hardwareConcurrency||4,mem=navigator.deviceMemory||4,c=hw>=2?2:1,lim=parseInt(lsGet('szokartya-parcap')||'0',10);if(lim>0)c=Math.min(c,lim);return c;}
 function ppParN(){var m=ppParMode();return m==='a'?ppAutoCap():parseInt(m,10);}
 function ppPoolKill(){PPP.forEach(function(w){try{w.terminate();}catch(e){}});PPP=[];}
 function ppPoolGet(){if(PPP.length<PPPAR){var src='var mk='+ppMk.toString()+';var h=mk(function(x,t){postMessage(x,t||[]);});onmessage=function(e){h(e.data);};',w=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));
@@ -4783,7 +4783,7 @@ function kWeekly(){var RK='szokartya-rem',now=new Date(),last=lsGet(RK)||'';
   if(!due||lsGet('szokartya-remsnz')===kDay())return;
   kBar('bk','Ideje biztonsági mentést készíteni a haladásodról.','Mentés fájlba',function(){var n=window.dlBackup?window.dlBackup():'';klog('mentés',n?'heti mentés kész: '+n:'a mentés nem sikerült');kBar('bk2',n?('Kész: '+n+' a Letöltések mappában van.'):'A mentés nem sikerült. Beállítások, Biztonsági mentés.');},function(){lsSet('szokartya-remsnz',kDay());});}
 function kInit(){var L=parseInt(lsGet('szokartya-parlive')||'0',10);
-  if(L){lsSet('szokartya-parlive','');klog('hang','az előző generálás váratlanul leállt ('+L+' szálnál)');if(ppParMode()==='a'&&L>=4){var nc=L>=6?4:2;lsSet('szokartya-parcap',String(nc));klog('hang','automata szálszám-korlát mostantól: '+nc);}}
+  if(L){lsSet('szokartya-parlive','');klog('hang','az előző generálás váratlanul leállt ('+L+' szálnál)');if(L>=4){lsSet('szokartya-ppar','a');lsSet('szokartya-parcap','2');klog('hang','átállítottam automatikusra, legfeljebb 2 szál');kModal('parcrash','A Chrome leállt','A Chrome a(z) '+L+' hangmotornál leállt, mert kevés a memória. Átállítottam az automatikus módra, ami legfeljebb 2 hangmotort használ. A generálás onnan folytatódik, ahol abbamaradt.',[{t:'Rendben'}]);}else if(L>=2&&ppParMode()==='a'){lsSet('szokartya-parcap','1');klog('hang','automata szálszám-korlát mostantól: 1');}}
   klog('karmester','app indul, '+(navigator.hardwareConcurrency||'?')+' mag, '+(navigator.deviceMemory||'?')+' GB RAM');}
 async function kHang(r,M){
   var cnt=hsCount(M),texts=pgTexts(),vs=pgVoices(),vs2=vs.length?vs:[ppVoice()],keys=new Set(await hAllKeys()),loc=0,gap=0;
@@ -4853,7 +4853,7 @@ async function pgRun(plan,tick){PG.run=true;PG.stop=false;PG.pause=false;var n=p
     else{if(rate<prevR*0.7&&li0>0){prevR=rate;setCur(li0-1,'lelassult, visszaveszek: '+Math.round(rate)+' hang/perc');}else prevR=rate;}}try{navigator.storage.persist();}catch(e){}lsSet('szokartya-pgrun','1');
   PPPAR=PPWK?par:1;
   function sl(ms){return new Promise(function(r){setTimeout(r,ms);});}
-  async function lane(li){if(li>0)await sl(li*1000);
+  async function lane(li){if(li>0)await sl(li*5000);
     while(!PG.stop&&!giveup){
       while(!PG.stop&&li>=lim()&&next<n)await sl(500);
       while(PG.pause&&!PG.stop)await sl(400);
