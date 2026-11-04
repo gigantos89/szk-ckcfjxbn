@@ -388,7 +388,7 @@ body{zoom:var(--fs,1)}
   </details>
   <details class="backup" id="pfBox"><summary>Profil és felhős mentés</summary>
     <p class="msg">A haladásod, a megtanult szavaid és a beállításaid titkosítva (a jelszavaddal) mentődnek a felhőbe. A mentéshez nem kell GitHub kulcs. A Google és a GitHub kulcs soha nem kerül bele. Az e-mail címed csak az adminisztrátor számára olvasható, jelszó-visszaállításhoz kell, ezért ő a jelszó nélkül is vissza tudja állítani az adatodat.</p>
-    <div class="vrow"><input class="hsin" type="text" id="pfUrl" aria-label="Profil szerver" placeholder="Profil szerver címe (https://...)" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+    <div class="vrow"><input class="hsin" type="text" id="pfUrl" aria-label="Profil szerver" placeholder="Profil szerver címe (haladó, üresen hagyható)" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
     <p class="msg" id="pfSt" role="status"></p>
     <div class="vrow"><button class="reset" id="pfNew" type="button">Új profil</button><button class="reset" id="pfJoin" type="button">Meglévő profil betöltése</button></div>
     <div class="vrow"><button class="reset" id="pfNow" type="button">Szinkron most</button><button class="reset" id="pfSw" type="button">Profil váltása (ezen a telefonon)</button></div>
@@ -5077,7 +5077,8 @@ function pfCanon(x){if(Array.isArray(x))return x.map(pfCanon);if(x&&typeof x==='
 function pfEnc(t){return new TextEncoder().encode(t);}
 function pfHex(u){return Array.prototype.map.call(u,function(b){return ('0'+b.toString(16)).slice(-2);}).join('');}
 function pfB64d(s){var b=atob(String(s).replace(/\s/g,'')),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;}
-function pfUrl(){var u=(lsGet(PFW)||'').trim().replace(/\/+$/,'');return /^https:\/\/[^ ]+$/.test(u)?u:'';}
+var PFDEF='https://shrill-moon-bf45.gepesz989.workers.dev';
+function pfUrl(){var u=(lsGet(PFW)||'').trim().replace(/\/+$/,'');if(u&&!/^https?:\/\//i.test(u))u='https://'+u;return /^https:\/\/[^ ]+$/.test(u)?u:PFDEF;}
 async function pfCall(path,body){var u=pfUrl();if(!u)throw new Error('nincs profil szerver beállítva (Beállítások, Profil és felhős mentés)');
   var r=await fetch(u+path,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,cache:'no-store'});
   var j=null;try{j=await r.json();}catch(e){}if(!r.ok){var e=new Error((j&&j.error)||('szerver hiba '+r.status));e.status=r.status;throw e;}return j;}
