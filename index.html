@@ -5100,7 +5100,7 @@ async function pfOpen(key,u8){return JSON.parse(new TextDecoder().decode(await p
 async function pfDK(kek,meta){var raw=await pfAesDec(kek,pfB64d(meta.wk_pw));return {raw:raw,key:await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt'])};}
 async function pfRsaEnc(pubJwk,u8){var k=await crypto.subtle.importKey('jwk',pubJwk,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);return hsB64(new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},k,u8)));}
 async function pfEmEnc(em){try{var pb=await pfCall('/pub');if(pb&&pb.pub)return await pfRsaEnc(pb.pub,pfEnc(JSON.stringify({e:em})));}catch(e){}return '';}
-var APPV='v46';
+var APPV='v47';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
@@ -5135,7 +5135,8 @@ function pfApply(o,withSettings){var rl=false,n=mergeSt(o.cards||{});saveLocal()
 async function pfSync(why,opt){opt=opt||{};var P=pfGet();if(!P||PFBUSY)return;var pw=lsGet('szokartya-pfpw-'+pfNk(P.cur));if(!pw)return;
   if(!pfUrl()){lsSet('szokartya-pfres','nincs profil szerver beállítva');if(window.pfUi)window.pfUi();return;}
   PFBUSY=true;var res='';
-  try{var d=await pfAuth(P.cur,pw),mj=d.meta,dk=d.dk;    var at=parseInt(lsGet('szokartya-pfat-'+pfNk(P.cur))||'0',10);
+  try{var d=await pfAuth(P.cur,pw),mj=d.meta,dk=d.dk;    if(!mj.em&&pfEmGet(P.cur)&&!window.PFEMD){window.PFEMD=1;try{var ee=await pfEmEnc(pfEmGet(P.cur));if(ee){await pfCall('/meta',{fid:d.fid,wcode:d.wcode,meta:{wk_pw:mj.wk_pw,em:ee}});klog('profil','az e-mail cím titkosítva elmentve a profilhoz');}}catch(e){}}
+    var at=parseInt(lsGet('szokartya-pfat-'+pfNk(P.cur))||'0',10);
     for(var tr=0;tr<3;tr++){
       var rb=await pfGetBin(d.fid),remote=null,rtxt='';
       if(rb.u8){remote=await pfOpen(dk.key,rb.u8);rtxt=JSON.stringify(pfCanon(Object.assign({},remote,{at:0})));
@@ -5231,6 +5232,8 @@ function pfDelete(){var P=pfGet();if(!P)return;
     async function(v){var d=await pfAuth(P.cur,v('p'));var dr=await pfCall('/delete',{fid:d.fid,wcode:d.wcode,email:v('e').trim()});
       var o=pfGet();o.list=o.list.filter(function(x){return x!==P.cur;});lsSet('szokartya-pfpw-'+pfNk(P.cur),'');if(o.list.length)o.cur=o.list[0];else{lsSet(PFK,'');o=null;}if(o)lsSet(PFK,JSON.stringify(o));klog('profil','felhős profil törölve'+(dr&&dr.mail?', értesítő levél elküldve':''));kBar('pfdelm',dr&&dr.mail?'A profil törölve. Értesítő levelet küldtünk.':'A profil törölve a felhőből.');if(window.pfUi)window.pfUi();});}
 var NWK='szokartya-news';
+setInterval(function(){if(!document.hidden&&pfGet()&&navigator.onLine!==false)kNews().catch(function(){});},90000);
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&pfGet())setTimeout(function(){kNews().catch(function(){});},1500);});
 function pfFeedback(pre){var P=pfGet();if(!P){kBar('pffb','Üzenethez előbb hozz létre profilt.');return;}
   pfDlg('pffb','Üzenet a fejlesztőnek','Írd le a hibát vagy az ötletedet. Automatikusan csatoljuk az app verzióját és a napló végét (ebben nincs jelszó). Ha megadtad az e-mail címed, azon válaszolhatok.',[{id:'t',ph:'Üzenet',type:'area',val:pre||''}],'Küldés',
     async function(v){var tx=v('t').trim();if(!tx)throw new Error('Írj üzenetet.');var pw=lsGet('szokartya-pfpw-'+pfNk(P.cur));if(!pw)throw new Error('A jelszó nincs elmentve ezen a telefonon (Beállítások, Profil).');var d=await pfAuth(P.cur,pw),lg='';

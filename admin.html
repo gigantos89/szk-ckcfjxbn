@@ -57,7 +57,7 @@ $('list').onclick=list;
 $('chk').onclick=async function(){msg('Ellenőrzés...');try{var r=await fetch(base()+'/status',{cache:'no-store'}),j=await r.json();msg(JSON.stringify(j));}catch(e){msg(e.message,1);}};
 $('ns').onclick=async function(){try{var to=$('nto').value,t=$('nt').value,x=$('nx').value,sent=0,tot=0;await call('/admin/news',{title:t,text:x,to:to});
   if($('nmail').checked){var tg=LIST.filter(function(p){return (!to||p.fid===to)&&p.email&&p.email.indexOf('@')>0;});tot=tg.length;
-    for(var i=0;i<tg.length;i++){try{await call('/admin/mail',{to:tg[i].email,subject:'Szókártya: '+t,body:'Szia '+tg[i].n+'!\n\n'+x+'\n\nEzt az üzenetet az appban is megkapod induláskor.'});sent++;}catch(e){}}}
-  $('nt').value='';$('nx').value='';msg('Közzétéve az appban.'+($('nmail').checked?' E-mail elküldve: '+sent+'/'+tot+'.':''));news();}catch(e){msg(e.message,1);}};
+    for(var i=0;i<tg.length;i++){if(i>0)await new Promise(function(r){setTimeout(r,500);});try{await call('/admin/mail',{to:tg[i].email,subject:'Szókártya: '+t,body:'Szia '+tg[i].n+'!\n\n'+x+'\n\nEzt az üzenetet az appban is megkapod induláskor.'});sent++;}catch(e){}}}
+  $('nt').value='';$('nx').value='';msg('Közzétéve az appban.'+($('nmail').checked?' E-mail elküldve: '+sent+'/'+tot+'.'+(function(){var n=LIST.filter(function(p){return (!to||p.fid===to)&&!(p.email&&p.email.indexOf('@')>0);}).length;return n?' ('+n+' profilhoz nem olvasható vagy nincs e-mail cím: privát kulcs beillesztve? az app a következő szinkronnál feltölti.)':'';})():''));news();}catch(e){msg(e.message,1);}};
 })();
 </script></body></html>
