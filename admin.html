@@ -1,60 +1,63 @@
 <!doctype html>
-<html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Szókártya admin</title>
-<style>:root{color-scheme:light dark;--bg:#fff;--fg:#1c1c1c;--mut:#666;--ln:#ccc;--ac:#0b57d0}@media(prefers-color-scheme:dark){:root{--bg:#161616;--fg:#eee;--mut:#aaa;--ln:#444;--ac:#8ab4f8}}
-body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,sans-serif;max-width:900px;margin:auto}h1{font-size:1.3rem}h2{font-size:1.05rem;margin:22px 0 6px}
-input,textarea,button{font:inherit;padding:8px 10px;border:1px solid var(--ln);border-radius:8px;background:transparent;color:inherit;width:100%;box-sizing:border-box;margin:4px 0}button{width:auto;cursor:pointer;background:var(--ac);color:#fff;border-color:var(--ac)}button.s{background:transparent;color:var(--ac)}button.d{background:#b3261e;border-color:#b3261e}
-table{width:100%;border-collapse:collapse;font-size:.9rem}th,td{text-align:left;padding:6px;border-top:1px solid var(--ln);vertical-align:top;word-break:break-word}.m{color:var(--mut);font-size:.9rem}#msg{min-height:1.4em}pre{white-space:pre-wrap;word-break:break-all;border:1px solid var(--ln);border-radius:8px;padding:8px;font-size:.8rem}</style></head><body>
+<html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Szókártya admin</title>
+<style>
+:root{--bg:#f6f7f9;--fg:#1d2330;--card:#fff;--ln:#d9dde5;--ac:#2f6fed;--bad:#c0392b;--mut:#667}
+@media(prefers-color-scheme:dark){:root{--bg:#14171d;--fg:#e8ebf2;--card:#1d222b;--ln:#323a48;--ac:#6b9bff;--bad:#ff7a6b;--mut:#9aa3b5}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,sans-serif;padding:16px;max-width:900px;margin:auto}
+h1{font-size:1.3rem;margin:.2em 0 .6em}h2{font-size:1.05rem;margin:0 0 .5em}
+.c{background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:14px;margin:0 0 14px}
+input,textarea{width:100%;padding:10px;border:1px solid var(--ln);border-radius:8px;background:var(--bg);color:var(--fg);font:inherit;margin:4px 0}
+button{padding:9px 14px;border:1px solid var(--ln);border-radius:8px;background:var(--ac);color:#fff;font:inherit;cursor:pointer;margin:4px 6px 4px 0}
+button.s{background:transparent;color:var(--fg)}button.d{background:var(--bad)}
+.m{color:var(--mut);font-size:.92rem}#msg{min-height:1.4em;margin:.4em 0}
+.w{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:.92rem}th,td{border-top:1px solid var(--ln);padding:6px 5px;text-align:left;vertical-align:top;white-space:nowrap}
+.bar{height:8px;background:var(--ln);border-radius:4px;min-width:70px}.bar i{display:block;height:8px;background:var(--ac);border-radius:4px}
+.nw{border-top:1px solid var(--ln);padding:8px 0;white-space:pre-wrap}
+</style></head><body>
 <h1>Szókártya admin</h1>
-<p class="m">Csak neked való oldal. A privát kulcs és az admin jelszó nem hagyja el a böngésződet, csak a profil-közvetítőnek küldi az admin jelszót.</p>
-<h2>1. Kapcsolat</h2>
-<input id="url" placeholder="Profil szerver címe (https://...workers.dev)" autocomplete="off">
+<div class="c"><h2>Belépés</h2>
+<input id="url" type="url" placeholder="Worker címe" value="https://shrill-moon-bf45.gepesz989.workers.dev">
 <input id="tok" type="password" placeholder="Admin jelszó (ADMIN_TOKEN)" autocomplete="off">
-<textarea id="priv" rows="3" placeholder="Privát kulcs (admin_privat.json tartalma)" spellcheck="false"></textarea>
-<input id="pf" type="file" accept=".json,application/json">
-<h2>Első beállítás: kulcspár készítése</h2>
-<p class="m">Csak egyszer kell. A privát kulcsot töltsd le és őrizd meg biztonságos helyen (ha elvész, a jelszó-visszaállítás nem lehetséges). A nyilvános kulcsot másold az ADMIN_PUB változóba.</p>
-<button class="s" id="gen" type="button">1. Kulcspár készítése</button> <button class="s" id="rnd" type="button">2. Véletlen admin jelszó</button> <button class="s" id="stt" type="button">3. Szerver ellenőrzése</button>
-<div id="gbox" hidden><p class="m"><b>Nyilvános kulcs</b> (ezt másold a Cloudflare ADMIN_PUB változóba, pontosan, egy sorban):</p><textarea id="pubt" rows="3" readonly></textarea><button class="s" data-c="pubt" type="button">Másolás</button>
-<p class="m"><b>Privát kulcs</b> (ezt ments el biztonságos helyre, például Google Keepbe vagy jelszókezelőbe, és másold be fent a Privát kulcs mezőbe is. Nélküle nem tudsz jelszót visszaállítani, és soha ne oszd meg):</p><textarea id="privt" rows="3" readonly></textarea><button class="s" data-c="privt" type="button">Másolás</button></div>
-<div id="rbox" hidden><p class="m"><b>Admin jelszó</b> (ezt másold a Cloudflare ADMIN_TOKEN változóba, és írd be fent az Admin jelszó mezőbe is):</p><textarea id="rndt" rows="2" readonly></textarea><button class="s" data-c="rndt" type="button">Másolás</button></div>
-<pre id="stat" hidden></pre>
-<h2>2. Profilok</h2>
-<button id="list" type="button">Lista betöltése</button><p id="msg" class="m" role="status"></p>
-<table id="tab" hidden><thead><tr><th>Név</th><th>E-mail</th><th>Létrehozva</th><th>Emlékeztető</th><th></th></tr></thead><tbody></tbody></table>
+<textarea id="priv" rows="2" placeholder="Admin privát kulcs (nem kötelező, csak az e-mail címek olvasásához; nem kerül sehova, a böngésző memóriájában marad)" autocomplete="off" spellcheck="false"></textarea>
+<button id="list">Profilok listázása</button><button id="chk" class="s">Szerver ellenőrzése</button>
+<p id="msg" class="m" role="status"></p></div>
+<div class="c"><h2>Regisztráltak és haladásuk</h2><p id="sum" class="m"></p><div class="w"><table id="tab"><thead><tr><th>Név</th><th>E-mail</th><th>Regisztrált</th><th>Utolsó mentés</th><th>Tanult</th><th>Ismétlés</th><th>Sorozat</th><th>Ma új</th><th>Verzió</th><th>Utolsó hiba</th><th></th></tr></thead><tbody></tbody></table></div>
+<p class="m">Az adat titkosított, innen csak az összesített számok látszanak. Letiltás: a felhasználó nem tud menteni. Törlés: a felhős profil megszűnik, a telefonon az adat megmarad.</p></div>
+<div class="c"><h2>Üzenet küldése a felhasználóknak</h2>
+<p class="m">Az app induláskor (és amikor előjön a háttérből) megjeleníti az új üzeneteket, egyszer. Például: új funkció, kinézeti változás, frissítés.</p>
+<select id="nto" style="width:100%;padding:10px;margin:4px 0"><option value="">Címzett: mindenki</option></select>
+<label class="m" style="display:block;margin:4px 0"><input id="nmail" type="checkbox" style="width:auto"> E-mailben is elküldöm (ha az e-mail cím kiolvasható a privát kulccsal)</label>
+<input id="nt" maxlength="80" placeholder="Cím (pl. Új: hangerő beállítás)"><textarea id="nx" rows="4" maxlength="1200" placeholder="Szöveg"></textarea>
+<button id="ns">Üzenet közzététele</button><div id="nl"></div></div>
 <script>
-const $=i=>document.getElementById(i),enc=t=>new TextEncoder().encode(t);
-const nk=n=>String(n||'').trim().toLowerCase().replace(/\s+/g,' ');
-const hex=u=>Array.from(u).map(b=>('0'+b.toString(16)).slice(-2)).join('');
-const b64=u=>{let s='';for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s)};
-const b64d=s=>{const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u};
-$('url').value='https://shrill-moon-bf45.gepesz989.workers.dev';try{$('url').value=localStorage.getItem('szk-adm-url')||$('url').value;}catch(e){}
-$('url').addEventListener('change',()=>{try{localStorage.setItem('szk-adm-url',$('url').value.trim())}catch(e){}});
-$('pf').addEventListener('change',function(){const f=this.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{$('priv').value=String(r.result||'').trim()};r.readAsText(f)});
-function say(t){$('msg').textContent=t}
-async function call(path,body){const u=$('url').value.trim().replace(/\/+$/,'');if(!/^https:\/\//.test(u))throw new Error('Add meg a szerver címét.');
-  const r=await fetch(u+path,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+$('tok').value},body:JSON.stringify(body||{})});let j={};try{j=await r.json()}catch(e){}if(!r.ok)throw new Error(j.error||('hiba '+r.status));return j}
-async function privKey(){let j;try{j=JSON.parse($('priv').value)}catch(e){throw new Error('A privát kulcs nem olvasható.')}return crypto.subtle.importKey('jwk',j,{name:'RSA-OAEP',hash:'SHA-256'},false,['decrypt'])}
-$('gen').onclick=async()=>{try{const k=await crypto.subtle.generateKey({name:'RSA-OAEP',modulusLength:2048,publicExponent:new Uint8Array([1,0,1]),hash:'SHA-256'},true,['encrypt','decrypt']);
-  const pub=await crypto.subtle.exportKey('jwk',k.publicKey),pri=await crypto.subtle.exportKey('jwk',k.privateKey);
-  $('pubt').value=JSON.stringify({kty:pub.kty,n:pub.n,e:pub.e,alg:pub.alg,ext:true,key_ops:['encrypt']});$('privt').value=JSON.stringify(pri);$('priv').value=JSON.stringify(pri);$('gbox').hidden=false;
-  say('Kész. Másold ki mindkét kulcsot a Másolás gombokkal.')}catch(e){say('Hiba: '+e.message)}};
-$('rnd').onclick=()=>{const u=crypto.getRandomValues(new Uint8Array(24));$('rndt').value=hex(u);$('tok').value=hex(u);$('rbox').hidden=false;say('Véletlen admin jelszó kész. Másold ki a Másolás gombbal.')};
-document.addEventListener('click',e=>{const id=e.target&&e.target.getAttribute&&e.target.getAttribute('data-c');if(!id)return;const t=$(id);t.focus();t.select();let ok=false;try{ok=document.execCommand('copy')}catch(x){}if(!ok&&navigator.clipboard)navigator.clipboard.writeText(t.value).then(()=>say('Átmásolva.'),()=>say('Jelöld ki és másold ki kézzel.'));else say(ok?'Átmásolva.':'Jelöld ki és másold ki kézzel.')});
-$('stt').onclick=async()=>{try{const u=$('url').value.trim().replace(/\/+$/,'');const r=await fetch(u+'/status',{cache:'no-store'});const j=await r.json();$('stat').hidden=false;$('stat').textContent=JSON.stringify(j,null,2);say(r.ok?'A szerver válaszol.':'A szerver hibát adott.')}catch(e){say('Nem érem el a szervert: '+e.message)}};
-async function who(k,m){try{return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:'RSA-OAEP'},k,b64d(m.who))))}catch(e){return {n:'(nem olvasható)',e:''}}}
-function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
-$('list').onclick=async()=>{try{say('Betöltés...');const k=await privKey(),j=await call('/admin/list'),tb=$('tab').querySelector('tbody');tb.innerHTML='';
-  for(const it of j.list){const w=await who(k,it.meta),tr=document.createElement('tr');
-    tr.innerHTML='<td>'+esc(w.n)+'</td><td>'+esc(w.e)+'</td><td>'+(it.meta.created?new Date(it.meta.created).toLocaleDateString('hu-HU'):'')+'</td><td>'+esc(it.meta.hint||'')+(it.meta.tmp?' <b>(ideiglenes jelszó)</b>':'')+'</td><td></td>';
-    const td=tr.lastChild,r=document.createElement('button');r.className='s';r.textContent='Új jelszó';r.onclick=()=>reset(k,it,w);const d=document.createElement('button');d.className='d';d.textContent='Törlés';d.onclick=()=>del(it,w);td.append(r,' ',d);tb.appendChild(tr)}
-  $('tab').hidden=false;say(j.list.length+' profil.')}catch(e){say('Hiba: '+e.message)}};
-async function del(it,w){if(!confirm('Biztosan törlöd: '+w.n+' ('+w.e+')? A haladása véglegesen elvész a felhőből.'))return;try{await call('/admin/delete',{fid:it.fid});say('Törölve: '+w.n);$('list').click()}catch(e){say('Hiba: '+e.message)}}
-function tmpPw(){const a='abcdefghjkmnpqrstuvwxyz',n='23456789',r=n=>{const u=crypto.getRandomValues(new Uint8Array(n));return u};let s='';const u=r(10);for(let i=0;i<6;i++)s+=a[u[i]%a.length];s+='-';for(let i=6;i<9;i++)s+=n[u[i]%n.length];s+='-';const v=r(4);for(let i=0;i<4;i++)s+=a[v[i]%a.length];return s}
-async function reset(k,it,w){const pw=prompt('Ideiglenes jelszó (hagyd üresen az automatikushoz):','')||tmpPw();if(pw.length<10){say('Legalább 10 karakter kell.');return}
-  try{const dk=new Uint8Array(await crypto.subtle.decrypt({name:'RSA-OAEP'},k,b64d(it.meta.wk_admin)));
-    const base=await crypto.subtle.importKey('raw',enc(pw),'PBKDF2',false,['deriveBits']),u=new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',salt:enc('szk2|'+nk(w.n)),iterations:200000,hash:'SHA-256'},base,512));
-    const kek=await crypto.subtle.importKey('raw',u.slice(0,32),'AES-GCM',false,['encrypt']),iv=crypto.getRandomValues(new Uint8Array(12)),ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},kek,dk)),o=new Uint8Array(12+ct.length);o.set(iv);o.set(ct,12);
-    await call('/admin/reset',{fid:it.fid,newWcode:hex(u.slice(32,64)),wk_pw:b64(o)});
-    const body='Szia '+w.n+'!\n\nÚj, ideiglenes jelszavad a Szókártya profilodhoz: '+pw+'\n\nA Beállítások, Profil és felhős mentés, Meglévő profil betöltése menüben add meg a nevedet és ezt a jelszót. Utána az app kér egy új jelszót.\n';
-    say('Kész. Ideiglenes jelszó: '+pw);const a=document.createElement('a');a.href='mailto:'+encodeURIComponent(w.e).replace('%40','@')+'?subject='+encodeURIComponent('Szókártya: új jelszó')+'&body='+encodeURIComponent(body);a.textContent=' E-mail megírása neki';$('msg').appendChild(a)}catch(e){say('Hiba: '+e.message)}}
+(function(){var $=function(i){return document.getElementById(i);};
+function msg(t,bad){$('msg').textContent=t;$('msg').style.color=bad?'var(--bad)':'';}
+function base(){return $('url').value.trim().replace(/\/+$/,'');}
+async function call(path,body){var r=await fetch(base()+path,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+$('tok').value.trim()},body:JSON.stringify(body||{}),cache:'no-store'});var j=null;try{j=await r.json();}catch(e){}if(!r.ok)throw new Error((j&&j.error)||('hiba '+r.status));return j;}
+var D=function(t){return t?new Date(t).toLocaleString('hu-HU',{year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'-';};
+function esc(s){var d=document.createElement('div');d.textContent=String(s);return d.innerHTML;}
+var PRIV=null,CACHE={};
+async function dec(em){if(!em||!PRIV)return '';if(CACHE[em]!==undefined)return CACHE[em];try{var u=atob(em),b=new Uint8Array(u.length);for(var i=0;i<u.length;i++)b[i]=u.charCodeAt(i);var o=JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:'RSA-OAEP'},PRIV,b)));return (CACHE[em]=o.e||'');}catch(e){return (CACHE[em]='(nem olvasható)');}}
+async function loadPriv(){PRIV=null;CACHE={};var t=$('priv').value.trim();if(!t)return;try{PRIV=await crypto.subtle.importKey('jwk',JSON.parse(t),{name:'RSA-OAEP',hash:'SHA-256'},false,['decrypt']);}catch(e){msg('A privát kulcs hibás, az e-mail címek nem látszanak.',1);}}
+var LIST=[];
+async function list(){msg('Betöltés...');try{await loadPriv();var j=await call('/admin/list'),tb=document.querySelector('#tab tbody');tb.innerHTML='';var act=0,now=Date.now();
+  j.list.sort(function(a,b){return (b.last||0)-(a.last||0);});LIST=j.list;
+  var sel=$('nto'),cur=sel.value;sel.innerHTML='<option value="">Címzett: mindenki</option>';
+  for(var k=0;k<j.list.length;k++){var p=j.list[k];p.email=await dec(p.em);var o=document.createElement('option');o.value=p.fid;o.textContent='Címzett: '+p.n;sel.appendChild(o);}sel.value=cur;
+  j.list.forEach(function(p){var s=p.stats||{},pc=s.c?Math.round(100*(s.l||0)/s.c):0;if(p.last&&now-p.last<86400000)act++;
+    var tr=document.createElement('tr');tr.innerHTML='<td><b>'+esc(p.n)+'</b>'+(p.blocked?' <span style="color:var(--bad)">(letiltva)</span>':'')+'</td><td>'+esc(p.email||(p.em?'(kulcs kell)':'-'))+'</td><td>'+D(p.created)+'</td><td>'+D(p.last)+'</td><td>'+(s.l||0)+'/'+(s.c||0)+' ('+pc+'%)<div class="bar"><i style="width:'+pc+'%"></i></div></td><td>'+(s.r||0)+'</td><td>'+(s.s||0)+' nap</td><td>'+(s.d||0)+'</td><td>'+esc(s.v||'-')+'</td><td style="white-space:normal;min-width:160px">'+esc(s.e||'')+'</td><td></td>';
+    var td=tr.lastChild,b0=document.createElement('button');b0.className='s';b0.textContent='Üzenet';b0.onclick=function(){$('nto').value=p.fid;$('nt').focus();$('nt').scrollIntoView({block:'center'});};
+    var b1=document.createElement('button');b1.className='s';b1.textContent=p.blocked?'Feloldás':'Letiltás';b1.onclick=async function(){try{await call('/admin/block',{fid:p.fid,blocked:!p.blocked});list();}catch(e){msg(e.message,1);}};
+    var b2=document.createElement('button');b2.className='d';b2.textContent='Törlés';b2.onclick=async function(){if(!confirm('Biztosan törlöd a(z) "'+p.n+'" felhős profilt?'))return;try{await call('/admin/delete',{fid:p.fid});list();}catch(e){msg(e.message,1);}};
+    td.appendChild(b0);td.appendChild(b1);td.appendChild(b2);tb.appendChild(tr);});
+  $('sum').textContent=j.list.length+' profil, az elmúlt 24 órában mentett: '+act+'.';msg('Kész.');news();}catch(e){msg(e.message,1);}}
+async function news(){try{var j=await call('/admin/newslist'),b=$('nl');b.innerHTML='';j.items.slice().reverse().forEach(function(n){var d=document.createElement('div');d.className='nw';d.textContent=D(n.ts)+'  ['+(n.to?((LIST.filter(function(p){return p.fid===n.to;})[0]||{}).n||'egy felhasználó'):'mindenki')+'] '+n.t+'\n'+n.x+'\n';var x=document.createElement('button');x.className='s';x.textContent='Üzenet törlése';x.onclick=async function(){try{await call('/admin/newsdel',{id:n.id});news();}catch(e){msg(e.message,1);}};d.appendChild(x);b.appendChild(d);});}catch(e){}}
+$('list').onclick=list;
+$('chk').onclick=async function(){msg('Ellenőrzés...');try{var r=await fetch(base()+'/status',{cache:'no-store'}),j=await r.json();msg(JSON.stringify(j));}catch(e){msg(e.message,1);}};
+$('ns').onclick=async function(){try{var to=$('nto').value,t=$('nt').value,x=$('nx').value,sent=0,tot=0;await call('/admin/news',{title:t,text:x,to:to});
+  if($('nmail').checked){var tg=LIST.filter(function(p){return (!to||p.fid===to)&&p.email&&p.email.indexOf('@')>0;});tot=tg.length;
+    for(var i=0;i<tg.length;i++){try{await call('/admin/mail',{to:tg[i].email,subject:'Szókártya: '+t,body:'Szia '+tg[i].n+'!\n\n'+x+'\n\nEzt az üzenetet az appban is megkapod induláskor.'});sent++;}catch(e){}}}
+  $('nt').value='';$('nx').value='';msg('Közzétéve az appban.'+($('nmail').checked?' E-mail elküldve: '+sent+'/'+tot+'.':''));news();}catch(e){msg(e.message,1);}};
+})();
 </script></body></html>
