@@ -305,24 +305,6 @@ body{zoom:var(--fs,1)}
     <div class="vrow"><select id="uiFs" aria-label="Teljes képernyő gomb"><option value="txt">Teljes képernyő gomb: ikon és felirat</option><option value="ico">Teljes képernyő gomb: csak ikon</option><option value="off">Teljes képernyő gomb: rejtett</option></select></div>
     <p class="msg">A program mindig teljes képernyőn indul (az első koppintásra). A gomb a jobb felső sarokban van.</p>
   </details>
-  <details class="backup" id="pgBox"><summary>Hangok előre elkészítése</summary>
-    <p>Elkészíti és eltárolja a telefonon a magyar szavak és a beszélgetés magyar mondatainak hangját az összes kártyához, hogy lejátszáskor ne kelljen várni. Előbb töltsd le a Piper hangot (Hang beállítása). Közben tartsd nyitva az appot, érdemes töltőre tenni a telefont. Ha a Hangtárban el van mentve a GitHub kulcs, a kész hangokat 10 hangonként automatikusan feltölti a Hangtárba, induláskor pedig automatikusan letölti a már feltöltötteket, így megszakadás után onnan folytatódik.</p>
-    <div class="vrow"><select id="pgWho" aria-label="Mely hangokkal"><option value="s">Mely hangokkal: a kiválasztott hanggal</option><option value="a">Mely hangokkal: az összes letöltött hanggal</option></select></div>
-        <div class="vrow"><select id="pgPar" aria-label="Párhuzamos hangmotorok"><option value="a">Hangmotorok: automatikus (ajánlott, legfeljebb 2)</option><option value="1">Hangmotorok: 1 (lassú, kímélő)</option><option value="2">Hangmotorok: 2</option><option value="4">Hangmotorok: 4 (sok memória, összeomolhat)</option><option value="6">Hangmotorok: 6 (nagyon sok memória, összeomolhat)</option></select></div>
-    <div class="vrow"><button class="reset" id="pgGo" type="button">Becslés</button><button class="reset" id="pgPause" type="button" disabled>Szünet</button><button class="reset" id="pgStop" type="button" disabled>Leállítás</button></div>
-    <progress id="pgBar" max="100" value="0" hidden style="width:100%"></progress>
-    <p class="msg" id="pgMsg" role="status"></p>
-    <div class="vrow"><button class="reset" id="pgClean" type="button">Nem használt hangok törlése</button><button class="reset" id="pgDel" type="button">Elkészített hangok törlése</button></div>
-  </details>
-  <details class="backup" id="hsBox"><summary>Hangtár (GitHub)</summary>
-    <p>Az egyik telefonon legyártott magyar hangokat feltöltheted a GitHub tárolódba, a többi telefon onnan letöltheti őket, így nem kell mindegyiken újra legyártani. A Piper hangmodellt (a nagy fájlt) ez nem tárolja, azt minden telefon egyszer letölti. A kulcsot csak ez a telefon tárolja, nem kerül a mentésbe.</p>
-    <div class="vrow"><input class="hsin" type="text" id="hsRepo" aria-label="Tároló" placeholder="felhasználó/tároló" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
-    <div class="vrow"><input class="hsin" type="password" id="hsTok" aria-label="GitHub kulcs" placeholder="GitHub kulcs (csak a feltöltéshez kell)" autocomplete="off"></div>
-    <div class="vrow"><button class="reset" id="hsSave" type="button">Mentés</button></div>
-    <div class="vrow"><button class="reset" id="hsUp" type="button">Feltöltés a tárba</button><button class="reset" id="hsDown" type="button">Letöltés a tárból</button></div>
-    <progress id="hsBar" max="100" value="0" hidden style="width:100%"></progress>
-    <p class="msg" id="hsMsg" role="status"></p>
-  </details>
   <details class="backup"><summary>Hallgatás</summary>
     <p>A főoldali Hallgatás a megtanult szavakat felolvassa angolul, majd magyarul. Az ismétlési ütemezést nem változtatja.</p>
     <div class="vrow"><select id="lsMin" aria-label="Mely szavak"><option value="4">Mely szavak: Könnyű (4 nap) vagy jobb</option><option value="1">Mely szavak: minden, ami nem Újra</option><option value="0">Mely szavak: minden látott szó</option></select></div>
@@ -375,32 +357,54 @@ body{zoom:var(--fs,1)}
   </details>
   <details class="backup"><summary>Biztonsági mentés (nem kötelező)</summary>
     <p>A haladásod és a beállításaid (a Google-kulcs kivételével) a telefonon magától mentődnek. Biztonsági másolathoz vagy másik böngészőbe, címre való átvitelhez használd ezeket. A fájl a Letöltések mappába kerül. Vasárnap este 8 után belépéskor emlékeztetőt kapsz.</p>
-    <div class="brow"><button class="reset" id="bCloud" type="button">Mentés felhőbe most</button></div>
-    <p class="msg" id="bCloudSt" role="status"></p>
     <div class="brow"><button class="reset" id="bFile" type="button">Mentés fájlba (letöltés)</button><button class="reset" id="bFileBtn" type="button">Visszatöltés fájlból</button><input type="file" id="bFileIn" accept=".txt,text/plain" hidden></div>
     <div class="brow"><button class="reset" id="bSave" type="button">Haladás és beállítások mentése</button><button class="reset" id="bLoad" type="button">Visszatöltés</button></div>
+    <textarea id="code" rows="3" spellcheck="false" placeholder="Ide kerül a mentési kód. Visszatöltéshez illeszd be ide, majd nyomd meg a Visszatöltés gombot."></textarea>
+    <p class="msg" id="msg" role="status"></p>
+  </details>
+  <details class="backup" id="pfBox"><summary>Profil és felhős mentés</summary>
+    <p class="msg">A haladásod, a megtanult szavaid és a beállításaid titkosítva (a jelszavaddal) mentődnek a felhőbe. A mentéshez nem kell GitHub kulcs. A Google és a GitHub kulcs soha nem kerül bele. Regisztrációkor e-mailben kapsz egy helyreállító kulcsot: ha elfelejted a jelszavad, ezzel visszakapod az adatodat. A kulcs és a jelszó nélkül az adat senkinek sem nyitható meg. Az adminisztrátor a neved és az összesített haladásod (hány szót tanultál, mikor voltál aktív) látja, a tartalmat nem.</p>
+    <p class="msg" id="pfSt" role="status"></p>
+    <div class="vrow"><button class="reset" id="pfNew" type="button">Új profil</button><button class="reset" id="pfJoin" type="button">Meglévő profil betöltése</button></div>
+    <div class="vrow"><button class="reset" id="pfNow" type="button">Szinkron most</button><button class="reset" id="pfSw" type="button">Profil váltása (ezen a telefonon)</button></div>
+    <div class="vrow"><button class="reset" id="pfPwd" type="button">Jelszó módosítása</button><button class="reset" id="pfRec" type="button">Új helyreállító kulcs</button><button class="reset" id="pfDel" type="button">Profil törlése a felhőből</button></div>
+    <div class="vrow"><button class="reset" id="pfMsg" type="button">Üzenet a fejlesztőnek</button></div>
+  </details>
+  <details class="backup" id="devBox"><summary>Fejlesztői beállítások (nem a tanulóknak)</summary>
+    <p class="msg">Hangok készítése és feltöltése, GitHub kulcs, hangmotorok, naplók. Ezek a hangtár fenntartásához kellenek, tanuláshoz nem.</p>
+    <div class="vrow"><input class="hsin" type="text" id="pfUrl" aria-label="Profil szerver" placeholder="Profil szerver címe (haladó, üresen hagyható)" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+    <details class="backup" id="pgBox"><summary>Hangok előre elkészítése</summary>
+    <p>Elkészíti és eltárolja a telefonon a magyar szavak és a beszélgetés magyar mondatainak hangját az összes kártyához, hogy lejátszáskor ne kelljen várni. Előbb töltsd le a Piper hangot (Hang beállítása). Közben tartsd nyitva az appot, érdemes töltőre tenni a telefont. Ha a Hangtárban el van mentve a GitHub kulcs, a kész hangokat 10 hangonként automatikusan feltölti a Hangtárba, induláskor pedig automatikusan letölti a már feltöltötteket, így megszakadás után onnan folytatódik.</p>
+    <div class="vrow"><select id="pgWho" aria-label="Mely hangokkal"><option value="s">Mely hangokkal: a kiválasztott hanggal</option><option value="a">Mely hangokkal: az összes letöltött hanggal</option></select></div>
+        <div class="vrow"><select id="pgPar" aria-label="Párhuzamos hangmotorok"><option value="a">Hangmotorok: automatikus (ajánlott, legfeljebb 2)</option><option value="1">Hangmotorok: 1 (lassú, kímélő)</option><option value="2">Hangmotorok: 2</option><option value="4">Hangmotorok: 4 (sok memória, összeomolhat)</option><option value="6">Hangmotorok: 6 (nagyon sok memória, összeomolhat)</option></select></div>
+    <div class="vrow"><button class="reset" id="pgGo" type="button">Becslés</button><button class="reset" id="pgPause" type="button" disabled>Szünet</button><button class="reset" id="pgStop" type="button" disabled>Leállítás</button></div>
+    <progress id="pgBar" max="100" value="0" hidden style="width:100%"></progress>
+    <p class="msg" id="pgMsg" role="status"></p>
+    <div class="vrow"><button class="reset" id="pgClean" type="button">Nem használt hangok törlése</button><button class="reset" id="pgDel" type="button">Elkészített hangok törlése</button></div>
+  </details>
+    <details class="backup" id="hsBox"><summary>Hangtár (GitHub)</summary>
+    <p>Az egyik telefonon legyártott magyar hangokat feltöltheted a GitHub tárolódba, a többi telefon onnan letöltheti őket, így nem kell mindegyiken újra legyártani. A Piper hangmodellt (a nagy fájlt) ez nem tárolja, azt minden telefon egyszer letölti. A kulcsot csak ez a telefon tárolja, nem kerül a mentésbe.</p>
+    <div class="vrow"><input class="hsin" type="text" id="hsRepo" aria-label="Tároló" placeholder="felhasználó/tároló" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+    <div class="vrow"><input class="hsin" type="password" id="hsTok" aria-label="GitHub kulcs" placeholder="GitHub kulcs (csak a feltöltéshez kell)" autocomplete="off"></div>
+    <div class="vrow"><button class="reset" id="hsSave" type="button">Mentés</button></div>
+    <div class="vrow"><button class="reset" id="hsUp" type="button">Feltöltés a tárba</button><button class="reset" id="hsDown" type="button">Letöltés a tárból</button></div>
+    <progress id="hsBar" max="100" value="0" hidden style="width:100%"></progress>
+    <p class="msg" id="hsMsg" role="status"></p>
+  </details>
+    <details class="backup" id="hfBox"><summary>Hangok mentése fájlba</summary>
     <p class="msg"><b>Hangok mentése:</b> a már elkészített hangok (Piper és Gemini) külön fájlokba kerülnek, mert nem férnek a mentőkódba. A fájlok a Letöltések mappába mennek, darabokra bontva, hogy a telefon memóriája ne teljen be. Visszatöltéskor jelöld ki az összes darabot egyszerre.</p>
     <div class="vrow"><label><input type="checkbox" id="hModels"> Modellek is (a letöltött Piper hangok, kb. 190 MB)</label></div>
     <div class="brow"><button class="reset" id="hSave" type="button">Hangok mentése fájlba</button><button class="reset" id="hLoadBtn" type="button">Hangok visszatöltése fájlból</button><input type="file" id="hLoadIn" accept=".bin,application/octet-stream" multiple hidden></div>
     <div class="vrow"><select id="hMode" aria-label="Visszatöltés módja"><option value="m">Visszatöltés: csak a hiányzó hangokat</option><option value="o">Visszatöltés: a meglévőket is felülírja</option></select></div>
     <progress id="hBar" max="100" value="0" hidden style="width:100%"></progress>
     <p class="msg" id="hMsg" role="status"></p>
-    <textarea id="code" rows="3" spellcheck="false" placeholder="Ide kerül a mentési kód. Visszatöltéshez illeszd be ide, majd nyomd meg a Visszatöltés gombot."></textarea>
-    <p class="msg" id="msg" role="status"></p>
-  </details>
-  <details class="backup" id="pfBox"><summary>Profil és felhős mentés</summary>
-    <p class="msg">A haladásod, a megtanult szavaid és a beállításaid titkosítva (a jelszavaddal) mentődnek a felhőbe. A mentéshez nem kell GitHub kulcs. A Google és a GitHub kulcs soha nem kerül bele. Regisztrációkor e-mailben kapsz egy helyreállító kulcsot: ha elfelejted a jelszavad, ezzel visszakapod az adatodat. A kulcs és a jelszó nélkül az adat senkinek sem nyitható meg. Az adminisztrátor a neved és az összesített haladásod (hány szót tanultál, mikor voltál aktív) látja, a tartalmat nem.</p>
-    <div class="vrow"><input class="hsin" type="text" id="pfUrl" aria-label="Profil szerver" placeholder="Profil szerver címe (haladó, üresen hagyható)" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
-    <p class="msg" id="pfSt" role="status"></p>
-    <div class="vrow"><button class="reset" id="pfNew" type="button">Új profil</button><button class="reset" id="pfJoin" type="button">Meglévő profil betöltése</button></div>
-    <div class="vrow"><button class="reset" id="pfNow" type="button">Szinkron most</button><button class="reset" id="pfSw" type="button">Profil váltása (ezen a telefonon)</button></div>
-    <div class="vrow"><button class="reset" id="pfPwd" type="button">Jelszó módosítása</button><button class="reset" id="pfRec" type="button">Új helyreállító kulcs</button><button class="reset" id="pfDel" type="button">Profil törlése a felhőből</button></div>
-  </details>
-  <details class="backup" id="klBox"><summary>Karmester napló (7 nap)</summary>
+    </details>
+    <details class="backup" id="klBox"><summary>Karmester napló (7 nap)</summary>
     <p class="msg">A háttérfeladatok naplója. 7 napnál régebbi sorok magától törlődnek. Másolással elküldheted nekem.</p>
     <div class="vrow"><button class="reset" id="klCopy" type="button">Másolás</button><button class="reset" id="klRun" type="button">Karmester futtatása most</button><button class="reset" id="klClr" type="button">Napló törlése</button></div>
     <div id="klWrap" style="max-height:40vh;overflow:auto;border:1px solid rgba(128,128,128,.4);border-radius:8px"><table id="klTab" style="width:100%;border-collapse:collapse;font-size:.8rem"><thead><tr><th style="text-align:left;padding:4px">Idő</th><th style="text-align:left;padding:4px">Feladat</th><th style="text-align:left;padding:4px">Üzenet</th></tr></thead><tbody></tbody></table></div>
     <p class="msg" id="klMsg" role="status"></p>
+  </details>
   </details>
 </div>
 <script>
@@ -4780,7 +4784,7 @@ function kModal(id,title,text,btns){if(document.querySelector('.rw'))return fals
   o.innerHTML='<div class="rwbox" role="dialog" aria-modal="true"><h2></h2><p></p></div>';o.querySelector('h2').textContent=title;o.querySelector('p').textContent=text;
   btns.forEach(function(b){var x=document.createElement('button');x.type='button';x.className='reset';x.textContent=b.t;x.addEventListener('click',function(){o.remove();try{if(b.fn)b.fn();}catch(e){}});o.querySelector('.rwbox').appendChild(x);});
   document.body.appendChild(o);return true;}
-function kOpenHs(){try{var w=document.getElementById('setWrap');if(w&&w.hidden){var bb=Array.prototype.filter.call(document.querySelectorAll('button'),function(x){return /^⚙ Beállítások megnyitása/.test(x.textContent);})[0];if(bb)bb.click();}var bx=document.getElementById('hsBox');if(bx){bx.open=true;bx.scrollIntoView({block:'start'});}}catch(e){}}
+function kOpenHs(){try{var w=document.getElementById('setWrap');if(w&&w.hidden){var bb=Array.prototype.filter.call(document.querySelectorAll('button'),function(x){return /^⚙ Beállítások megnyitása/.test(x.textContent);})[0];if(bb)bb.click();}var bx=document.getElementById('hsBox');if(bx){var dv=document.getElementById('devBox');if(dv)dv.open=true;bx.open=true;bx.scrollIntoView({block:'start'});}}catch(e){}}
 var KWIFI=0,KMOB=0;
 function hsToast(t,ms){try{ppChip(t,-1);setTimeout(function(){var c=document.getElementById('ppChip');if(c&&!PG.run&&!PPBUSY&&c.firstChild&&c.firstChild.textContent===t)ppChipHide();},ms||7000);}catch(e){}}
 async function hsMan(){try{return JSON.parse(new TextDecoder().decode(await hsFetch('manifest.json',true)));}catch(e){return {clips:{},fail:String(e&&e.message||e).slice(0,80)};}}
@@ -5094,6 +5098,9 @@ async function pfAesEnc(key,u8){var iv=crypto.getRandomValues(new Uint8Array(12)
 async function pfAesDec(key,u8){try{return new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:u8.slice(0,12)},key,u8.slice(12)));}catch(e){throw new Error('rossz jelszó');}}
 async function pfOpen(key,u8){return JSON.parse(new TextDecoder().decode(await pfGz(await pfAesDec(key,u8),true)));}
 async function pfDK(kek,meta){var raw=await pfAesDec(kek,pfB64d(meta.wk_pw));return {raw:raw,key:await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt'])};}
+async function pfRsaEnc(pubJwk,u8){var k=await crypto.subtle.importKey('jwk',pubJwk,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);return hsB64(new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},k,u8)));}
+async function pfEmEnc(em){try{var pb=await pfCall('/pub');if(pb&&pb.pub)return await pfRsaEnc(pb.pub,pfEnc(JSON.stringify({e:em})));}catch(e){}return '';}
+var APPV='v46';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
@@ -5101,7 +5108,7 @@ function pfRecNorm(k){return String(k||'').toUpperCase().replace(/[^A-Z0-9]/g,''
 async function pfRecD(fid,key){var base=await crypto.subtle.importKey('raw',pfEnc(pfRecNorm(key)),'PBKDF2',false,['deriveBits']);
   var u=new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',salt:pfEnc('szk3rec|'+fid),iterations:100000,hash:'SHA-256'},base,512));
   return {kek:await crypto.subtle.importKey('raw',u.slice(0,32),'AES-GCM',false,['encrypt','decrypt']),rcode:pfHex(u.slice(32,64))};}
-function pfStats(){var dn=0,r=0,a=0;try{DATA.forEach(function(d,i){var c=SI(i);if(c.ivl>=1)dn++;});Object.keys(st).forEach(function(k){var c=st[k];if(c){r+=c.reps||0;if((c.t||0)>a)a=c.t||0;}});return {c:DATA.length,l:dn,r:r,s:streak(),d:newDone(),a:a};}catch(e){return {c:0,l:0,r:0,s:0,d:0,a:0};}}
+function pfStats(){var dn=0,r=0,a=0;try{DATA.forEach(function(d,i){var c=SI(i);if(c.ivl>=1)dn++;});Object.keys(st).forEach(function(k){var c=st[k];if(c){r+=c.reps||0;if((c.t||0)>a)a=c.t||0;}});var le='';try{var kl=klogGet().filter(function(x){return x.k==='hiba'||/hiba|leállt/.test(x.m);}).pop();if(kl)le=new Date(kl.t).toLocaleDateString('hu-HU')+' '+kl.m;}catch(e){}return {c:DATA.length,l:dn,r:r,s:streak(),d:newDone(),a:a,v:APPV,e:le.slice(0,150)};}catch(e){return {c:0,l:0,r:0,s:0,d:0,a:0,v:APPV,e:''};}}
 function pfShowKey(key,title,cb){var o=document.createElement('div');o.className='rw';o.id='pfkey';
   o.innerHTML='<div class="rwbox" role="dialog" aria-modal="true"><h2></h2><p></p><p class="big" style="font-family:monospace;letter-spacing:1px;word-break:break-all;user-select:all"></p><p class="msg"></p></div>';
   o.querySelector('h2').textContent=title;o.querySelectorAll('p')[0].textContent='Ez a helyreállító kulcsod. Ha elfelejted a jelszavad, ezzel kapod vissza a felhős adatodat. Készíts róla képernyőképet, vagy másold ki, és tedd biztos helyre. Elküldtük e-mailben is, ha megadtál címet.';
@@ -5157,7 +5164,7 @@ function pfDlg(id,title,text,fields,okText,onOk,extra){ // fields: [{id,ph,type}
   if(document.getElementById(id))return;var o=document.createElement('div');o.className='rw';o.id=id;
   o.innerHTML='<div class="rwbox" role="dialog" aria-modal="true"><h2></h2><p></p><div class="pff"></div><p class="msg pfE" role="status"></p></div>';
   o.querySelector('h2').textContent=title;o.querySelector('p').textContent=text;var ff=o.querySelector('.pff');
-  fields.forEach(function(f){var i=document.createElement('input');i.className='hsin';i.id=id+'-'+f.id;i.type=f.type||'text';i.placeholder=f.ph;i.autocomplete='off';i.autocapitalize='off';i.spellcheck=false;if(f.val)i.value=f.val;ff.appendChild(i);});
+  fields.forEach(function(f){var i=document.createElement(f.type==='area'?'textarea':'input');if(f.type==='area'){i.rows=5;i.maxLength=1500;i.style.width='100%';}i.className='hsin';i.id=id+'-'+f.id;if(f.type!=='area')i.type=f.type||'text';i.placeholder=f.ph;i.autocomplete='off';i.autocapitalize='off';i.spellcheck=false;if(f.val)i.value=f.val;ff.appendChild(i);});
   if(fields.some(function(f){return f.type==='password';})){var lb=document.createElement('label');lb.style.cssText='display:flex;gap:8px;align-items:center;justify-content:center;margin:6px 0;font-size:.95rem';var cb=document.createElement('input');cb.type='checkbox';cb.id=id+'-show';cb.style.cssText='width:auto;margin:0';lb.appendChild(cb);lb.appendChild(document.createTextNode('Jelszó mutatása'));ff.appendChild(lb);
     cb.addEventListener('change',function(){fields.forEach(function(f){if(f.type==='password')o.querySelector('#'+id+'-'+f.id).type=cb.checked?'text':'password';});});}
   var E=o.querySelector('.pfE'),box=o.querySelector('.rwbox');
@@ -5178,7 +5185,7 @@ function pfNew(done){
       var s=pfStrong(p);if(s)throw new Error(s);if(p!==v('p2'))throw new Error('A két jelszó nem egyezik.');
       var P0=pfGet(),same=P0&&pfNk(P0.cur)===pfNk(n);
       var d=await pfPw(n,p),dkRaw=crypto.getRandomValues(new Uint8Array(32)),rec=pfRecGen(),rd=await pfRecD(d.fid,rec);
-      var meta={wk_pw:hsB64(await pfAesEnc(d.kek,dkRaw)),wk_rec:hsB64(await pfAesEnc(rd.kek,dkRaw))};
+      var meta={wk_pw:hsB64(await pfAesEnc(d.kek,dkRaw)),wk_rec:hsB64(await pfAesEnc(rd.kek,dkRaw)),em:await pfEmEnc(em)};
       var dk=await crypto.subtle.importKey('raw',dkRaw,'AES-GCM',false,['encrypt']),mine=pfObj();mine.at=Date.now();
       var data=hsB64(await pfAesEnc(dk,await pfGz(pfEnc(JSON.stringify(mine)))));
       var rg=await pfCall('/register',{fid:d.fid,wcode:d.wcode,rcode:rd.rcode,meta:meta,data:data,email:em,name:n,rec:rec,stats:pfStats()});
@@ -5215,7 +5222,7 @@ function pfNewRec(){var P=pfGet();if(!P){return;}
     [{id:'p',ph:'Jelszó',type:'password'},{id:'e',ph:'E-mail cím (nem kötelező)',type:'email',val:pfEmGet(P.cur)}],'Új kulcs készítése',
     async function(v){var em=v('e').trim();if(em&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em))throw new Error('Az e-mail cím hibás.');
       var od=await pfAuth(P.cur,v('p')),rec=pfRecGen(),rd=await pfRecD(od.fid,rec);
-      var r=await pfCall('/meta',{fid:od.fid,wcode:od.wcode,meta:{wk_pw:od.meta.wk_pw,wk_rec:hsB64(await pfAesEnc(rd.kek,od.dk.raw))},newRcode:rd.rcode,email:em,rec:rec});
+      var r=await pfCall('/meta',{fid:od.fid,wcode:od.wcode,meta:{wk_pw:od.meta.wk_pw,wk_rec:hsB64(await pfAesEnc(rd.kek,od.dk.raw)),em:em?await pfEmEnc(em):undefined},newRcode:rd.rcode,email:em,rec:rec});
       if(em)lsSet('szokartya-pfem-'+pfNk(P.cur),em);klog('profil','új helyreállító kulcs'+(r&&r.mail?', e-mail elküldve':''));await pfKeyWait(rec,'Az új helyreállító kulcsod');});}
 function pfRelogin(){var P=pfGet();if(!P)return;pfDlg('pfre','Jelszó megadása','A(z) "'+P.cur+'" profil jelszava megváltozott vagy hibás. Add meg a jelenlegi jelszót.',[{id:'p',ph:'Jelszó',type:'password'}],'Mentés',
   async function(v){var pw=v('p');if(!pw)throw new Error('Add meg a jelszót.');await pfAuth(P.cur,pw);lsSet('szokartya-pfpw-'+pfNk(P.cur),pw);klog('profil','új jelszó elmentve a telefonon');pfSync('új jelszó').catch(function(){});});}
@@ -5224,22 +5231,26 @@ function pfDelete(){var P=pfGet();if(!P)return;
     async function(v){var d=await pfAuth(P.cur,v('p'));var dr=await pfCall('/delete',{fid:d.fid,wcode:d.wcode,email:v('e').trim()});
       var o=pfGet();o.list=o.list.filter(function(x){return x!==P.cur;});lsSet('szokartya-pfpw-'+pfNk(P.cur),'');if(o.list.length)o.cur=o.list[0];else{lsSet(PFK,'');o=null;}if(o)lsSet(PFK,JSON.stringify(o));klog('profil','felhős profil törölve'+(dr&&dr.mail?', értesítő levél elküldve':''));kBar('pfdelm',dr&&dr.mail?'A profil törölve. Értesítő levelet küldtünk.':'A profil törölve a felhőből.');if(window.pfUi)window.pfUi();});}
 var NWK='szokartya-news';
-async function kNews(){if(!pfGet())return;var j=await pfCall('/news'),seen=parseInt(lsGet(NWK)||'0',10),it=(j.items||[]).filter(function(x){return x.id>seen;});if(!it.length)return;
+function pfFeedback(pre){var P=pfGet();if(!P){kBar('pffb','Üzenethez előbb hozz létre profilt.');return;}
+  pfDlg('pffb','Üzenet a fejlesztőnek','Írd le a hibát vagy az ötletedet. Automatikusan csatoljuk az app verzióját és a napló végét (ebben nincs jelszó). Ha megadtad az e-mail címed, azon válaszolhatok.',[{id:'t',ph:'Üzenet',type:'area',val:pre||''}],'Küldés',
+    async function(v){var tx=v('t').trim();if(!tx)throw new Error('Írj üzenetet.');var pw=lsGet('szokartya-pfpw-'+pfNk(P.cur));if(!pw)throw new Error('A jelszó nincs elmentve ezen a telefonon (Beállítások, Profil).');var d=await pfAuth(P.cur,pw),lg='';
+      try{lg=klogGet().slice(-12).map(function(x){return new Date(x.t).toLocaleTimeString('hu-HU')+' '+x.k+' '+x.m;}).join('\n');}catch(e){}
+      await pfCall('/feedback',{fid:d.fid,wcode:d.wcode,text:tx,ver:APPV,log:lg,reply:pfEmGet(P.cur)});klog('profil','üzenet elküldve a fejlesztőnek');kBar('pffb','Az üzenetet elküldtük. Köszönjük!');});}
+async function kNews(){var P=pfGet();if(!P)return;var fid=await pfFid(P.cur),j=await pfCall('/news?f='+fid),seen=parseInt(lsGet(NWK)||'0',10),it=(j.items||[]).filter(function(x){return x.id>seen;});if(!it.length)return;
   var mx=Math.max.apply(null,it.map(function(x){return x.id;})),txt=it.map(function(x){return x.t+'\n'+x.x;}).join('\n\n');
-  var ok=kModal('newsm','Újdonságok',txt,[{t:'Rendben',fn:function(){lsSet(NWK,String(mx));}}]);if(ok){var pp=document.querySelector('#newsm p');if(pp)pp.style.whiteSpace='pre-wrap';klog('hírek',it.length+' új üzenet megjelenítve');}}
+  var ok=kModal('newsm','Újdonságok',txt,[{t:'Rendben',fn:function(){lsSet(NWK,String(mx));}},{t:'Üzenet a fejlesztőnek',fn:function(){lsSet(NWK,String(mx));setTimeout(function(){pfFeedback('');},100);}}]);if(ok){var pp=document.querySelector('#newsm p');if(pp)pp.style.whiteSpace='pre-wrap';klog('hírek',it.length+' új üzenet megjelenítve');}}
 function pfFirst(){if(pfGet()||lsGet('szokartya-pfsnz')===kDay())return;if(document.querySelector('.rw')){setTimeout(pfFirst,4000);return;}
   kModal('pfask','Profil létrehozása','Hozz létre profilt, hogy a haladásod, a megtanult szavaid és a beállításaid titkosítva mentődjenek a felhőbe, és bármelyik telefonról elérd őket. Később is megteheted a Beállításokban.',[{t:'Új profil',fn:function(){pfNew(function(){});}},{t:'Meglévő profil betöltése',fn:function(){pfJoin(function(){});}},{t:'Később',fn:function(){lsSet('szokartya-pfsnz',kDay());}}]);}
 (function(){function init(){var b=document.getElementById('pfBox');if(!b)return;var st=document.getElementById('pfSt'),ui0=document.getElementById('pfUrl');
   function ui(){var P=pfGet(),ok=parseInt(lsGet('szokartya-pfok')||'0',10);st.textContent=P?('Profil: '+P.cur+'. Utolsó feltöltés: '+(ok?new Date(ok).toLocaleString('hu-HU'):'még nem volt')+'. Állapot: '+(lsGet('szokartya-pfres')||'-')+'.'+(P.list.length>1?' A telefonon lévő profilok: '+P.list.join(', ')+'.':'')):'Nincs profil. A haladásod csak ezen a telefonon van.';if(ui0&&document.activeElement!==ui0)ui0.value=lsGet(PFW)||'';}
-  var cs=document.getElementById('bCloudSt');
-  function cui(){if(!cs)return;var P=pfGet(),ok=parseInt(lsGet('szokartya-pfok')||'0',10),r=lsGet('szokartya-pfres')||'';cs.textContent=P?(/^hiba/.test(r)?'A felhős mentés nem sikerült: '+r.replace(/^hiba:\s*/,'')+'.':(ok?'Sikeres felhős mentés: '+new Date(ok).toLocaleString('hu-HU')+' (profil: '+P.cur+').':'Még nem volt felhős mentés.')):'Felhős mentéshez előbb hozz létre profilt: Beállítások, Profil és felhős mentés.';}
-  var ui1=ui;ui=function(){ui1();cui();};window.pfUi=ui;ui();
-  var bc=document.getElementById('bCloud');if(bc)bc.addEventListener('click',function(){if(!pfGet()){cs.textContent='Felhős mentéshez előbb hozz létre profilt: Beállítások, Profil és felhős mentés.';return;}cs.textContent='Mentés...';bc.disabled=true;pfSync('kézi mentés').then(function(){bc.disabled=false;ui();var r=lsGet('szokartya-pfres')||'';if(r==='mentve'||r==='naprakész')cs.textContent='Sikeres mentés felhőbe: '+new Date().toLocaleString('hu-HU')+(r==='naprakész'?' (már minden naprakész volt).':'.');},function(){bc.disabled=false;ui();});});ui0.addEventListener('change',function(){lsSet(PFW,ui0.value.trim());st.textContent='A profil szerver címe elmentve.';});
+  window.pfUi=ui;ui();
+  ui0.addEventListener('change',function(){lsSet(PFW,ui0.value.trim());st.textContent='A profil szerver címe elmentve.';});
   document.getElementById('pfNew').addEventListener('click',function(){pfNew(ui);});
   document.getElementById('pfJoin').addEventListener('click',function(){pfJoin(ui);});
   document.getElementById('pfNow').addEventListener('click',function(){if(!pfGet()){st.textContent='Előbb hozz létre profilt.';return;}st.textContent='Szinkron...';pfSync('kézi').then(ui,function(e){ui();});});
   document.getElementById('pfPwd').addEventListener('click',function(){if(!pfGet()){st.textContent='Előbb hozz létre profilt.';return;}pfChange();});
   document.getElementById('pfRec').addEventListener('click',function(){if(!pfGet()){st.textContent='Előbb hozz létre profilt.';return;}pfNewRec();});
+  document.getElementById('pfMsg').addEventListener('click',function(){pfFeedback('');});
   document.getElementById('pfDel').addEventListener('click',function(){if(!pfGet()){st.textContent='Nincs profil.';return;}pfDelete();});
   document.getElementById('pfSw').addEventListener('click',function(){var P=pfGet();if(!P||P.list.length<2){st.textContent='Nincs másik profil ezen a telefonon. Hozz létre újat vagy tölts be egy meglévőt.';return;}
     var other=P.list.filter(function(x){return x!==P.cur;});kModal('pfsw','Profil váltása','Melyik profilra váltsak?',other.map(function(n){return {t:n,fn:function(){if(!lsGet('szokartya-pfpw-'+pfNk(n))){pfJoin();return;}pfSwitch(n);}};}).concat([{t:'Mégse'}]));});}
@@ -5281,7 +5292,7 @@ render();
 })();
 (function(){var u=document.getElementById('uiWords');if(u){u.value=uiGet().words==='0'?'0':'1';u.addEventListener('change',function(){var o=uiGet();o.words=u.value;try{localStorage.setItem(UIK,JSON.stringify(o));}catch(e){}if(typeof QS!=='undefined'&&QS&&VIEW==='q')renderQ();});}})();
 (function(){var btn=document.getElementById('setAll');if(!btn)return;
-  var wrap=document.createElement('div');wrap.id='setWrap';var ds=document.querySelectorAll('details.backup');
+  var wrap=document.createElement('div');wrap.id='setWrap';var ds=Array.prototype.filter.call(document.querySelectorAll('details.backup'),function(d){return !d.parentNode.closest('details.backup');});
   if(ds.length){ds[0].parentNode.insertBefore(wrap,ds[0]);Array.prototype.forEach.call(ds,function(d){wrap.appendChild(d);});}
   function apply(o,reset){wrap.hidden=!o;if(o&&reset)Array.prototype.forEach.call(wrap.querySelectorAll('details.backup'),function(d){d.open=false;});btn.textContent=o?'⚙ Beállítások bezárása ▴':'⚙ Beállítások megnyitása ▾';btn.setAttribute('aria-expanded',o?'true':'false');}
   apply(uiGet().setOpen==='1',true);
