@@ -4864,6 +4864,7 @@ function kModal(id,title,text,btns){if(document.querySelector('.rw'))return fals
   document.body.appendChild(o);return true;}
 function kOpenHs(){try{var w=document.getElementById('setWrap');if(w&&w.hidden){var bb=Array.prototype.filter.call(document.querySelectorAll('button'),function(x){return /^⚙ Beállítások megnyitása/.test(x.textContent);})[0];if(bb)bb.click();}var bx=document.getElementById('hsBox');if(bx){var dv=document.getElementById('devBox');if(dv)dv.open=true;bx.open=true;bx.scrollIntoView({block:'start'});}}catch(e){}}
 var KWIFI=0,KMOB=0;
+function toast5(t){try{ppChip(t,-1);setTimeout(function(){var c=document.getElementById('ppChip');if(c&&c.firstChild&&c.firstChild.textContent===t)ppChipHide();},5000);}catch(e){}}
 function hsToast(t,ms){try{ppChip(t,-1);setTimeout(function(){var c=document.getElementById('ppChip');if(c&&!PG.run&&!PPBUSY&&c.firstChild&&c.firstChild.textContent===t)ppChipHide();},ms||7000);}catch(e){}}
 async function hsMan(){try{return JSON.parse(new TextDecoder().decode(await hsFetch('manifest.json',true)));}catch(e){return {clips:{},fail:String(e&&e.message||e).slice(0,80)};}}
 function hsCount(M){var n=0;Object.keys(M.clips||{}).forEach(function(v){n+=Object.keys(M.clips[v]).length;});return n;}
@@ -5087,7 +5088,7 @@ async function hLoad(fl,over,prog){var dec=new TextDecoder(),have=over?null:new 
     go.disabled=true;pa.disabled=sp.disabled=false;bar.hidden=false;bar.value=0;
     var r=await pgRun(pl,function(i,n,ms){bar.value=100*i/n;var eta=Math.round(ms/i*(n-i)/60000);var t='Elkészült: '+i+' / '+n+(i>3?', még kb. '+eta+' perc':'')+(PG.pause?' (szünet)':'')+(PGSYNC?' · a tárban: '+SYNCED:'');msg.textContent=t;});
     if(PGSYNC){msg.textContent='Utolsó hangok feltöltése...';while(SYBUSY)await new Promise(function(r){setTimeout(r,200);});await syncNow();}
-    PGSYNC=null;if(AUTO){AUTO=false;try{klog('hang','háttérben kész: '+r.done+' hang');hsToast('Hangok elkészültek a háttérben: '+r.done+' hang',6000);}catch(e){}}
+    PGSYNC=null;if(AUTO){AUTO=false;try{klog('hang','háttérben kész: '+r.done+' hang');toast5('Hangok elkészültek a háttérben: '+r.done+' hang');}catch(e){}}
     idle();pgPlan().catch(function(){});
     msg.textContent=(r.failed?'Megállt: sok egymás utáni hang nem készült el ('+String(r.err&&r.err.message||r.err).slice(0,100)+'). Zárd be és nyisd újra az appot, majd Indítás.':(r.stopped?'Leállítva: '+r.done+' hang elkészült. Az Indítással később folytatható.':'Kész: '+r.done+' hang elkészült.')+(r.skipped?' Kihagyva: '+r.skipped+' hang'+(r.bad&&r.bad.length?' (hibás hang: '+r.bad.join(', ')+', töltsd le újra a Hang beállításánál)':'')+'. Az Indítással újra megpróbálja.':''))+(SYNCED?' A tárba feltöltve: '+SYNCED+' hang.':'')+(SYERR?' Feltöltési hiba: '+SYERR+'.':'');}
   go.addEventListener('click',async function(){
@@ -5098,7 +5099,7 @@ async function hLoad(fl,over,prog){var dec=new TextDecoder(),have=over?null:new 
       try{navigator.storage.estimate().then(function(e){var free=(e.quota||0)-(e.usage||0);if(free>0&&est>free*0.8)msg.textContent=txt+' Figyelem: a szabad hely kevés lehet (kb. '+mb(free)+' MB)!';});}catch(e){}
       msg.textContent=txt+' Az Indítás gombbal kezdődik.';go.textContent='Indítás';return;}
     var pl=plan;plan=null;await runPlan(pl);});
-  window.pgResume=async function(){if(PG.run||PPBUSY)return;plan=null;AUTO=true;var pl=await prepare();plan=null;if(!pl||!pl.todo.length){AUTO=false;ppChipHide();msg.textContent=pl?'Minden hang kész.':msg.textContent;return;}try{hsToast('Hangok készítése indul a háttérben: '+pl.todo.length+' hang',6000);}catch(e){}await runPlan(pl);};
+  window.pgResume=async function(){if(PG.run||PPBUSY)return;plan=null;AUTO=true;var pl=await prepare();plan=null;if(!pl||!pl.todo.length){AUTO=false;ppChipHide();msg.textContent=pl?'Minden hang kész.':msg.textContent;return;}try{toast5('Hangok készítése indul a háttérben: '+pl.todo.length+' hang');}catch(e){}await runPlan(pl);};
   pa.addEventListener('click',function(){if(!PG.run)return;PG.pause=!PG.pause;pa.textContent=PG.pause?'Folytatás':'Szünet';});
   sp.addEventListener('click',function(){PG.stop=true;PG.pause=false;});
   cl.addEventListener('click',async function(){if(PG.run)return;var n=await pgClearAll(true);msg.textContent=n?n+' nem használt hang törölve.':'Nincs nem használt hang.';pgPlan().catch(function(){});});
@@ -5179,7 +5180,7 @@ async function pfOpen(key,u8){return JSON.parse(new TextDecoder().decode(await p
 async function pfDK(kek,meta){var raw=await pfAesDec(kek,pfB64d(meta.wk_pw));return {raw:raw,key:await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt'])};}
 async function pfRsaEnc(pubJwk,u8){var k=await crypto.subtle.importKey('jwk',pubJwk,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);return hsB64(new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},k,u8)));}
 async function pfEmEnc(em){try{var pb=await pfCall('/pub');if(pb&&pb.pub)return await pfRsaEnc(pb.pub,pfEnc(JSON.stringify({e:em})));}catch(e){}return '';}
-var APPV='v52';
+var APPV='v53';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
