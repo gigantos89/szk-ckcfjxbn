@@ -186,6 +186,12 @@ body{zoom:var(--fs,1)}
 .hint{font-size:.82rem;color:var(--muted);margin:0}
 #goPick[hidden]{display:none}
 #home h2{font-size:1.05rem;margin:4px 0 0}
+.ah{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;margin:2px 0 0;padding:12px 14px;border:1px solid var(--line,#8884);border-radius:12px;background:transparent;color:var(--fg);font:inherit;font-size:1.05rem;font-weight:700;text-align:left;cursor:pointer}
+.ah small{font-weight:400;color:var(--muted);font-size:.85rem;margin-left:auto}
+.ah b{display:inline-block;transition:transform .15s;font-size:.9rem}
+.ah[aria-expanded=true] b{transform:rotate(90deg)}
+.ab{display:flex;flex-direction:column;gap:8px;padding:6px 0 4px}
+.ab[hidden]{display:none}
 .hb{display:flex;align-items:center;gap:12px;width:100%;text-align:left;font:inherit;color:var(--fg);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;cursor:pointer}
 .hb i{width:10px;align-self:stretch;border-radius:5px;flex:none}
 .hb span{flex:1;font-size:1.02rem}.hb small{display:block;color:var(--muted);font-size:.8rem;margin-top:2px}
@@ -4131,21 +4137,25 @@ function maybeAskQ(cat){
   document.getElementById('qYes').addEventListener('click',function(){o.remove();openQ(k);});
 }
 
+var HOMEOPEN=null;
 function buildHome(){
+  function ah(k,t,sm){return '<button type="button" class="ah" data-s="'+k+'" aria-expanded="'+(HOMEOPEN===k)+'"><span>'+t+'</span><small>'+sm+'</small><b>&#9656;</b></button><div class="ab"'+(HOMEOPEN===k?'':' hidden')+'>';}
+  function ae(){return '</div>';}
   var h=document.getElementById('home'),cnt={};DATA.forEach(function(d){cnt[d.cat]=(cnt[d.cat]||0)+1;});
   var now=Date.now(),du=dueInfo(null).el.length;
   var na=newAllow(),un=0;DATA.forEach(function(d,i){if(!SI(i).seen)un++;});
   var nn=Math.min(na,un);
   function b(m,col,t,sub,n,cls){return '<div class="hr"><button type="button" class="hb'+(cls||'')+'" data-m="'+m+'"><i style="background:'+col+'"></i><span>'+t+'</span><em>'+n+'</em></button>'+(m.indexOf('cat:')===0?'<label class="pk"><input type="checkbox" data-k="'+m.slice(4)+'" aria-label="Kijelölés"'+(PICK.indexOf(m.slice(4))>=0?' checked':'')+'></label>':'')+'</div>';}
   var o=b('learn','var(--fg)','Tanulás','Esedékes ismétlések és mai új szavak',du+' + '+(nn===Infinity?un:nn),' main');
-  o+='<h2>Témakörök</h2><p class="hint">Koppints egy témakörre, vagy jelölj ki többet a négyzettel, és indítsd el őket együtt. Ugyanúgy tanulás, mint a Tanulás gomb (Újra, Nehéz, Jó, Könnyű, 15 nap, 30 nap), csak a választott témakör szavaival, véletlen sorrendben.</p><button type="button" class="hb main" id="goPick" '+(PICK.length?'':'hidden ')+'><span>Kijelölt témakörök indítása<small>Véletlen sorrend</small></span><em>'+DATA.filter(function(d){return PICK.indexOf(d.cat)>=0;}).length+'</em></button>';
+  o+=ah('t','Témakörök',Object.keys(cnt).length+' db');o+='<p class="hint">Koppints egy témakörre, vagy jelölj ki többet a négyzettel, és indítsd el őket együtt. Ugyanúgy tanulás, mint a Tanulás gomb (Újra, Nehéz, Jó, Könnyű, 15 nap, 30 nap), csak a választott témakör szavaival, véletlen sorrendben.</p><button type="button" class="hb main" id="goPick" '+(PICK.length?'':'hidden ')+'><span>Kijelölt témakörök indítása<small>Véletlen sorrend</small></span><em>'+DATA.filter(function(d){return PICK.indexOf(d.cat)>=0;}).length+'</em></button>';
   Object.keys(CATS).forEach(function(k){if(cnt[k])o+=b('cat:'+k,CATS[k].c,esc(CATS[k].n),'',cnt[k]);});
-  o+='<h2>Beszélgetés</h2><p class="hint">Szóbeli témakártyák: kérdések magyar magyarázattal és szósegítővel.</p>'+Object.keys(QT).map(function(k){return '<div class="hr"><button type="button" class="hb" data-q="'+k+'"><i style="background:'+QT[k].c+'"></i><span>'+esc(QT[k].n)+'<small>'+esc(QT[k].hu)+'</small></span><em>'+QT[k].items.length+'</em></button></div>';}).join('');
+  o+=ae()+ah('q','Beszélgetés',Object.keys(QT).length+' db');o+='<p class="hint">Szóbeli témakártyák: kérdések magyar magyarázattal és szósegítővel.</p>'+Object.keys(QT).map(function(k){return '<div class="hr"><button type="button" class="hb" data-q="'+k+'"><i style="background:'+QT[k].c+'"></i><span>'+esc(QT[k].n)+'<small>'+esc(QT[k].hu)+'</small></span><em>'+QT[k].items.length+'</em></button></div>';}).join('');
   var lsN=0;try{lsN=lsElig(lsCfg()).length;}catch(e){}
-  o+='<h2>Szabad beszélgetés</h2><div class="hr"><button type="button" class="hb" data-f="1"><i style="background:#2a9d8f"></i><span>Szabad beszélgetés<small>Angolul beszélgetsz egy tanárral, bármiről</small></span><em>AI</em></button></div>';
-  o+='<h2>Hallgatás</h2><div class="hr"><button type="button" class="hb" data-l="1"><i style="background:#7a5cc7"></i><span>Szavak hallgatása<small>Angolul, majd magyarul, ismételve, a megtanult szavakból</small></span><em>'+lsN+'</em></button></div>';
-  o+='<h2>Egyéb</h2>'+b('hard','var(--red)','Nehéz szavak','Legalább kétszer Újra',hardList().length)+b('star','#d9a400','Csillagozottak','',starList().length)+b('all','var(--muted)','Minden kártya','Gyakorlás',DATA.length);
-  h.innerHTML=o;
+  o+=ae()+ah('f','Szabad beszélgetés','AI');o+='<div class="hr"><button type="button" class="hb" data-f="1"><i style="background:#2a9d8f"></i><span>Szabad beszélgetés<small>Angolul beszélgetsz egy tanárral, bármiről</small></span><em>AI</em></button></div>';
+  o+=ae()+ah('l','Hallgatás',lsN+' szó');o+='<div class="hr"><button type="button" class="hb" data-l="1"><i style="background:#7a5cc7"></i><span>Szavak hallgatása<small>Angolul, majd magyarul, ismételve, a megtanult szavakból</small></span><em>'+lsN+'</em></button></div>';
+  o+=ae()+ah('e','Egyéb','3');o+=b('hard','var(--red)','Nehéz szavak','Legalább kétszer Újra',hardList().length)+b('star','#d9a400','Csillagozottak','',starList().length)+b('all','var(--muted)','Minden kártya','Gyakorlás',DATA.length);
+  o+='</div>';h.innerHTML=o;
+  h.querySelectorAll('.ah').forEach(function(x){x.addEventListener('click',function(){HOMEOPEN=(HOMEOPEN===x.dataset.s)?null:x.dataset.s;h.querySelectorAll('.ah').forEach(function(y){var op=y.dataset.s===HOMEOPEN;y.setAttribute('aria-expanded',op);y.nextElementSibling.hidden=!op;});if(HOMEOPEN)try{x.scrollIntoView({block:'nearest'});}catch(e){}});});
   h.querySelectorAll('.hb[data-m]').forEach(function(x){x.addEventListener('click',function(){MODE=x.dataset.m;QUEUE=null;showView('study');});});
   h.querySelectorAll('.pk input').forEach(function(x){x.addEventListener('change',function(){var k=x.dataset.k,i=PICK.indexOf(k);if(x.checked&&i<0)PICK.push(k);if(!x.checked&&i>=0)PICK.splice(i,1);buildHome();});});
   h.querySelectorAll('.hb[data-f]').forEach(function(x){x.addEventListener('click',function(){showView('free');});});
@@ -4154,7 +4164,7 @@ function buildHome(){
   var gp=document.getElementById('goPick');if(gp)gp.addEventListener('click',function(){if(!PICK.length)return;MODE=PICK.length===1?'cat:'+PICK[0]:'cats:'+PICK.join(',');QUEUE=null;showView('study');});
 }
 function showView(v){
-  var pv=VIEW;VIEW=v;if(pv!==v){try{var sw0=document.getElementById('setWrap');if(sw0)Array.prototype.forEach.call(sw0.querySelectorAll('details.backup'),function(d){d.open=false;});}catch(e){}}if(pv==='free'&&v!=='free'&&window.fStopAll)window.fStopAll();
+  var pv=VIEW;VIEW=v;if(v==='home'&&pv!=='home')HOMEOPEN=null;if(pv!==v){try{var sw0=document.getElementById('setWrap');if(sw0)Array.prototype.forEach.call(sw0.querySelectorAll('details.backup'),function(d){d.open=false;});}catch(e){}}if(pv==='free'&&v!=='free'&&window.fStopAll)window.fStopAll();
   document.getElementById('home').hidden=v!=='home';document.getElementById('study').hidden=v!=='study';document.getElementById('qview').hidden=v!=='q';document.getElementById('lview').hidden=v!=='listen';document.getElementById('fview').hidden=v!=='free';if(v!=='listen'&&typeof L!=='undefined'&&L.on)lsStop();
   if(v==='study'){var nm=document.getElementById('modeName'),s=document.getElementById('modeSel');buildModeSel();var op=s.options[s.selectedIndex];nm.textContent=op?op.textContent.replace(/\s*\(\d+\)$/,''):'';}
   if(v==='q'){renderQ();}else if(v==='listen'){renderL();}else if(v==='free'){renderF();}else render();try{window.scrollTo(0,0);}catch(e){}
@@ -5169,7 +5179,7 @@ async function pfOpen(key,u8){return JSON.parse(new TextDecoder().decode(await p
 async function pfDK(kek,meta){var raw=await pfAesDec(kek,pfB64d(meta.wk_pw));return {raw:raw,key:await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt'])};}
 async function pfRsaEnc(pubJwk,u8){var k=await crypto.subtle.importKey('jwk',pubJwk,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);return hsB64(new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},k,u8)));}
 async function pfEmEnc(em){try{var pb=await pfCall('/pub');if(pb&&pb.pub)return await pfRsaEnc(pb.pub,pfEnc(JSON.stringify({e:em})));}catch(e){}return '';}
-var APPV='v50';
+var APPV='v51';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
