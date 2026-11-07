@@ -4,9 +4,9 @@
 <style>
 :root{--bg:#f6f7f9;--fg:#1d2330;--card:#fff;--ln:#d9dde5;--ac:#2f6fed;--bad:#c0392b;--mut:#667}
 @media(prefers-color-scheme:dark){:root{--bg:#14171d;--fg:#e8ebf2;--card:#1d222b;--ln:#323a48;--ac:#6b9bff;--bad:#ff7a6b;--mut:#9aa3b5}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,sans-serif;padding:16px;max-width:1300px;margin:auto}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,sans-serif;padding:12px;max-width:none;margin:0}
 h1{font-size:1.3rem;margin:.2em 0 .6em}h2{font-size:1.05rem;margin:0 0 .5em}
-.c{background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:14px;margin:0 0 14px}
+.c{max-width:900px;background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:14px;margin:0 0 14px}
 input,textarea{width:100%;padding:10px;border:1px solid var(--ln);border-radius:8px;background:var(--bg);color:var(--fg);font:inherit;margin:4px 0}
 button{padding:9px 14px;border:1px solid var(--ln);border-radius:8px;background:var(--ac);color:#fff;font:inherit;cursor:pointer;margin:4px 6px 4px 0}
 button.s{background:transparent;color:var(--fg)}button.d{background:var(--bad)}
@@ -16,6 +16,8 @@ button.s{background:transparent;color:var(--fg)}button.d{background:var(--bad)}
 .nw{border-top:1px solid var(--ln);padding:8px 0;white-space:pre-wrap}
 .sw{display:flex;align-items:center;gap:8px;margin:3px 0;cursor:pointer;font-size:.88rem}.sw input{position:absolute;opacity:0;width:0;height:0;margin:0}.sw i{position:relative;flex:none;width:38px;height:22px;border-radius:11px;background:#8a93a6;transition:background .15s}.sw i:after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s}.sw input:checked+i{background:#2e9d57}.sw input:checked+i:after{left:19px}.sw input:focus-visible+i{outline:2px solid var(--ac)}.sw.neg input:checked+i{background:var(--bad)}.sw b{font-weight:600}
 details.mo{margin-top:4px}details.mo summary{cursor:pointer;color:var(--mut);font-size:.85rem}details.mo button{display:block}
+.c.full{max-width:none;width:100%}
+#pbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--card);border-top:2px solid var(--ac);padding:10px 14px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;box-shadow:0 -4px 16px rgba(0,0,0,.25)}#pbar[hidden]{display:none}#pbar span{font-weight:600;margin-right:auto}.sw.chg span{color:var(--ac)}body{padding-bottom:70px}
 </style></head><body>
 <h1>Szókártya admin</h1>
 <div class="c"><h2>Belépés</h2>
@@ -23,8 +25,9 @@ details.mo{margin-top:4px}details.mo summary{cursor:pointer;color:var(--mut);fon
 <input id="tok" type="password" placeholder="Admin jelszó (ADMIN_TOKEN)" autocomplete="off">
 <textarea id="priv" rows="2" placeholder="Admin privát kulcs (nem kötelező, csak az e-mail címek olvasásához; nem kerül sehova, a böngésző memóriájában marad)" autocomplete="off" spellcheck="false"></textarea>
 <button id="list">Profilok listázása</button><button id="chk" class="s">Szerver ellenőrzése</button>
+<div style="margin-top:8px;border-top:1px solid var(--ln);padding-top:8px"><button id="apply2" disabled>Beállítások alkalmazása</button><span class="m">A táblázat kapcsolói csak erre a gombra lépnek életbe.</span></div>
 <p id="msg" class="m" role="status"></p></div>
-<div class="c"><h2>Regisztráltak és haladásuk</h2><p id="sum" class="m"></p><div class="w"><table id="tab"><thead><tr><th>Név</th><th>Fiók</th><th>E-mail</th><th>Regisztrált</th><th>Utolsó mentés</th><th>Tanult</th><th>Ismétlés</th><th>Sorozat</th><th>Ma új</th><th>Gemini</th><th>Hangkészítő</th><th>Verzió</th><th>Utolsó hiba</th><th>Műveletek</th></tr></thead><tbody></tbody></table></div>
+<div class="c full"><h2>Regisztráltak és haladásuk</h2><p id="sum" class="m"></p><div class="w"><table id="tab"><thead><tr><th>Név</th><th>Fiók</th><th>E-mail</th><th>Regisztrált</th><th>Utolsó mentés</th><th>Tanult</th><th>Ismétlés</th><th>Sorozat</th><th>Ma új</th><th>Gemini</th><th>Hangkészítő</th><th>Verzió</th><th>Utolsó hiba</th><th>Műveletek</th></tr></thead><tbody></tbody></table></div>
 <p><button id="gAll">Gemini bekapcsolása mindenkinek</button><button id="gNone" class="s">Gemini kikapcsolása mindenkinél</button></p>
 <p class="m">A napi keret felhasználónként számolódik (a számláló magyar idő szerint éjfélkor nullázódik). Az alap keret 100 kérés. Egy kérés egy AI-válasz, javítás vagy hang. A számláló kb. 5 kérésenként mentődik, ezért kisebb eltérés lehet.</p>
 <p class="m">A Gemini a te Google kulcsodat használja a Cloudflare-ben (GEMINI_KEY), a felhasználók a kulcsot nem látják. Kikapcsolás után a hozzáférés megszűnik. A kulcs ingyenes kerete közös, ezért figyeld a használatot.</p>
@@ -35,6 +38,7 @@ details.mo{margin-top:4px}details.mo summary{cursor:pointer;color:var(--mut);fon
 <label class="m" style="display:block;margin:4px 0"><input id="nmail" type="checkbox" style="width:auto"> E-mailben is elküldöm (ha az e-mail cím kiolvasható a privát kulccsal)</label>
 <input id="nt" maxlength="80" placeholder="Cím (pl. Új: hangerő beállítás)"><textarea id="nx" rows="4" maxlength="1200" placeholder="Szöveg"></textarea>
 <button id="ns">Üzenet közzététele</button><div id="nl"></div></div>
+<div id="pbar" hidden><span id="pn"></span><button id="apply3">Beállítások alkalmazása</button><button id="pdrop" class="s">Elvetés</button></div>
 <script>
 (function(){var $=function(i){return document.getElementById(i);};
 function msg(t,bad){$('msg').textContent=t;$('msg').style.color=bad?'var(--bad)':'';}
@@ -45,7 +49,16 @@ function esc(s){var d=document.createElement('div');d.textContent=String(s);retu
 var PRIV=null,CACHE={};
 async function dec(em){if(!em||!PRIV)return '';if(CACHE[em]!==undefined)return CACHE[em];try{var u=atob(em),b=new Uint8Array(u.length);for(var i=0;i<u.length;i++)b[i]=u.charCodeAt(i);var o=JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:'RSA-OAEP'},PRIV,b)));return (CACHE[em]=o.e||'');}catch(e){return (CACHE[em]='(nem olvasható)');}}
 async function loadPriv(){PRIV=null;CACHE={};var t=$('priv').value.trim();if(!t)return;try{PRIV=await crypto.subtle.importKey('jwk',JSON.parse(t),{name:'RSA-OAEP',hash:'SHA-256'},false,['decrypt']);}catch(e){msg('A privát kulcs hibás, az e-mail címek nem látszanak.',1);}}
-var LIST=[],DEF=100,TODAY='';
+var LIST=[],DEF=100,TODAY='',PEND={};
+function nPend(){var n=0;for(var f in PEND)n+=Object.keys(PEND[f]).length;return n;}
+function setP(fid,key,val,orig){var e=PEND[fid]=PEND[fid]||{};if(val===orig)delete e[key];else e[key]=val;if(!Object.keys(e).length)delete PEND[fid];bar();}
+function bar(){var n=nPend();$('pbar').hidden=!n;$('pn').textContent=n+' változás vár az alkalmazásra';$('apply2').disabled=!n;$('apply2').textContent=n?('Beállítások alkalmazása ('+n+')'):'Beállítások alkalmazása';}
+function nm(fid){return (LIST.filter(function(p){return p.fid===fid;})[0]||{}).n||'?';}
+async function applyAll(){var n=nPend();if(!n)return;var L=[];for(var f in PEND){var e=PEND[f];if('ok' in e)L.push(nm(f)+': fiók '+(e.ok?'engedélyezett':'LETILTVA'));if('gem' in e)L.push(nm(f)+': Gemini '+(e.gem?'be':'ki'));if('adm' in e)L.push(nm(f)+': hangkészítés '+(e.adm?'ENGEDÉLYEZVE':'tiltva'));if('gq' in e)L.push(nm(f)+': Gemini keret '+(e.gq===null?'alap':e.gq<0?'korlátlan':e.gq));}
+  if(!confirm('Alkalmazod ezeket?\n\n'+L.join('\n')))return;msg('Alkalmazás...');var err=0;
+  for(var f in PEND){var e=PEND[f];try{if('ok' in e)await call('/admin/block',{fid:f,blocked:!e.ok});if('gem' in e)await call('/admin/gem',{fid:f,on:e.gem});if('gq' in e)await call('/admin/gem',{fid:f,limit:e.gq===null?-2:e.gq});if('adm' in e)await call('/admin/adm',{fid:f,on:e.adm});}catch(x){err++;msg(nm(f)+': '+x.message,1);}}
+  PEND={};bar();await list();if(!err)msg('Alkalmazva: '+n+' változás.');}
+async function dropAll(){PEND={};bar();await list();}
 function gUse(p){var lim=p.gq===null||p.gq===undefined?DEF:p.gq,used=(p.gu&&p.gu.d===TODAY)?p.gu.n:0;return '<span class="m">'+used+'/'+(lim<0?'∞':lim)+'</span>';}
 async function list(){msg('Betöltés...');try{await loadPriv();var j=await call('/admin/list'),tb=document.querySelector('#tab tbody');tb.innerHTML='';DEF=j.def;TODAY=j.today;var act=0,now=Date.now();
   j.list.sort(function(a,b){return (b.last||0)-(a.last||0);});LIST=j.list;
@@ -56,16 +69,18 @@ async function list(){msg('Betöltés...');try{await loadPriv();var j=await call
     var td=tr.lastChild,b0=document.createElement('button');b0.className='s';b0.textContent='Üzenet';b0.onclick=function(){$('nto').value=p.fid;$('nt').focus();$('nt').scrollIntoView({block:'center'});};
     var b1=document.createElement('button');b1.className='s';b1.textContent=p.blocked?'Feloldás':'Letiltás';b1.onclick=async function(){try{await call('/admin/block',{fid:p.fid,blocked:!p.blocked});list();}catch(e){msg(e.message,1);}};
     var b2=document.createElement('button');b2.className='d';b2.textContent='Törlés';b2.onclick=async function(){if(!confirm('Biztosan törlöd a(z) "'+p.n+'" felhős profilt?'))return;try{await call('/admin/delete',{fid:p.fid});list();}catch(e){msg(e.message,1);}};
-    var bq=document.createElement('button');bq.className='s';bq.textContent='Keret';bq.onclick=async function(){var v=prompt('Napi Gemini keret a(z) '+p.n+' számára.\nSzám = napi kérések száma (alap: '+DEF+'), 0 = nincs keret, k = korlátlan:',p.gq===null?String(DEF):(p.gq<0?'k':String(p.gq)));if(v===null)return;v=v.trim().toLowerCase();var lim=(v==='k'||v==='korlátlan')?-1:parseInt(v,10);if(isNaN(lim)){msg('Számot vagy k betűt adj meg.',1);return;}try{await call('/admin/gem',{fid:p.fid,limit:lim});list();}catch(e){msg(e.message,1);}};
+    var bq=document.createElement('button');bq.className='s';bq.textContent='Keret';bq.onclick=async function(){var v=prompt('Napi Gemini keret a(z) '+p.n+' számára.\nSzám = napi kérések száma (alap: '+DEF+'), 0 = nincs keret, k = korlátlan:',p.gq===null?String(DEF):(p.gq<0?'k':String(p.gq)));if(v===null)return;v=v.trim().toLowerCase();var lim=(v==='k'||v==='korlátlan')?-1:parseInt(v,10);if(isNaN(lim)){msg('Számot vagy k betűt adj meg.',1);return;}setP(p.fid,'gq',lim,p.gq===null||p.gq===undefined?null:p.gq);bq.textContent='Keret (függőben: '+(lim<0?'∞':lim)+')';};
     var br=document.createElement('button');br.className='s';br.textContent='Mai nullázás';br.onclick=async function(){try{await call('/admin/gem',{fid:p.fid,reset:true});list();}catch(e){msg(e.message,1);}};
-    var bg=document.createElement('button');bg.className='s';bg.textContent=p.gem?'Gemini ki':'Gemini be';bg.onclick=async function(){try{await call('/admin/gem',{fid:p.fid,on:!p.gem});list();}catch(e){msg(e.message,1);}};var ba=document.createElement('button');ba.className='s';ba.textContent=p.adm?'Hangkészítő jog el':'Hangkészítő jog';ba.onclick=async function(){if(!p.adm&&!confirm('A(z) '+p.n+' profil hangot készíthet és tölthet fel. Biztos?'))return;try{await call('/admin/adm',{fid:p.fid,on:!p.adm});list();}catch(e){msg(e.message,1);}};function sw(t,on,ontx,offtx,fn,neg){var l=document.createElement('label');l.className='sw'+(neg?' neg':'');var i=document.createElement('input');i.type='checkbox';i.checked=on;var k=document.createElement('i'),s=document.createElement('span');s.innerHTML=t+': <b>'+(on?ontx:offtx)+'</b>';i.onchange=function(){i.checked=on;fn(!on);};l.appendChild(i);l.appendChild(k);l.appendChild(s);return l;}
-    td.appendChild(sw('Fiók',!p.blocked,'engedélyezett','letiltva',async function(v){if(!v&&!confirm('Letiltod a(z) '+p.n+' profilt? A felhős mentése megáll.'))return;try{await call('/admin/block',{fid:p.fid,blocked:!v});list();}catch(e){msg(e.message,1);}}));
-    td.appendChild(sw('Gemini',!!p.gem,'be','ki',async function(v){try{await call('/admin/gem',{fid:p.fid,on:v});list();}catch(e){msg(e.message,1);}}));
-    td.appendChild(sw('Hangkészítés',!!p.adm,'engedélyezett','tiltott',async function(v){if(v&&!confirm('A(z) '+p.n+' profil hangot készíthet és tölthet fel a Hangtárba. Biztos?'))return;try{await call('/admin/adm',{fid:p.fid,on:v});list();}catch(e){msg(e.message,1);}}));
-    td.appendChild(b0);var mo=document.createElement('details');mo.className='mo';var ms=document.createElement('summary');ms.textContent='Továbbiak';mo.appendChild(ms);mo.appendChild(bq);mo.appendChild(br);mo.appendChild(b2);td.appendChild(mo);tb.appendChild(tr);});
+    var bg=document.createElement('button');bg.className='s';bg.textContent=p.gem?'Gemini ki':'Gemini be';bg.onclick=async function(){try{await call('/admin/gem',{fid:p.fid,on:!p.gem});list();}catch(e){msg(e.message,1);}};var ba=document.createElement('button');ba.className='s';ba.textContent=p.adm?'Hangkészítő jog el':'Hangkészítő jog';ba.onclick=async function(){if(!p.adm&&!confirm('A(z) '+p.n+' profil hangot készíthet és tölthet fel. Biztos?'))return;try{await call('/admin/adm',{fid:p.fid,on:!p.adm});list();}catch(e){msg(e.message,1);}};function sw(t,key,orig,ontx,offtx,neg){var e=PEND[p.fid]||{},cur=(key in e)?e[key]:orig,l=document.createElement('label');l.className='sw'+(neg?' neg':'')+(cur!==orig?' chg':'');var inp=document.createElement('input');inp.type='checkbox';inp.checked=cur;var k=document.createElement('i'),s=document.createElement('span');
+      function lab(c){s.innerHTML=t+': <b>'+(c?ontx:offtx)+'</b>'+(c!==orig?' <em class="m">(függőben)</em>':'');l.className='sw'+(neg?' neg':'')+(c!==orig?' chg':'');}lab(cur);
+      inp.onchange=function(){setP(p.fid,key,inp.checked,orig);lab(inp.checked);};l.appendChild(inp);l.appendChild(k);l.appendChild(s);return l;}
+    td.appendChild(sw('Fiók','ok',!p.blocked,'engedélyezett','letiltva'));
+    td.appendChild(sw('Gemini','gem',!!p.gem,'be','ki'));
+    td.appendChild(sw('Hangkészítés','adm',!!p.adm,'engedélyezett','tiltott'));
+    td.appendChild(b0);var mo=document.createElement('details');mo.className='mo';var ms=document.createElement('summary');ms.textContent='Továbbiak';mo.appendChild(ms);mo.appendChild(bq);mo.appendChild(b2);td.appendChild(mo);tb.appendChild(tr);});
   $('sum').textContent=j.list.length+' profil, az elmúlt 24 órában mentett: '+act+'.';msg('Kész.');news();}catch(e){msg(e.message,1);}}
 async function news(){try{var j=await call('/admin/newslist'),b=$('nl');b.innerHTML='';j.items.slice().reverse().forEach(function(n){var d=document.createElement('div');d.className='nw';d.textContent=D(n.ts)+'  ['+(n.to?((LIST.filter(function(p){return p.fid===n.to;})[0]||{}).n||'egy felhasználó'):'mindenki')+'] '+n.t+'\n'+n.x+'\n';var x=document.createElement('button');x.className='s';x.textContent='Üzenet törlése';x.onclick=async function(){try{await call('/admin/newsdel',{id:n.id});news();}catch(e){msg(e.message,1);}};d.appendChild(x);b.appendChild(d);});}catch(e){}}
-$('list').onclick=list;
+$('list').onclick=list;$('apply2').onclick=applyAll;$('apply3').onclick=applyAll;$('pdrop').onclick=dropAll;
 $('gAll').onclick=async function(){if(!confirm('Bekapcsolod a Geminit minden felhasználónak?'))return;try{var r=await call('/admin/gem',{all:true,on:true});msg('Bekapcsolva, módosult: '+r.changed+' profil.');list();}catch(e){msg(e.message,1);}};
 $('gNone').onclick=async function(){if(!confirm('Kikapcsolod a Geminit mindenkinél?'))return;try{var r=await call('/admin/gem',{all:true,on:false});msg('Kikapcsolva, módosult: '+r.changed+' profil.');list();}catch(e){msg(e.message,1);}};
 $('chk').onclick=async function(){msg('Ellenőrzés...');try{var r=await fetch(base()+'/status',{cache:'no-store'}),j=await r.json();msg(JSON.stringify(j));}catch(e){msg(e.message,1);}};
