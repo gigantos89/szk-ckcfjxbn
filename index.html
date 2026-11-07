@@ -255,6 +255,15 @@ body{zoom:var(--fs,1)}
     <p class="msg" id="rwMsg" role="status"></p>
   </details>
   <details class="backup vbox"><summary>Hang beállítása</summary>
+    <p>Válaszd ki, ki tanítson: a tanár úr férfi hangon szól angolul brit kiejtéssel és magyarul is, a tanárnő női hangon. A beszélgetés tanára is ehhez igazodik.</p>
+    <div class="vrow"><select id="tcSel" aria-label="Tanár"><option value="m">Tanár: férfi (tanár úr)</option><option value="f">Tanár: női (tanárnő)</option></select><button class="reset" id="tcTest" type="button">Próba</button></div>
+    <p class="msg" id="tcMsg" role="status"></p>
+    <div class="vrow"><select id="rateSel" aria-label="Sebesség"><option value="0.9">Sebesség: normál</option><option value="0.7">Sebesség: lassú</option></select></div>
+    <div class="vrow"><select id="autoSel" aria-label="Mikor olvasson fel"><option value="0">Csak gombnyomásra</option><option value="1">Magától, amikor megfordul a kártya</option></select></div>
+    <div class="vrow"><select id="whatSel" aria-label="Mit olvasson fel"><option value="w">Csak a szó / kifejezés</option><option value="s">Kifejezés + példamondat</option></select></div>
+    <p class="msg" id="voiceMsg" role="status"></p>
+  
+    <details class="backup" id="vdet"><summary>Részletek (haladó)</summary>
     <p>Válaszd ki az angol akcentust: a brit hang férfi, az amerikai női. A listából kiválaszthatod a telefon egyik hangját is, ha több van. A választás megmarad. A kártyák, a hangszóró gombok és a Hallgatás ezt a hangot használják.</p>
     <div class="vrow"><select id="enVSel" aria-label="Angol hang"><option value="pm">Angol hang: brit férfi (Piper, Alan)</option><option value="pf">Angol hang: brit női (Piper, Jenny)</option><option value="ph">Angol hang: a telefon hangja</option></select><button class="reset" id="enVTest" type="button">Próba</button></div>
     <div class="vrow"><select id="enWSel" aria-label="Szavak és kifejezések hangja"><option value="a">Szavak, kifejezések: automatikus letöltés</option><option value="m">Szavak, kifejezések: kézi letöltés</option><option value="o">Szavak, kifejezések: a telefon hangja</option></select></div>
@@ -278,10 +287,10 @@ body{zoom:var(--fs,1)}
     <p class="msg" id="ppMsg" role="status"></p>
     <p class="msg">Ez a hang a telefonon készül el, nincs hozzá kulcs és nincs Gemini-keret. A letöltés egyszeri (a hang kb. 60 MB, a futtató néhány tíz MB, érdemes wifin), utána internet nélkül is szól. A magyarázatok és a beszélgetés magyar részei ezen szólnak. A Hallgatásban a Hallgatás beállításainál kapcsolhatod be. Ha a hang nem indul el, a telefon hangja szól helyette.</p></div>
     <p class="msg" id="huMsg" role="status"></p>
-    <div class="vrow"><select id="rateSel" aria-label="Sebesség"><option value="0.9">Sebesség: normál</option><option value="0.7">Sebesség: lassú</option></select></div>
-    <div class="vrow"><select id="autoSel" aria-label="Mikor olvasson fel"><option value="0">Csak gombnyomásra</option><option value="1">Magától, amikor megfordul a kártya</option></select></div>
-    <div class="vrow"><select id="whatSel" aria-label="Mit olvasson fel"><option value="w">Csak a szó / kifejezés</option><option value="s">Kifejezés + példamondat</option></select></div>
-    <p class="msg" id="voiceMsg" role="status"></p>
+    
+    <div class="vrow"><select id="gtfSel" aria-label="Google női hang a beszélgetéshez"></select></div>
+    <p class="msg">A Google női hang a beszélgetésben szól, ha a tanár női és van Google hozzáférésed.</p>
+    </details>
   </details>
   <details class="backup" id="cvBox"><summary>Mikrofon és beszélgetés</summary>
     <p>A beszéd-kérdéseknél a válaszmező melletti mikrofon gombbal vagy írás helyett diktálsz, vagy folyamatos hangos beszélgetést folytatsz a tanárral a témáról. Google-kulcs, internet és mikrofon-engedély kell hozzá.</p>
@@ -3625,8 +3634,8 @@ function gtErrText(){var e=window.gtErr||{};return e.code==='nokey'?'Nincs Googl
 /* ===== Piper: a telefonon futó magyar hang ===== */
 var PPT=0,PPBAD=false,PPDL='szokartya-pdl',PPVK='szokartya-ppv',PPLK='szokartya-ppl',PPHL='szokartya-lhg';
 var PPLIBS=['https://cdn.jsdelivr.net/npm/@diffusionstudio/vits-web@1.0.3/+esm','https://cdn.jsdelivr.net/npm/@diffusionstudio/vits-web@1.0.2/+esm','https://cdn.jsdelivr.net/npm/@diffusionstudio/vits-web@1.0.0/+esm'];
-var PPDEF=['hu_HU-imre-medium','hu_HU-anna-medium','hu_HU-berta-medium'];
-var PPNAME={imre:'Imre (férfi)',anna:'Anna (női)',berta:'Berta (női)'};
+var PPDEF=['hu_HU-imre-medium','hu_HU-anna-medium'];
+var PPNAME={imre:'Imre (férfi)',anna:'Anna (női)'};
 /* ===== Angol Piper hang (brit, rögzített: 1 férfi, 1 női) ===== */
 var PPEN=['en_GB-alan-medium','en_GB-jenny_dioco-medium'],ENNAME={'en_GB-alan-medium':'Alan (brit férfi)','en_GB-jenny_dioco-medium':'Jenny (brit női)'},ENV='szokartya-env',ENW='szokartya-enw',ENS='szokartya-ens';
 function enVoiceSel(){var v=lsGet(ENV);return v==='pf'||v==='ph'||v==='pm'?v:'pm';}
@@ -3656,7 +3665,7 @@ function ppMk(post){
       if(!lib)await load(m.urls);
       var l=lib;
       if(m.t==='init'){post({id:id,ok:1});}
-      else if(m.t==='voices'){var v=[];try{var r=await l.voices();if(!Array.isArray(r))r=Object.keys(r||{}).map(function(k){var o=r[k];return o&&o.key?o:{key:k};});v=r.map(function(o){return String(o&&(o.key||o.id||o.name)||'');}).filter(function(k){return /^hu_HU-/.test(k);});}catch(e){}post({id:id,ok:1,list:v});}
+      else if(m.t==='voices'){var v=[];try{var r=await l.voices();if(!Array.isArray(r))r=Object.keys(r||{}).map(function(k){var o=r[k];return o&&o.key?o:{key:k};});v=r.map(function(o){return String(o&&(o.key||o.id||o.name)||'');}).filter(function(k){return /^hu_HU-/.test(k)&&!/berta/.test(k);});}catch(e){}post({id:id,ok:1,list:v});}
       else if(m.t==='stored'){var s=[];try{s=await l.stored();}catch(e){}post({id:id,ok:1,list:(s||[]).map(String)});}
       else if(m.t==='download'){var seen={};await l.download(m.voice,function(p){seen[p.url]=[p.loaded||0,p.total||0];var a=0,b=0;for(var k in seen){a+=seen[k][0];b+=seen[k][1];}post({id:id,prog:[a,b]});});post({id:id,ok:1});}
       else if(m.t==='remove'){await l.remove(m.voice);post({id:id,ok:1});}
@@ -3729,7 +3738,7 @@ function ppCall0(m,prog){if(m.t==='predict'&&PPPAR>1&&PPWK&&typeof Worker!=='und
     if(PPW&&/nem tölthető be|Worker hiba/.test(String(e&&e.message))){try{PPW.terminate();}catch(x){}PPW=null;PPWK=false;return ppCall0(m,prog);}
     if(m.t==='predict'&&!m.rt&&/abort|runtime|memory|unreachable|out of bounds|null function/i.test(String(e&&e.message||e))){ppReset();return ppCall0(Object.assign({},m,{rt:1}),prog);}
     throw e;});}
-function ppList(){var l=[];try{l=JSON.parse(lsGet(PPLK)||'[]');}catch(e){}return l&&l.length?l:PPDEF;}
+function ppList(){var l=[];try{l=JSON.parse(lsGet(PPLK)||'[]');}catch(e){}l=(l||[]).filter(function(x){return !/berta/.test(x);});return l&&l.length?l:PPDEF;}
 function ppVoice(){var l=ppList(),v=lsGet(PPVK);return l.indexOf(v)>=0?v:l[0];}
 function ppDlSet(){try{return JSON.parse(lsGet(PPDL)||'[]')||[];}catch(e){return [];}}
 function ppHave(v){return ppDlSet().indexOf(v||ppVoice())>=0;}
@@ -4725,7 +4734,7 @@ function fGet(){var o={voice:'phone'};try{o=Object.assign(o,JSON.parse(lsGet('sz
 function fSetO(k,v){var o=fGet();o[k]=v;lsSet('szokartya-fv',JSON.stringify(o));}
 function fGender(){return cvGet().teach==='f'?'f':'m';}
 function fName(){return fGender()==='f'?'Tanárnő':'Tanár úr';}
-function fGemVoice(){return fGender()==='f'?(lsGet('szokartya-gtf')||'Kore'):gtVoice();}
+function fGemVoice(){return fGender()==='f'?(lsGet('szokartya-gtf')||'Aoede'):gtVoice();}
 function fAdd(role,text,keep){var c=fEl('fLog');if(!keep)FL.push({r:role,t:text});if(!c)return null;var d=document.createElement('div');d.className='cb '+role;var b=document.createElement('b');b.textContent=role==='me'?'Én':fName();var sp=document.createElement('span');sp.textContent=text||'…';d.appendChild(b);d.appendChild(sp);c.appendChild(d);try{c.scrollTop=c.scrollHeight;}catch(e){}return sp;}
 function fSt(t){var e=fEl('fSt');if(e)e.textContent=t||'';}
 function fSay(text){var o=fGet();gtStop();try{speechSynthesis.cancel();}catch(e){}
@@ -4912,7 +4921,8 @@ function kWeekly(){var RK='szokartya-rem',now=new Date(),last=lsGet(RK)||'';
   if(!due||lsGet('szokartya-remsnz')===kDay())return;
   kBar('bk','Ideje biztonsági mentést készíteni a haladásodról.','Mentés fájlba',function(){var n=window.dlBackup?window.dlBackup():'';klog('mentés',n?'heti mentés kész: '+n:'a mentés nem sikerült');kBar('bk2',n?('Kész: '+n+' a Letöltések mappában van.'):'A mentés nem sikerült. Beállítások, Biztonsági mentés.');},function(){lsSet('szokartya-remsnz',kDay());});}
 async function kGapReport(n,vsn){try{var P=pfGet();if(!P||!n)return;var last=parseInt(lsGet('szokartya-gaprep')||'0',10);if(Date.now()-last<604800000)return;var pw=lsGet('szokartya-pfpw-'+pfNk(P.cur));if(!pw)return;var d=await pfAuth(P.cur,pw);lsSet('szokartya-gaprep',String(Date.now()));await pfCall('/gap',{fid:d.fid,wcode:d.wcode,n:n,v:vsn.join(', ')});klog('hangtár','jeleztem az adminnak a hiányzó hangokat');}catch(e){}}
-function kInit(){var L=parseInt(lsGet('szokartya-parlive')||'0',10);
+function kInit(){try{if(!lsGet('szokartya-bertaclr')){lsSet('szokartya-bertaclr','1');ppMark('hu_HU-berta-medium',false);ppClearC('hu_HU-berta-medium');}}catch(e){}
+  var L=parseInt(lsGet('szokartya-parlive')||'0',10);
   if(L){lsSet('szokartya-parlive','');klog('hang','az előző generálás váratlanul leállt ('+L+' szálnál)');if(L>=4){lsSet('szokartya-ppar','a');lsSet('szokartya-parcap','2');klog('hang','átállítottam automatikusra, legfeljebb 2 szál');kModal('parcrash','A Chrome leállt','A Chrome a(z) '+L+' hangmotornál leállt, mert kevés a memória. Átállítottam az automatikus módra, ami legfeljebb 2 hangmotort használ. A generálás onnan folytatódik, ahol abbamaradt.',[{t:'Rendben'}]);}else if(L>=2&&ppParMode()==='a'){lsSet('szokartya-parcap','1');klog('hang','automata szálszám-korlát mostantól: 1');}}
   klog('karmester','app indul, '+(navigator.hardwareConcurrency||'?')+' mag, '+(navigator.deviceMemory||'?')+' GB RAM');}
 async function kHang(r,M){
@@ -5081,6 +5091,18 @@ async function hsDelEn(st){if(!isAdm())throw new Error('törölni csak az admin 
   st('A tár megnyitása...');var r=await hsApi('?ref=main&_='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('GitHub hiba '+r.status);var l=await r.json(),fl=l.filter(function(x){return /^en_b_/.test(x.name);}),n=0;
   for(var i=0;i<fl.length;i++){st('Törlés: '+i+' / '+fl.length);var d=await hsApi(fl[i].path,{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:'angol hangok törlése',sha:fl[i].sha,branch:'main'})});if(d.ok)n++;}
   var mf=await hsGetManifest(),M=mf.m;Object.keys(M.clips||{}).forEach(function(k){if(/^en_/.test(k))delete M.clips[k];});await hsPut('manifest.json',new TextEncoder().encode(JSON.stringify(M)),mf.sha,'angol hangok kivétele a jegyzékből');return n;}
+(function(){var tc=document.getElementById('tcSel');if(!tc)return;var tm=document.getElementById('tcMsg'),gf=document.getElementById('gtfSel');
+  function ev(id,v){var e=document.getElementById(id);if(!e)return;e.value=v;try{e.dispatchEvent(new Event('change'));}catch(x){}}
+  tc.value=cvGet().teach==='f'?'f':'m';
+  tc.addEventListener('change',function(){var f=tc.value==='f',x={};try{x=JSON.parse(lsGet(CVK)||'{}')||{};}catch(e){}x.teach=f?'f':'m';lsSet(CVK,JSON.stringify(x));
+    lsSet(ENV,f?'pf':'pm');lsSet(PPVK,f?'hu_HU-anna-medium':'hu_HU-imre-medium');lsSet('szokartya-hg','p');
+    ['cvTeach','fTeach'].forEach(function(id){var e=document.getElementById(id);if(e)e.value=x.teach;});
+    var es=document.getElementById('enVSel');if(es)es.value=enVoiceSel();var hs=document.getElementById('hgSel');if(hs){hs.value='p';try{hs.dispatchEvent(new Event('change'));}catch(e){}}
+    var pp=document.getElementById('ppSel');if(pp){pp.value=lsGet(PPVK);}
+    tm.textContent=f?'Tanárnő: angolul Jenny (brit), magyarul Anna.':'Tanár úr: angolul Alan (brit), magyarul Imre.';try{kRun('tanár váltás');}catch(e){}});
+  document.getElementById('tcTest').addEventListener('click',function(){var t=sayText(DATA[0]);(enNeed(t)?enPlay(t):Promise.resolve(false)).then(function(ok){if(!ok){speak('Good morning. This is the English voice.');}return new Promise(function(r){setTimeout(r,ok?200:2500);});}).then(function(){return cvSayOne('Jó napot kívánok. Ez a magyar hang próbája.','hu');});});
+  if(gf){[['Aoede','lágy, könnyed'],['Zephyr','élénk'],['Leda','fiatalos'],['Callirrhoe','nyugodt'],['Autonoe','élénk, tiszta'],['Despina','sima'],['Erinome','tiszta'],['Laomedeia','vidám'],['Achernar','lágy'],['Gacrux','érett'],['Pulcherrima','határozott'],['Vindemiatrix','szelíd'],['Sulafat','meleg']].forEach(function(g){var o=document.createElement('option');o.value=g[0];o.textContent='Google női hang: '+g[0]+' ('+g[1]+')';gf.appendChild(o);});gf.value=lsGet('szokartya-gtf')||'Aoede';gf.addEventListener('change',function(){lsSet('szokartya-gtf',gf.value);});}
+})();
 (function(){var ev=document.getElementById('enVSel');if(!ev)return;var ew=document.getElementById('enWSel'),es=document.getElementById('enSSel'),ph=document.getElementById('enPh'),msg=document.getElementById('enMsg');
   function sh(){if(ph)ph.style.display=enVoiceSel()==='ph'?'':'none';}
   ev.value=enVoiceSel();ew.value=enMode('w');es.value=enMode('s');sh();
@@ -5253,7 +5275,7 @@ async function pfOpen(key,u8){return JSON.parse(new TextDecoder().decode(await p
 async function pfDK(kek,meta){var raw=await pfAesDec(kek,pfB64d(meta.wk_pw));return {raw:raw,key:await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt'])};}
 async function pfRsaEnc(pubJwk,u8){var k=await crypto.subtle.importKey('jwk',pubJwk,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);return hsB64(new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},k,u8)));}
 async function pfEmEnc(em){try{var pb=await pfCall('/pub');if(pb&&pb.pub)return await pfRsaEnc(pb.pub,pfEnc(JSON.stringify({e:em})));}catch(e){}return '';}
-var APPV='v56';
+var APPV='v57';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
