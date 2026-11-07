@@ -3666,7 +3666,9 @@ function netEnsure(what,verb,mb){if(mb&&mb<=3)return Promise.resolve();if(NETP)r
   NETP=netCheck().then(function(r){if(r.ok||Date.now()-PPMOBT<600000||(r.unk&&Date.now()-KWIFI<21600000)||(r.cur==='mobilnet'&&Date.now()-KMOB<3600000))return;return netAsk(r.why,what,verb,r.cur,r.unk).then(function(yes){try{klog('hálózat','mobilnet engedély ('+what+'): '+(yes?'igen':'nem'));}catch(x){}if(!yes){var e=new Error('A letöltés várakozik: nem engedélyezted mobilneten.');e.declined=true;throw e;}PPMOBT=Date.now();});});
   var done=function(){NETP=null;};NETP.then(done,done);return NETP;}
 function ppAbortNet(){try{if(PPW)PPW.terminate();}catch(e){}PPW=null;Object.keys(PPQ).forEach(function(k){var q=PPQ[k];delete PPQ[k];var e=new Error('Megszakítva: a telefon mobilnetre váltott. Wifin folytathatod.');e.net=true;q.rej(e);});}
-function ppCall(m,prog){var big=m.t==='download',eng=!lsGet(ENG)&&m.t!=='remove';
+function isAdm(){return lsGet('szokartya-adm')==='1';}
+function applyRole(){try{['pgBox','hsBox','hfBox'].forEach(function(id){var e=document.getElementById(id);if(e)e.style.display=isAdm()?'':'none';});}catch(e){}}
+function ppCall(m,prog){if((m.t==='predict'||m.t==='download')&&!isAdm()&&!window.__ppsetup)return Promise.reject(new Error('Hangot csak az admin készíthet.'));var big=m.t==='download',eng=!lsGet(ENG)&&m.t!=='remove';
   if(big||eng)return netEnsure(big?'egy hangfájlt (kb. 60-70 MB)':'a hangmotort (több tíz MB)').then(function(){return ppCall1(m,prog,big);});
   return ppCall1(m,prog,false);}
 function ppCall1(m,prog,watch){var mon=null,c=null;
@@ -3705,11 +3707,11 @@ function ppActive(){return hgGet()==='p'&&cvGet().hv==='hu'&&ppHave()&&!PPBAD;}
 function ppLs(){return lsGet(PPHL)==='p'&&ppHave()&&!PPBAD;}
 function ppErrText(){var e=window.ppErr;return 'A letöltött magyar hang nem indult el'+(e&&e.message?' ('+String(e.message).slice(0,90)+')':'')+', ezért a telefon hangja szól.';}
 function ppGen(text,v){var k='pp|'+v+'|'+text;if(PPFL[k])return PPFL[k];
-  var p=gtGetC(k).then(function(c){if(c)return c;return (PPPAR>1?ppCall({t:'predict',text:text,voice:v}):ppSerial(function(){return ppCall({t:'predict',text:text,voice:v});})).then(function(r){return gtPutC(k,r.buf).then(function(){return r.buf;});});});
+  var p=gtGetC(k).then(function(c){if(c)return c;if(!isAdm()){var me=new Error('nincs a hangtárban');me.miss=1;throw me;}return (PPPAR>1?ppCall({t:'predict',text:text,voice:v}):ppSerial(function(){return ppCall({t:'predict',text:text,voice:v});})).then(function(r){return gtPutC(k,r.buf).then(function(){return r.buf;});});});
   PPFL[k]=p;var d=function(){delete PPFL[k];};p.then(d,d);return p;}
 var PPS=Promise.resolve(),PPBUSY=false;
 function ppSerial(f){var r=PPS.then(f,f);PPS=r.then(function(){},function(){});return r;}
-function ppPre(text){if(!text||!ppHave())return;var v=ppVoice();cvChunks(text).forEach(function(c){ppGen(c,v).catch(function(){});});}
+function ppPre(text){if(!text||!ppHave()||!isAdm())return;var v=ppVoice();cvChunks(text).forEach(function(c){ppGen(c,v).catch(function(){});});}
 function ppSayAll(text,rate,alive){var p=Promise.resolve(true);cvChunks(text).forEach(function(c){p=p.then(function(ok){if(!ok)return false;if(alive&&!alive())return true;return ppPlay(c,rate);});});return p;}
 function ppPlay(text,rate){var t=PPT,v=ppVoice();window.ppErr=null;
   return ppGen(text,v).then(function(buf){if(t!==PPT)return true;return new Promise(function(res){
@@ -3718,7 +3720,7 @@ function ppPlay(text,rate){var t=PPT,v=ppVoice();window.ppErr=null;
     function done(x){try{URL.revokeObjectURL(u);}catch(e){}window.__gr=null;res(x);}
     window.__ga=a;window.__gr=res;
     a.onended=function(){done(true);};a.onerror=function(){window.ppErr={message:'a hang nem játszható le'};done(false);};
-    a.play().catch(function(e){window.ppErr=e||{};done(false);});});}).catch(function(e){window.ppErr=e||{};PPBAD=true;return false;});}
+    a.play().catch(function(e){window.ppErr=e||{};done(false);});});}).catch(function(e){window.ppErr=e||{};if(!(e&&e.miss))PPBAD=true;return false;});}
 function ppClearC(v){return gtDb().then(function(db){return new Promise(function(res){var tx=db.transaction('a','readwrite'),os=tx.objectStore('a'),rq=os.openCursor();rq.onsuccess=function(){var c=rq.result;if(!c)return;if(String(c.key).indexOf('pp|'+v+'|')===0)c.delete();c.continue();};tx.oncomplete=function(){res();};tx.onerror=function(){res();};});}).catch(function(){});}
 function ppSetup(v,st){
   try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
@@ -4875,16 +4877,19 @@ function kWeekly(){var RK='szokartya-rem',now=new Date(),last=lsGet(RK)||'';
   var days=(now-new Date(last+'T00:00:00'))/86400000,due=days>=7||(now.getDay()===0&&now.getHours()>=20&&last!==kDay());
   if(!due||lsGet('szokartya-remsnz')===kDay())return;
   kBar('bk','Ideje biztonsági mentést készíteni a haladásodról.','Mentés fájlba',function(){var n=window.dlBackup?window.dlBackup():'';klog('mentés',n?'heti mentés kész: '+n:'a mentés nem sikerült');kBar('bk2',n?('Kész: '+n+' a Letöltések mappában van.'):'A mentés nem sikerült. Beállítások, Biztonsági mentés.');},function(){lsSet('szokartya-remsnz',kDay());});}
+async function kGapReport(n,vsn){try{var P=pfGet();if(!P||!n)return;var last=parseInt(lsGet('szokartya-gaprep')||'0',10);if(Date.now()-last<604800000)return;var pw=lsGet('szokartya-pfpw-'+pfNk(P.cur));if(!pw)return;var d=await pfAuth(P.cur,pw);lsSet('szokartya-gaprep',String(Date.now()));await pfCall('/gap',{fid:d.fid,wcode:d.wcode,n:n,v:vsn.join(', ')});klog('hangtár','jeleztem az adminnak a hiányzó hangokat');}catch(e){}}
 function kInit(){var L=parseInt(lsGet('szokartya-parlive')||'0',10);
   if(L){lsSet('szokartya-parlive','');klog('hang','az előző generálás váratlanul leállt ('+L+' szálnál)');if(L>=4){lsSet('szokartya-ppar','a');lsSet('szokartya-parcap','2');klog('hang','átállítottam automatikusra, legfeljebb 2 szál');kModal('parcrash','A Chrome leállt','A Chrome a(z) '+L+' hangmotornál leállt, mert kevés a memória. Átállítottam az automatikus módra, ami legfeljebb 2 hangmotort használ. A generálás onnan folytatódik, ahol abbamaradt.',[{t:'Rendben'}]);}else if(L>=2&&ppParMode()==='a'){lsSet('szokartya-parcap','1');klog('hang','automata szálszám-korlát mostantól: 1');}}
   klog('karmester','app indul, '+(navigator.hardwareConcurrency||'?')+' mag, '+(navigator.deviceMemory||'?')+' GB RAM');}
 async function kHang(r,M){
   var cnt=hsCount(M),texts=pgTexts(),vs=pgVoices(),vs2=vs.length?vs:[ppVoice()],keys=new Set(await hAllKeys()),loc=0,gap=0;
   if(M.fail)klog('hangtár','nincs még manifest, vagy a tároló nem érhető el ('+M.fail+'), üresnek veszem');
-  vs2.forEach(function(v){var cl=(M.clips||{})[v]||{};texts.forEach(function(t){var inM=!!cl[hsHash(t)];if(inM&&!keys.has('pp|'+v+'|'+t))loc++;if(!inM)gap++;});});
+  var gapBy={};vs2.forEach(function(v){var cl=(M.clips||{})[v]||{};texts.forEach(function(t){var inM=!!cl[hsHash(t)];if(inM&&!keys.has('pp|'+v+'|'+t))loc++;if(!inM){gap++;gapBy[v]=(gapBy[v]||0)+1;}});});
+  if(!isAdm()&&!M.fail)vs2.forEach(function(v){if((M.clips||{})[v])ppMark(v,true);});
   klog('hangtár','a tárban '+cnt+' hang; helyben hiányzik: '+loc+'; a tárból hiányzik: '+gap);
   if(loc>0&&!M.fail){try{var g=await hsDownload(function(t,pc){ppChip(t,pc);});ppChipHide();klog('hangtár','letöltve: '+g.got);}catch(e){ppChipHide();klog('hangtár',e&&e.declined?'letöltés várakozik: nem engedélyezted mobilneten':'letöltés megszakadt: '+String(e&&e.message||e).slice(0,100));}}
   if(!gap){lsSet('szokartya-pgrun','');hsToast('Hangtár: '+cnt+' hang van a tárolóban.');return;}
+  if(!isAdm()){klog('hangtár','hiányzó hang: '+gap+', a telefon hangja szól helyettük; nem készítek hangot, nem vagyok admin');kGapReport(gap,Object.keys(gapBy));return;}
   var why=[];if(!(lsGet(HST)||''))why.push('nincs GitHub kulcs megadva');if(!r.ok)why.push(r.cur==='mobilnet'?'mobilneten vagy, nem wifin':(r.unk?'nem tudom, hogy wifin vagy-e':r.why.replace(/\.$/,'').toLowerCase()));
   if(why.length){klog('hangtár','nem generálok: '+why.join('; '));
     if(lsGet('szokartya-hsnz')!==kDay()){var tok=!!(lsGet(HST)||''),bt=[];
@@ -4895,6 +4900,12 @@ async function kHang(r,M){
       kModal('hsw','Hangtár: '+gap+' hang hiányzik','A tárban '+cnt+' hang van, '+gap+' hiányzik. Automatikusan nem készül el, mert '+why.join(' és ')+'. Jelenlegi kapcsolat: '+r.cur+'.',bt);}
     return;}
   if(!ppHave(ppVoice())){klog('hangtár','a hiányzó hangokhoz kell a hangmodell');if(lsGet(PPDEC)!=='skip'&&lsGet('szokartya-hsnz')!==kDay())kModal('ppo','Hangmodell letöltése','A '+gap+' hiányzó hang elkészítéséhez le kell tölteni a magyar hangmodellt (kb. 200 MB). Jelenlegi kapcsolat: '+r.cur+'.',[{t:'Letöltés most',fn:ppOfferGo},{t:'Később',fn:function(){}},{t:'Ma ne kérdezz többet',fn:function(){lsSet('szokartya-hsnz',kDay());}}]);return;}
+  var parts=Object.keys(gapBy).map(function(v){return (String(v).split('-')[1]||v)+': '+gapBy[v]+(gapBy[v]>=texts.length?' (új hang, minden szöveg)':' (új vagy módosult szöveg)');});
+  klog('hangtár','hiányzik '+gap+' hang: '+parts.join('; '));
+  if(!window.__gapgo){
+    if(lsGet('szokartya-hsnz')===kDay()||Date.now()<parseInt(lsGet('szokartya-gaplt')||'0',10))return;
+    kModal('gapq','Hangtár: '+gap+' hang hiányzik','Hiányzik: '+parts.join('; ')+'. Elkészítem és feltöltöm őket a Hangtárba. Közben tartsd nyitva az appot, érdemes töltőre tenni.',[{t:'Elkészítem most',fn:function(){window.__gapgo=1;kRun('admin jóváhagyta');}},{t:'Később',fn:function(){lsSet('szokartya-gaplt',String(Date.now()+3600000));}},{t:'Ma ne kérdezz',fn:function(){lsSet('szokartya-hsnz',kDay());}}]);return;}
+  window.__gapgo=0;
   klog('hangtár','generálás és feltöltés indul: '+gap+' hiányzó hang');
   await window.pgResume();await hsCountToast();}
 async function kRun(why){
@@ -4904,8 +4915,8 @@ async function kRun(why){
     try{if(navigator.serviceWorker){var rg=await navigator.serviceWorker.getRegistration();if(rg)rg.update().catch(function(){});}}catch(e){}
     if(navigator.onLine===false){klog('hálózat','nincs kapcsolat');return;}
     var rp=netCheck(),mp=hsMan(),r=await rp;try{if(pfGet())await pfSync('karmester');}catch(e){}try{await kNews();}catch(e){}if(!r.ok&&r.unk&&Date.now()-KWIFI<21600000){r.ok=true;r.cur='wifi (te megerősítetted)';}if(!r.ok&&r.cur==='mobilnet'&&Date.now()-KMOB<600000){r.ok=true;r.cur='mobilnet (te engedélyezted)';}klog('hálózat',r.cur+(r.ok?' (rendben)':' ('+r.why+')'));
-    if(lsGet(PPDEC)==='go'&&!ppAllHave()){if(r.ok){klog('hangmodell','a megszakadt letöltés folytatódik');ppStartAll();return;}kBar('ppr','A hangmodell letöltése megszakadt.','Folytatás',ppOfferGo,function(){});}
-    if(!lsGet(PPDEC)&&!ppAllHave()&&!window.__ppfirst){window.__ppfirst=1;if(r.ok){klog('hangmodell','első indítás: a hangmodellek letöltése wifin');ppStartAll();return;}kModal('ppf','Hangmodellek letöltése','A magyar mondatok és a Szabad beszélgetés hangjához le kell tölteni a Piper hangmodelleket (kb. 190 MB). A kész hangfájlokat a GitHubról töltöm le. Jelenlegi kapcsolat: '+r.cur+'. Wifin érdemes letölteni.',[{t:'Letöltés most',fn:ppOfferGo},{t:'Wifin majd magától',fn:function(){}},{t:'Nem kérem',fn:function(){lsSet(PPDEC,'skip');}}]);}
+    if(isAdm()&&lsGet(PPDEC)==='go'&&!ppAllHave()){if(r.ok){klog('hangmodell','a megszakadt letöltés folytatódik');ppStartAll();return;}kBar('ppr','A hangmodell letöltése megszakadt.','Folytatás',ppOfferGo,function(){});}
+    if(isAdm()&&!lsGet(PPDEC)&&!ppAllHave()&&!window.__ppfirst){window.__ppfirst=1;if(r.ok){klog('hangmodell','első indítás: a hangmodellek letöltése wifin');ppStartAll();return;}kModal('ppf','Hangmodellek letöltése','A magyar mondatok és a Szabad beszélgetés hangjához le kell tölteni a Piper hangmodelleket (kb. 190 MB). A kész hangfájlokat a GitHubról töltöm le. Jelenlegi kapcsolat: '+r.cur+'. Wifin érdemes letölteni.',[{t:'Letöltés most',fn:ppOfferGo},{t:'Wifin majd magától',fn:function(){}},{t:'Nem kérem',fn:function(){lsSet(PPDEC,'skip');}}]);}
     await kHang(r,await mp);
   }catch(e){klog('hiba',String(e&&e.message||e).slice(0,120));}
   finally{KRUN=false;klog('karmester','kész');}}
@@ -4989,6 +5000,7 @@ async function hsPut(path,u8,sha,msg){var body={message:msg,content:hsB64(u8),br
 var HSQ=Promise.resolve();
 function hsUpload(st){var r=HSQ.then(function(){return hsUpload0(st);});HSQ=r.then(function(){},function(){});return r;}
 async function hsUpload0(st){
+  if(!isAdm())throw new Error('feltölteni csak az admin tud');
   if(!(lsGet(HST)||''))throw new Error('előbb add meg a GitHub kulcsot');
   var keys=(await hAllKeys()).filter(function(k){return k.indexOf('pp|')===0;});
   st('A hangtár ellenőrzése...',-1);var mf=await hsGetManifest(),M=mf.m,sha=mf.sha;M.clips=M.clips||{};
@@ -5092,14 +5104,14 @@ async function hLoad(fl,over,prog){var dec=new TextDecoder(),have=over?null:new 
     idle();pgPlan().catch(function(){});
     msg.textContent=(r.failed?'Megállt: sok egymás utáni hang nem készült el ('+String(r.err&&r.err.message||r.err).slice(0,100)+'). Zárd be és nyisd újra az appot, majd Indítás.':(r.stopped?'Leállítva: '+r.done+' hang elkészült. Az Indítással később folytatható.':'Kész: '+r.done+' hang elkészült.')+(r.skipped?' Kihagyva: '+r.skipped+' hang'+(r.bad&&r.bad.length?' (hibás hang: '+r.bad.join(', ')+', töltsd le újra a Hang beállításánál)':'')+'. Az Indítással újra megpróbálja.':''))+(SYNCED?' A tárba feltöltve: '+SYNCED+' hang.':'')+(SYERR?' Feltöltési hiba: '+SYERR+'.':'');}
   go.addEventListener('click',async function(){
-    if(PG.run||PPBUSY)return;
+    if(PG.run||PPBUSY||!isAdm())return;
     if(!plan){plan=await prepare();if(!plan)return;
       if(!plan.todo.length){msg.textContent='Minden hang kész ('+plan.total+' hang, '+plan.voices.length+' hang).';plan=null;return;}
       var est=plan.chars/14*44100,txt='Hiányzik '+plan.todo.length+' hang ('+plan.voices.length+' hangból). Új tárhely: kb. '+mb(est)+' MB.'+(syncOn()?' Közben 10 hangonként feltölti a Hangtárba, így megszakadás után onnan folytatódik.':'');
       try{navigator.storage.estimate().then(function(e){var free=(e.quota||0)-(e.usage||0);if(free>0&&est>free*0.8)msg.textContent=txt+' Figyelem: a szabad hely kevés lehet (kb. '+mb(free)+' MB)!';});}catch(e){}
       msg.textContent=txt+' Az Indítás gombbal kezdődik.';go.textContent='Indítás';return;}
     var pl=plan;plan=null;await runPlan(pl);});
-  window.pgResume=async function(){if(PG.run||PPBUSY)return;plan=null;AUTO=true;var pl=await prepare();plan=null;if(!pl||!pl.todo.length){AUTO=false;ppChipHide();msg.textContent=pl?'Minden hang kész.':msg.textContent;return;}try{toast5('Hangok készítése indul a háttérben: '+pl.todo.length+' hang');}catch(e){}await runPlan(pl);};
+  window.pgResume=async function(){if(PG.run||PPBUSY||!isAdm())return;plan=null;AUTO=true;var pl=await prepare();plan=null;if(!pl||!pl.todo.length){AUTO=false;ppChipHide();msg.textContent=pl?'Minden hang kész.':msg.textContent;return;}try{toast5('Hangok készítése indul a háttérben: '+pl.todo.length+' hang');}catch(e){}await runPlan(pl);};
   pa.addEventListener('click',function(){if(!PG.run)return;PG.pause=!PG.pause;pa.textContent=PG.pause?'Folytatás':'Szünet';});
   sp.addEventListener('click',function(){PG.stop=true;PG.pause=false;});
   cl.addEventListener('click',async function(){if(PG.run)return;var n=await pgClearAll(true);msg.textContent=n?n+' nem használt hang törölve.':'Nincs nem használt hang.';pgPlan().catch(function(){});});
@@ -5180,7 +5192,7 @@ async function pfOpen(key,u8){return JSON.parse(new TextDecoder().decode(await p
 async function pfDK(kek,meta){var raw=await pfAesDec(kek,pfB64d(meta.wk_pw));return {raw:raw,key:await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt'])};}
 async function pfRsaEnc(pubJwk,u8){var k=await crypto.subtle.importKey('jwk',pubJwk,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);return hsB64(new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},k,u8)));}
 async function pfEmEnc(em){try{var pb=await pfCall('/pub');if(pb&&pb.pub)return await pfRsaEnc(pb.pub,pfEnc(JSON.stringify({e:em})));}catch(e){}return '';}
-var APPV='v53';
+var APPV='v54';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
@@ -5218,6 +5230,7 @@ async function pfSync(why,opt){opt=opt||{};var P=pfGet();if(!P||PFBUSY)return;va
   PFBUSY=true;var res='';
   try{var d=await pfAuth(P.cur,pw),mj=d.meta,dk=d.dk;
     if(mj.blocked){lsSet('szokartya-pfres','letiltva');klog('profil','a profil le van tiltva');if(window.kBar)kBar('pfblk','A profilodat az adminisztrátor letiltotta, a felhős mentés szünetel. Írj neki, ha ez tévedés.');return;}
+    var ad0=isAdm();lsSet('szokartya-adm',mj.adm?'1':'');if(ad0!==!!mj.adm){klog('profil',mj.adm?'hangkészítő (admin) jog megkapva':'a hangkészítő jog megszűnt');applyRole();}
     var gm0=lsGet('szokartya-gem')==='1';lsSet('szokartya-gem',mj.gem?'1':'');if(gm0&&!mj.gem){window.PFGA=null;klog('profil','a Gemini hozzáférés megszűnt');}
     if(!mj.em&&pfEmGet(P.cur)&&!window.PFEMD){window.PFEMD=1;try{var ee=await pfEmEnc(pfEmGet(P.cur));if(ee){await pfCall('/meta',{fid:d.fid,wcode:d.wcode,meta:{wk_pw:mj.wk_pw,em:ee}});klog('profil','az e-mail cím titkosítva elmentve a profilhoz');}}catch(e){}}
     var at=parseInt(lsGet('szokartya-pfat-'+pfNk(P.cur))||'0',10);
@@ -5355,7 +5368,7 @@ ppChip=function(t,pc,err){ppChip0(t,pc,err);ppChipFit();};
 ppChipHide=function(){ppChipHide0();ppChipFit();};
 setInterval(function(){if(!document.getElementById('ppChip')&&document.body.style.paddingBottom)document.body.style.paddingBottom='';},1500);
 
-render();
+render();applyRole();
 (async function(){
   try{
     if(!window.claude||!claude.use){return;}
