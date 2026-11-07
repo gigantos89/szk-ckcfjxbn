@@ -6,7 +6,7 @@
 @media(prefers-color-scheme:dark){:root{--bg:#14171d;--fg:#e8ebf2;--card:#1d222b;--ln:#323a48;--ac:#6b9bff;--bad:#ff7a6b;--mut:#9aa3b5}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,sans-serif;padding:12px;max-width:none;margin:0}
 h1{font-size:1.3rem;margin:.2em 0 .6em}h2{font-size:1.05rem;margin:0 0 .5em}
-.c{max-width:900px;background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:14px;margin:0 0 14px}
+.c{background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:14px;margin:0 0 14px}
 input,textarea{width:100%;padding:10px;border:1px solid var(--ln);border-radius:8px;background:var(--bg);color:var(--fg);font:inherit;margin:4px 0}
 button{padding:9px 14px;border:1px solid var(--ln);border-radius:8px;background:var(--ac);color:#fff;font:inherit;cursor:pointer;margin:4px 6px 4px 0}
 button.s{background:transparent;color:var(--fg)}button.d{background:var(--bad)}
@@ -27,7 +27,7 @@ details.mo{margin-top:4px}details.mo summary{cursor:pointer;color:var(--mut);fon
 <button id="list">Profilok listázása</button><button id="chk" class="s">Szerver ellenőrzése</button>
 <div style="margin-top:8px;border-top:1px solid var(--ln);padding-top:8px"><button id="apply2" disabled>Beállítások alkalmazása</button><span class="m">A táblázat kapcsolói csak erre a gombra lépnek életbe.</span></div>
 <p id="msg" class="m" role="status"></p></div>
-<div class="c full"><h2>Regisztráltak és haladásuk</h2><p id="sum" class="m"></p><div class="w"><table id="tab"><thead><tr><th>Név</th><th>Fiók</th><th>E-mail</th><th>Regisztrált</th><th>Utolsó mentés</th><th>Tanult</th><th>Ismétlés</th><th>Sorozat</th><th>Ma új</th><th>Gemini</th><th>Hangkészítő</th><th>Verzió</th><th>Utolsó hiba</th><th>Műveletek</th></tr></thead><tbody></tbody></table></div>
+<div class="c full"><h2>Regisztráltak és haladásuk</h2><p id="sum" class="m"></p><div id="cols" class="m" style="margin:2px 0 6px"></div><style id="colcss"></style><div class="w"><table id="tab"><thead><tr><th>Név</th><th>Fiók</th><th>E-mail</th><th>Regisztrált</th><th>Utolsó mentés</th><th>Tanult</th><th>Ismétlés</th><th>Sorozat</th><th>Ma új</th><th>Gemini</th><th>Hangkészítő</th><th>Verzió</th><th>Utolsó hiba</th><th>Műveletek</th></tr></thead><tbody></tbody></table></div>
 <p><button id="gAll">Gemini bekapcsolása mindenkinek</button><button id="gNone" class="s">Gemini kikapcsolása mindenkinél</button></p>
 <p class="m">A napi keret felhasználónként számolódik (a számláló magyar idő szerint éjfélkor nullázódik). Az alap keret 100 kérés. Egy kérés egy AI-válasz, javítás vagy hang. A számláló kb. 5 kérésenként mentődik, ezért kisebb eltérés lehet.</p>
 <p class="m">A Gemini a te Google kulcsodat használja a Cloudflare-ben (GEMINI_KEY), a felhasználók a kulcsot nem látják. Kikapcsolás után a hozzáférés megszűnik. A kulcs ingyenes kerete közös, ezért figyeld a használatot.</p>
@@ -50,6 +50,11 @@ var PRIV=null,CACHE={};
 async function dec(em){if(!em||!PRIV)return '';if(CACHE[em]!==undefined)return CACHE[em];try{var u=atob(em),b=new Uint8Array(u.length);for(var i=0;i<u.length;i++)b[i]=u.charCodeAt(i);var o=JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:'RSA-OAEP'},PRIV,b)));return (CACHE[em]=o.e||'');}catch(e){return (CACHE[em]='(nem olvasható)');}}
 async function loadPriv(){PRIV=null;CACHE={};var t=$('priv').value.trim();if(!t)return;try{PRIV=await crypto.subtle.importKey('jwk',JSON.parse(t),{name:'RSA-OAEP',hash:'SHA-256'},false,['decrypt']);}catch(e){msg('A privát kulcs hibás, az e-mail címek nem látszanak.',1);}}
 var LIST=[],DEF=100,TODAY='',PEND={};
+var CN=[[4,'Regisztrált'],[5,'Utolsó mentés'],[6,'Tanult'],[7,'Ismétlés'],[8,'Sorozat'],[9,'Ma új']],CK='szk-admin-cols',HID=[];
+try{HID=JSON.parse(localStorage.getItem(CK)||'[]')||[];}catch(e){HID=[];}
+function colApply(){var css=HID.map(function(i){return '#tab th:nth-child('+i+'),#tab td:nth-child('+i+'){display:none}';}).join('');$('colcss').textContent=css;
+  var c=$('cols');c.innerHTML='Oszlopok: ';CN.forEach(function(x){var b=document.createElement('button');b.type='button';var off=HID.indexOf(x[0])>=0;b.className='s';b.style.cssText='padding:3px 9px;margin:2px 4px 2px 0;font-size:.85rem'+(off?';opacity:.55;text-decoration:line-through':';border-color:var(--ac)');b.textContent=(off?'+ ':'✓ ')+x[1];b.onclick=function(){var k=HID.indexOf(x[0]);if(k>=0)HID.splice(k,1);else HID.push(x[0]);try{localStorage.setItem(CK,JSON.stringify(HID));}catch(e){}colApply();};c.appendChild(b);});}
+setTimeout(colApply,0);
 function nPend(){var n=0;for(var f in PEND)n+=Object.keys(PEND[f]).length;return n;}
 function setP(fid,key,val,orig){var e=PEND[fid]=PEND[fid]||{};if(val===orig)delete e[key];else e[key]=val;if(!Object.keys(e).length)delete PEND[fid];bar();}
 function bar(){var n=nPend();$('pbar').hidden=!n;$('pn').textContent=n+' változás vár az alkalmazásra';$('apply2').disabled=!n;$('apply2').textContent=n?('Beállítások alkalmazása ('+n+')'):'Beállítások alkalmazása';}
