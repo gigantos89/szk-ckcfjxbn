@@ -3654,9 +3654,12 @@ function enBuf(buf){return new Promise(function(res){var u=URL.createObjectURL(n
 function enPlay(t){var q=enNeed(t);if(!q)return Promise.resolve(false);gtStop();var tk=PPT;
   return Promise.all(q.need.map(function(c){return gtGetC('pp|'+q.vid+'|'+c);})).then(function(b){if(b.some(function(x){return !x;}))return false;
     var p=Promise.resolve(true);b.forEach(function(buf){p=p.then(function(ok){if(!ok)return false;if(tk!==PPT)return true;return enBuf(buf);});});return p;}).catch(function(){return false;});}
-function ppSetupEn(v,st){try{navigator.storage.persist();}catch(e){}st('A hangmotor betöltése...',-1);
+function ppSetupEn(v,st,again){try{navigator.storage.persist();}catch(e){}st(again?'Sérült modell, újra letöltöm...':'A hangmotor betöltése...',-1);
   return ppCall({t:'stored'}).then(function(r){if(r.list.indexOf(v)>=0)return;st('Hang letöltése...',0);return ppCall({t:'download',voice:v},function(p){st('Hang letöltése: '+(p[1]?Math.round(100*p[0]/p[1])+'%':Math.round(p[0]/1048576)+' MB'),p[1]?Math.min(100,100*p[0]/p[1]):-1);});})
-  .then(function(){st('Előkészítés...',-1);return ppCall({t:'predict',text:'Good morning.',voice:v});}).then(function(){ppMark(v,true);});}
+  .then(function(){st('Előkészítés...',-1);return ppCall({t:'predict',text:'Good morning.',voice:v});}).then(function(){ppMark(v,true);})
+  .catch(function(e){var m=String(e&&e.message||e);
+    if(!again&&/protobuf|graph|session|onnx|fetch|network/i.test(m)){return ppCall({t:'remove',voice:v}).catch(function(){}).then(function(){return new Promise(function(r){setTimeout(r,800);});}).then(function(){return ppSetupEn(v,st,true);});}
+    if(again)throw new Error('A modell kétszeri letöltés után sem használható ('+m.slice(0,80)+'). Próbáld wifin, és ha marad, ürítsd a Chrome oldaladatait ennél az oldalnál.');throw e;});}
 function ppMk(post){
   var lib=null;
   async function load(urls){var last=null;for(var i=0;i<urls.length;i++){try{var m=await import(urls[i]);if(m&&!m.predict&&m.default&&m.default.predict)m=m.default;if(m&&m.predict){lib=m;return;}}catch(e){last=e;}}throw new Error('A hangmotor nem tölthető be'+(last?': '+(last.message||last):''));}
@@ -5275,7 +5278,7 @@ async function pfOpen(key,u8){return JSON.parse(new TextDecoder().decode(await p
 async function pfDK(kek,meta){var raw=await pfAesDec(kek,pfB64d(meta.wk_pw));return {raw:raw,key:await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt'])};}
 async function pfRsaEnc(pubJwk,u8){var k=await crypto.subtle.importKey('jwk',pubJwk,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);return hsB64(new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},k,u8)));}
 async function pfEmEnc(em){try{var pb=await pfCall('/pub');if(pb&&pb.pub)return await pfRsaEnc(pb.pub,pfEnc(JSON.stringify({e:em})));}catch(e){}return '';}
-var APPV='v57';
+var APPV='v58';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
