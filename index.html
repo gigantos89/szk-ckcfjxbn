@@ -369,15 +369,7 @@ body{zoom:var(--fs,1)}
     <p class="msg" id="gMsg" role="status"></p>
   </details>
   <details class="backup" id="statBox"><summary>Statisztika (7 nap)</summary><div class="stsum" id="statBody"></div></details>
-  <details class="backup"><summary>Kártyák Excelbe és vissza</summary>
-    <p>Kiexportálhatod az összes kártyát (szöveg, memóriatrükkök, színek), átírhatod Excelben, és visszatöltheted: a módosított kártyák szövege felülíródik, a tanulási állapotuk megmarad. Új sorból új kártya lesz. Az „Azonosító” oszlopot ne írd át.</p>
-    <div class="vrow"><button class="reset" id="xExport" type="button">Excel letöltése (.xlsx)</button><button class="reset" id="xCopy" type="button">Másolás táblázatként</button></div>
-    <div class="vrow"><label for="xFile">Betöltés fájlból (.xlsx, .csv):</label><input type="file" id="xFile" accept=".xlsx,.xls,.csv,.tsv,.txt"></div>
-    <textarea id="xPaste" rows="3" spellcheck="false" placeholder="Vagy illeszd be ide az Excel celláit (fejléc is kell), majd nyomd meg a Betöltés gombot."></textarea>
-    <div class="vrow"><button class="reset" id="xPasteGo" type="button">Betöltés a beillesztett táblázatból</button><button class="reset" id="xUndo" type="button" hidden>Utolsó betöltés visszavonása</button></div>
-    <div class="xprev" id="xPrev" hidden><p id="xPrevTxt"></p><div class="vrow"><button class="reset" id="xOk" type="button">Betöltés megerősítése</button><button class="reset" id="xNo" type="button">Mégse</button></div></div>
-    <p class="msg" id="xMsg" role="status"></p>
-  </details>
+
   <details class="backup"><summary>Biztonsági mentés (nem kötelező)</summary>
     <p>A haladásod és a beállításaid (a Google-kulcs kivételével) a telefonon magától mentődnek. Biztonsági másolathoz vagy másik böngészőbe, címre való átvitelhez használd ezeket. A fájl a Letöltések mappába kerül. Vasárnap este 8 után belépéskor emlékeztetőt kapsz.</p>
     <div class="brow"><button class="reset" id="bFile" type="button">Mentés fájlba (letöltés)</button><button class="reset" id="bFileBtn" type="button">Visszatöltés fájlból</button><input type="file" id="bFileIn" accept=".txt,text/plain" hidden></div>
@@ -395,6 +387,15 @@ body{zoom:var(--fs,1)}
   </details>
   <details class="backup" id="devBox"><summary>Fejlesztői beállítások (nem a tanulóknak)</summary>
     <p class="msg">Hangok készítése és feltöltése, GitHub kulcs, hangmotorok, naplók. Ezek a hangtár fenntartásához kellenek, tanuláshoz nem.</p>
+    <details class="backup"><summary>Kártyák Excelbe és vissza</summary>
+    <p>Kiexportálhatod az összes kártyát (szöveg, memóriatrükkök, színek), átírhatod Excelben, és visszatöltheted: a módosított kártyák szövege felülíródik, a tanulási állapotuk megmarad. Új sorból új kártya lesz. Az „Azonosító” oszlopot ne írd át.</p>
+    <div class="vrow"><button class="reset" id="xExport" type="button">Excel letöltése (.xlsx)</button><button class="reset" id="xCopy" type="button">Másolás táblázatként</button></div>
+    <div class="vrow"><label for="xFile">Betöltés fájlból (.xlsx, .csv):</label><input type="file" id="xFile" accept=".xlsx,.xls,.csv,.tsv,.txt"></div>
+    <textarea id="xPaste" rows="3" spellcheck="false" placeholder="Vagy illeszd be ide az Excel celláit (fejléc is kell), majd nyomd meg a Betöltés gombot."></textarea>
+    <div class="vrow"><button class="reset" id="xPasteGo" type="button">Betöltés a beillesztett táblázatból</button><button class="reset" id="xUndo" type="button" hidden>Utolsó betöltés visszavonása</button></div>
+    <div class="xprev" id="xPrev" hidden><p id="xPrevTxt"></p><div class="vrow"><button class="reset" id="xOk" type="button">Betöltés megerősítése</button><button class="reset" id="xNo" type="button">Mégse</button></div></div>
+    <p class="msg" id="xMsg" role="status"></p>
+  </details>
     <div class="vrow"><input class="hsin" type="text" id="pfUrl" aria-label="Profil szerver" placeholder="Profil szerver címe (haladó, üresen hagyható)" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
     <details class="backup" id="pgBox"><summary>Hangok előre elkészítése</summary>
     <p>Elkészíti és eltárolja a telefonon a magyar szavak és a beszélgetés magyar mondatainak hangját az összes kártyához, hogy lejátszáskor ne kelljen várni. Előbb töltsd le a Piper hangot (Hang beállítása). Közben tartsd nyitva az appot, érdemes töltőre tenni a telefont. Ha a Hangtárban el van mentve a GitHub kulcs, a kész hangokat 10 hangonként automatikusan feltölti a Hangtárba, induláskor pedig automatikusan letölti a már feltöltötteket, így megszakadás után onnan folytatódik.</p>
@@ -3710,7 +3711,8 @@ function netEnsure(what,verb,mb){if(mb&&mb<=3)return Promise.resolve();if(NETP)r
   var done=function(){NETP=null;};NETP.then(done,done);return NETP;}
 function ppAbortNet(){try{if(PPW)PPW.terminate();}catch(e){}PPW=null;Object.keys(PPQ).forEach(function(k){var q=PPQ[k];delete PPQ[k];var e=new Error('Megszakítva: a telefon mobilnetre váltott. Wifin folytathatod.');e.net=true;q.rej(e);});}
 function isAdm(){return lsGet('szokartya-adm')==='1';}
-function applyRole(){try{['pgBox','hsBox','hfBox'].forEach(function(id){var e=document.getElementById(id);if(e)e.style.display=isAdm()?'':'none';});}catch(e){}}
+function isDev(){return isAdm()||lsGet('szokartya-dev')==='1';}
+function applyRole(){try{var dv=document.getElementById('devBox');if(dv)dv.style.display=isDev()?'':'none';['pgBox','hsBox','hfBox'].forEach(function(id){var e=document.getElementById(id);if(e)e.style.display=isAdm()?'':'none';});}catch(e){}}
 function ppCall(m,prog){if((m.t==='predict'||m.t==='download')&&!isAdm()&&!window.__ppsetup)return Promise.reject(new Error('Hangot csak az admin készíthet.'));var big=m.t==='download',eng=!lsGet(ENG)&&m.t!=='remove';
   if(big||eng)return netEnsure(big?'egy hangfájlt (kb. 60-70 MB)':'a hangmotort (több tíz MB)').then(function(){return ppCall1(m,prog,big);});
   return ppCall1(m,prog,false);}
@@ -5278,7 +5280,7 @@ async function pfOpen(key,u8){return JSON.parse(new TextDecoder().decode(await p
 async function pfDK(kek,meta){var raw=await pfAesDec(kek,pfB64d(meta.wk_pw));return {raw:raw,key:await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt'])};}
 async function pfRsaEnc(pubJwk,u8){var k=await crypto.subtle.importKey('jwk',pubJwk,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);return hsB64(new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},k,u8)));}
 async function pfEmEnc(em){try{var pb=await pfCall('/pub');if(pb&&pb.pub)return await pfRsaEnc(pb.pub,pfEnc(JSON.stringify({e:em})));}catch(e){}return '';}
-var APPV='v58';
+var APPV='v59';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
@@ -5316,6 +5318,7 @@ async function pfSync(why,opt){opt=opt||{};var P=pfGet();if(!P||PFBUSY)return;va
   PFBUSY=true;var res='';
   try{var d=await pfAuth(P.cur,pw),mj=d.meta,dk=d.dk;
     if(mj.blocked){lsSet('szokartya-pfres','letiltva');klog('profil','a profil le van tiltva');if(window.kBar)kBar('pfblk','A profilodat az adminisztrátor letiltotta, a felhős mentés szünetel. Írj neki, ha ez tévedés.');return;}
+    var dd0=lsGet('szokartya-dev')==='1';lsSet('szokartya-dev',mj.dev?'1':'');if(dd0!==!!mj.dev)applyRole();
     var ad0=isAdm();lsSet('szokartya-adm',mj.adm?'1':'');if(ad0!==!!mj.adm){klog('profil',mj.adm?'hangkészítő (admin) jog megkapva':'a hangkészítő jog megszűnt');applyRole();}
     var gm0=lsGet('szokartya-gem')==='1';lsSet('szokartya-gem',mj.gem?'1':'');if(gm0&&!mj.gem){window.PFGA=null;klog('profil','a Gemini hozzáférés megszűnt');}
     if(!mj.em&&pfEmGet(P.cur)&&!window.PFEMD){window.PFEMD=1;try{var ee=await pfEmEnc(pfEmGet(P.cur));if(ee){await pfCall('/meta',{fid:d.fid,wcode:d.wcode,meta:{wk_pw:mj.wk_pw,em:ee}});klog('profil','az e-mail cím titkosítva elmentve a profilhoz');}}catch(e){}}
