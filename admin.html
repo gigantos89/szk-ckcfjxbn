@@ -27,6 +27,27 @@ details.mo{margin-top:4px}details.mo summary{cursor:pointer;color:var(--mut);fon
 <button id="list">Profilok listázása</button><button id="chk" class="s">Szerver ellenőrzése</button>
 <div style="margin-top:8px;border-top:1px solid var(--ln);padding-top:8px"><button id="apply2" disabled>Beállítások alkalmazása</button><span class="m">A táblázat kapcsolói csak erre a gombra lépnek életbe.</span></div>
 <p id="msg" class="m" role="status"></p></div>
+<div class="c full" id="regc"><h2>Regisztráció és meghívók</h2>
+<p class="m">Itt döntöd el, ki hozhat létre új profilt. A meglévő profilok működnek tovább, akármilyen a mód. A mentés gomb azonnal életbe lép.</p>
+<p id="rst" class="m"></p>
+<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0"><b>Mód:</b>
+<label class="m"><input type="radio" name="rmode" value="inv" style="width:auto"> Csak meghívóval</label>
+<label class="m"><input type="radio" name="rmode" value="open" style="width:auto"> Nyitott (napi linkkel)</label>
+<label class="m"><input type="radio" name="rmode" value="closed" style="width:auto"> Zárva</label></div>
+<label class="m" style="display:block;margin:4px 0"><input id="rlock" type="checkbox" style="width:auto"> A letiltott profil appja zárolódik (kapu): csak üzenetet írhat vagy törölheti a profilját</label>
+<details class="mo"><summary>Korlátok (haladó)</summary>
+<label class="m">Profilok összesen (0 = nincs plafon)<input id="rcap" type="number" min="0"></label>
+<label class="m">Új profil naponta egy IP-címről<input id="ripday" type="number" min="1"></label>
+<label class="m">Regisztrációs levél naponta (az Apps Script kb. 100/nap)<input id="rmailday" type="number" min="0" max="100"></label>
+<label class="m">Megszakító: ennyi regisztráció egy óra alatt nyitott módban meghívósra vált<input id="rtrip" type="number" min="2"></label>
+<label class="m">Meghívó érvényessége (nap)<input id="rdays" type="number" min="1" max="60"></label>
+<label class="m">Üzenet a fejlesztőnek naponta összesen<input id="rfbday" type="number" min="0" max="100"></label></details>
+<button id="rsave">Beállítások mentése</button>
+<div id="rlinkbox" class="m" style="margin:8px 0;word-break:break-all"></div>
+<h2 style="margin-top:14px">Meghívók küldése</h2>
+<textarea id="rem" rows="3" placeholder="E-mail címek (soronként egy, vagy vesszővel elválasztva)"></textarea>
+<button id="rsend">Meghívók küldése</button><p id="rres" class="m"></p>
+<div class="w" style="max-height:260px"><table id="rtab"><thead><tr><th>Cím</th><th>Állapot</th><th>Lejár</th><th></th></tr></thead><tbody></tbody></table></div></div>
 <div class="c full"><h2>Regisztráltak és haladásuk</h2><p id="sum" class="m"></p><div id="cols" class="m" style="margin:2px 0 6px"></div><style id="colcss"></style><div class="w"><table id="tab"><thead><tr><th>Név</th><th>Fiók</th><th>E-mail</th><th>Regisztrált</th><th>Utolsó mentés</th><th>Tanult</th><th>Ismétlés</th><th>Sorozat</th><th>Ma új</th><th>Gemini</th><th>Hangkészítő</th><th>Verzió</th><th>Utolsó hiba</th><th>Műveletek</th></tr></thead><tbody></tbody></table></div>
 <p><button id="gAll">Gemini bekapcsolása mindenkinek</button><button id="gNone" class="s">Gemini kikapcsolása mindenkinél</button></p>
 <p class="m">A napi keret felhasználónként számolódik (a számláló magyar idő szerint éjfélkor nullázódik). Az alap keret 100 kérés. Egy kérés egy AI-válasz, javítás vagy hang. A számláló kb. 5 kérésenként mentődik, ezért kisebb eltérés lehet.</p>
@@ -84,8 +105,30 @@ async function list(){msg('Betöltés...');try{await loadPriv();var j=await call
     td.appendChild(sw('Hangkészítés','adm',!!p.adm,'engedélyezett','tiltott'));
     td.appendChild(sw('Fejlesztői menü','dev',!!p.dev,'engedélyezett','tiltott'));
     td.appendChild(b0);var mo=document.createElement('details');mo.className='mo';var ms=document.createElement('summary');ms.textContent='Továbbiak';mo.appendChild(ms);mo.appendChild(bq);mo.appendChild(b2);td.appendChild(mo);tb.appendChild(tr);});
-  $('sum').textContent=j.list.length+' profil, az elmúlt 24 órában mentett: '+act+'.';msg('Kész.');news();}catch(e){msg(e.message,1);}}
+  regLoad();$('sum').textContent=j.list.length+' profil, az elmúlt 24 órában mentett: '+act+'.';msg('Kész.');news();}catch(e){msg(e.message,1);}}
 async function news(){try{var j=await call('/admin/newslist'),b=$('nl');b.innerHTML='';j.items.slice().reverse().forEach(function(n){var d=document.createElement('div');d.className='nw';d.textContent=D(n.ts)+'  ['+(n.to?((LIST.filter(function(p){return p.fid===n.to;})[0]||{}).n||'egy felhasználó'):'mindenki')+'] '+n.t+'\n'+n.x+'\n';var x=document.createElement('button');x.className='s';x.textContent='Üzenet törlése';x.onclick=async function(){try{await call('/admin/newsdel',{id:n.id});news();}catch(e){msg(e.message,1);}};d.appendChild(x);b.appendChild(d);});}catch(e){}}
+
+var RG=null;
+function rmsg(t,bad){$('rres').textContent=t;$('rres').style.color=bad?'var(--bad)':'';}
+async function regLoad(set){try{var j=await call('/admin/reg',set?{set:set}:{});RG=j;
+  var m=document.querySelectorAll('input[name=rmode]');for(var i=0;i<m.length;i++)m[i].checked=(m[i].value===j.mode);
+  $('rlock').checked=!!j.lock;$('rcap').value=j.cap;$('ripday').value=j.ipday;$('rmailday').value=j.mailday;$('rtrip').value=j.trip;$('rdays').value=j.days;$('rfbday').value=j.fbday;
+  $('rst').innerHTML='Most: <b>'+({inv:'Csak meghívóval',open:'Nyitott (napi linkkel)',closed:'Zárva'})[j.mode]+'</b>. Profilok: '+j.total+(j.cap?'/'+j.cap:'')+'. Regisztráció az elmúlt 24 órában: '+j.regs24+'. Mai levél: '+j.mails+'/'+j.mailday+'. Mai üzenet: '+j.fb+'/'+j.fbday+'.'+(j.tripAt?' <b style="color:var(--bad)">A megszakító '+D(j.tripAt)+'-kor automatikusan meghívósra váltott.</b>':'');
+  var lb=$('rlinkbox');if(j.mode==='open'){lb.innerHTML='Mai regisztrációs link (ma és holnap reggelig érvényes, naponta új): <br><code></code><br>';lb.querySelector('code').textContent=j.link;var b=document.createElement('button');b.className='s';b.textContent='Link másolása';b.onclick=function(){navigator.clipboard.writeText(j.link).then(function(){rmsg('Link másolva.');});};lb.appendChild(b);}else lb.textContent='';
+  var tb=document.querySelector('#rtab tbody');tb.innerHTML='';var now=Date.now();
+  j.inv.forEach(function(x){var tr=document.createElement('tr'),st=x.used?'Felhasználva ('+D(x.used)+')':(x.exp<now?'Lejárt':'Függőben');
+    tr.innerHTML='<td>'+esc(x.m)+'</td><td>'+st+'</td><td>'+D(x.exp)+'</td><td></td>';var td=tr.lastChild;
+    if(!x.used){var b1=document.createElement('button');b1.className='s';b1.textContent='Újraküldés';b1.onclick=async function(){var e=prompt('Add meg újra a teljes e-mail címet (új kód készül, a régi érvénytelen):');if(!e)return;try{var r=await call('/admin/invite',{email:e.trim()});rmsg(r.mailed?'Elküldve.':'Nem ment ki a levél ('+r.err+'). Link: '+r.link,!r.mailed);regLoad();}catch(er){rmsg(er.message,1);}};
+      var b2=document.createElement('button');b2.className='d';b2.textContent='Visszavonás';b2.onclick=async function(){try{await call('/admin/invdel',{id:x.id});regLoad();}catch(er){rmsg(er.message,1);}};td.appendChild(b1);td.appendChild(b2);}
+    tb.appendChild(tr);});
+  }catch(e){$('rst').textContent='Hiba: '+e.message;}}
+$('rsave').onclick=async function(){var m=document.querySelector('input[name=rmode]:checked');if(!m){rmsg('Válassz módot.',1);return;}
+  var tx={inv:'Csak meghívóval',open:'NYITOTT (napi linkkel bárki regisztrálhat)',closed:'ZÁRVA (senki sem regisztrálhat)'}[m.value];if(!confirm('Mentés: mód = '+tx+'?'))return;
+  await regLoad({mode:m.value,lock:$('rlock').checked,cap:+$('rcap').value,ipday:+$('ripday').value,mailday:+$('rmailday').value,trip:+$('rtrip').value,days:+$('rdays').value,fbday:+$('rfbday').value});rmsg('Mentve.');};
+$('rsend').onclick=async function(){var L=$('rem').value.split(/[\s,;]+/).filter(function(x){return x;}),ok=0,bad=[],links=[];if(!L.length){rmsg('Adj meg legalább egy e-mail címet.',1);return;}
+  if(!confirm(L.length+' meghívót küldök. Rendben?'))return;
+  for(var i=0;i<L.length;i++){if(i>0)await new Promise(function(r){setTimeout(r,500);});rmsg('Küldés: '+(i+1)+'/'+L.length+'...');try{var r=await call('/admin/invite',{email:L[i]});if(r.mailed)ok++;else{bad.push(L[i]+' ('+(r.err||'nem ment ki')+')');links.push(L[i]+': '+r.link);}}catch(e){bad.push(L[i]+' ('+e.message+')');}}
+  rmsg('Elküldve: '+ok+'/'+L.length+(bad.length?'. Hiba: '+bad.join('; '):'')+(links.length?'. Kézzel küldhető linkek: '+links.join(' | '):''),bad.length>0);$('rem').value='';regLoad();};
 $('list').onclick=list;$('apply2').onclick=applyAll;$('apply3').onclick=applyAll;$('pdrop').onclick=dropAll;
 $('gAll').onclick=async function(){if(!confirm('Bekapcsolod a Geminit minden felhasználónak?'))return;try{var r=await call('/admin/gem',{all:true,on:true});msg('Bekapcsolva, módosult: '+r.changed+' profil.');list();}catch(e){msg(e.message,1);}};
 $('gNone').onclick=async function(){if(!confirm('Kikapcsolod a Geminit mindenkinél?'))return;try{var r=await call('/admin/gem',{all:true,on:false});msg('Kikapcsolva, módosult: '+r.changed+' profil.');list();}catch(e){msg(e.message,1);}};
