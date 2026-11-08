@@ -388,6 +388,7 @@ body{zoom:var(--fs,1)}
     <div class="vrow"><button class="reset" id="pfShare" type="button" hidden>Mai link ismerősnek</button></div>
     <div class="vrow"><button class="reset" id="pfNow" type="button">Szinkron most</button><button class="reset" id="pfSw" type="button">Profil váltása (ezen a telefonon)</button></div>
     <div class="vrow"><button class="reset" id="pfPwd" type="button">Jelszó módosítása</button><button class="reset" id="pfRec" type="button">Új helyreállító kulcs</button><button class="reset" id="pfDel" type="button">Profil törlése a felhőből</button></div>
+    <div class="vrow"><button class="reset" id="pfWipe" type="button">Minden adat törlése a telefonról</button></div>
     <div class="vrow"><button class="reset" id="pfMsg" type="button">Üzenet a fejlesztőnek</button></div>
   </details>
   <details class="backup" id="devBox"><summary>Fejlesztői beállítások (nem a tanulóknak)</summary>
@@ -5355,7 +5356,7 @@ async function pfOpen(key,u8){return JSON.parse(new TextDecoder().decode(await p
 async function pfDK(kek,meta){var raw=await pfAesDec(kek,pfB64d(meta.wk_pw));return {raw:raw,key:await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt'])};}
 async function pfRsaEnc(pubJwk,u8){var k=await crypto.subtle.importKey('jwk',pubJwk,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);return hsB64(new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},k,u8)));}
 async function pfEmEnc(em){try{var pb=await pfCall('/pub');if(pb&&pb.pub)return await pfRsaEnc(pb.pub,pfEnc(JSON.stringify({e:em})));}catch(e){}return '';}
-var APPV='v66';
+var APPV='v67';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
@@ -5544,9 +5545,35 @@ function pfNewRec(){var P=pfGet();if(!P){return;}
       if(em)lsSet('szokartya-pfem-'+pfNk(P.cur),em);klog('profil','új helyreállító kulcs'+(r&&r.mail?', e-mail elküldve':''));await pfKeyWait(rec,'Az új helyreállító kulcsod');});}
 function pfRelogin(){var P=pfGet();if(!P)return;pfDlg('pfre','Jelszó megadása','A(z) "'+P.cur+'" profil jelszava megváltozott vagy hibás. Add meg a jelenlegi jelszót.',[{id:'p',ph:'Jelszó',type:'password'}],'Mentés',
   async function(v){var pw=v('p');if(!pw)throw new Error('Add meg a jelszót.');await pfAuth(P.cur,pw);lsSet('szokartya-pfpw-'+pfNk(P.cur),pw);klog('profil','új jelszó elmentve a telefonon');pfSync('új jelszó').catch(function(){});});}
-function pfDelete(){var P=pfGet();if(!P)return;
+
+function pfWipeAll(){window.PFWIPE=true;try{localStorage.clear();}catch(e){}try{sessionStorage.clear();}catch(e){}
+  var P=[];
+  try{P.push((indexedDB.databases?indexedDB.databases():Promise.resolve([])).then(function(ds){return Promise.all(ds.map(function(d){return new Promise(function(r){var q=indexedDB.deleteDatabase(d.name);q.onsuccess=q.onerror=q.onblocked=function(){r();};});}));}).catch(function(){}));}catch(e){}
+  try{if(window.caches)P.push(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k);}));}).catch(function(){}));}catch(e){}
+  try{if(navigator.serviceWorker)P.push(navigator.serviceWorker.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister();}));}).catch(function(){}));}catch(e){}
+  Promise.all(P).then(function(){setTimeout(function(){location.replace(location.pathname);},300);});}
+function pfWipeCore(n){var k=pfNk(n),P=pfGet();
+  if(!P||!P.list.filter(function(x){return pfNk(x)!==k;}).length){pfWipeAll();return;}
+  window.PFWIPE=true;
+  ['szokartya-pfpw-','szokartya-pfem-','szokartya-pfat-','szokartya-snap-'].forEach(function(p){try{localStorage.removeItem(p+k);}catch(e){}});
+  var list=P.list.filter(function(x){return pfNk(x)!==k;}),wasCur=pfNk(P.cur)===k,next=wasCur?list[0]:P.cur;
+  lsSet(PFK,JSON.stringify({cur:next,list:list}));
+  if(wasCur){[KEY,OLD,'szokartya-set',EDKEY,'szokartya-pref','szokartya-pfd','szokartya-pfres','szokartya-pfok','szokartya-pfnext','szokartya-pfleft','szokartya-gate','szokartya-swappend','szokartya-pfjoin'].forEach(function(x){try{localStorage.removeItem(x);}catch(e){}});
+    var sn=lsGet('szokartya-snap-'+pfNk(next));if(sn)lsSet('szokartya-swappend',sn);else if(lsGet('szokartya-pfpw-'+pfNk(next)))lsSet('szokartya-pfjoin','1');
+    setTimeout(function(){location.reload();},700);}
+  else{window.PFWIPE=false;if(window.pfUi)window.pfUi();}
+  kBar('pfwd','A(z) „'+n+'” profil és minden adata törölve erről a telefonról.');}
+function pfWipe(){var P=pfGet(),n=P&&P.cur,others=P?P.list.filter(function(x){return x!==P.cur;}):[],last=!others.length,dirty=lsGet('szokartya-pfd')==='1'&&!!P;
+  var warn=dirty?' Figyelem: van fel nem töltött változásod, ami a telefonról való törléssel elvész, ha nem mented előbb felhőbe.':'';
+  var txt=(last?'Az összes adat törlődik erről a telefonról és a böngészőből: a profil neve, e-mail címe és jelszava, a haladás, a szerkesztések, a kulcsok, a hangok és a letöltött modellek.':'A(z) „'+n+'” profil neve, e-mail címe, jelszava és minden adata (haladás, szerkesztések) törlődik erről a telefonról. A többi profil ('+others.join(', ')+') érintetlen marad, és átváltasz rá. A közös hangok maradnak.')+' A felhőben lévő profil megmarad, ha nem kéred a felhős törlést is.'+warn;
+  var b=[{t:'Törlés csak a telefonról',fn:function(){pfWipeCore(n||'');}}];
+  if(P)b.push({t:'Telefonról és felhőből is',fn:function(){pfDelete(function(){pfWipeCore(n);});}});
+  b.push({t:'Mégse'});
+  kModal('pfwipe','Minden adat törlése erről a telefonról',txt,b);}
+function pfDelete(after){var P=pfGet();if(!P)return;
   pfDlg('pfdel','Profil törlése a felhőből','A felhőben lévő profilod (haladás, név, jelszó-adatok) véglegesen törlődik. A telefonon lévő adat megmarad. Add meg a jelszavad. Ha megadsz e-mail címet, értesítő levelet küldünk.',[{id:'p',ph:'Jelszó',type:'password'},{id:'e',ph:'E-mail cím (nem kötelező)',type:'email',val:pfEmGet(P.cur)}],'Törlés a felhőből',
     async function(v){var d=await pfAuth(P.cur,v('p'));var dr=await pfCall('/delete',{fid:d.fid,wcode:d.wcode,email:v('e').trim()});
+      if(after){klog('profil','felhős profil törölve'+(dr&&dr.mail?', értesítő levél elküldve':''));after(dr);return;}
       var o=pfGet();o.list=o.list.filter(function(x){return x!==P.cur;});lsSet('szokartya-pfpw-'+pfNk(P.cur),'');if(o.list.length)o.cur=o.list[0];else{lsSet(PFK,'');o=null;}if(o)lsSet(PFK,JSON.stringify(o));klog('profil','felhős profil törölve'+(dr&&dr.mail?', értesítő levél elküldve':''));kBar('pfdelm',dr&&dr.mail?'A profil törölve. Értesítő levelet küldtünk.':'A profil törölve a felhőből.');if(window.pfUi)window.pfUi();if(!pfGet())lsSet(GTK,'');gateShow();});}
 var NWK='szokartya-news';
 setInterval(function(){if(!document.hidden&&pfGet()&&navigator.onLine!==false)kNews().catch(function(){});},90000);
@@ -5573,6 +5600,7 @@ function pfFirst(){if(pfGet()||lsGet('szokartya-pfsnz')===kDay())return;if(docum
   document.getElementById('pfPwd').addEventListener('click',function(){if(!pfGet()){st.textContent='Előbb hozz létre profilt.';return;}pfChange();});
   document.getElementById('pfRec').addEventListener('click',function(){if(!pfGet()){st.textContent='Előbb hozz létre profilt.';return;}pfNewRec();});
   document.getElementById('pfMsg').addEventListener('click',function(){pfFeedback('');});
+  document.getElementById('pfWipe').addEventListener('click',pfWipe);
   document.getElementById('pfDel').addEventListener('click',function(){if(!pfGet()){st.textContent='Nincs profil.';return;}pfDelete();});
   document.getElementById('pfSw').addEventListener('click',function(){var P=pfGet();if(!P||P.list.length<2){st.textContent='Nincs másik profil ezen a telefonon. Hozz létre újat vagy tölts be egy meglévőt.';return;}
     var other=P.list.filter(function(x){return x!==P.cur;});kModal('pfsw','Profil váltása','Melyik profilra váltsak?',other.map(function(n){return {t:n,fn:function(){if(!lsGet('szokartya-pfpw-'+pfNk(n))){pfJoin();return;}pfSwitch(n);}};}).concat([{t:'Mégse'}]));});}
