@@ -212,6 +212,7 @@ body{zoom:var(--fs,1)}
 .stsum{font-size:.9rem;line-height:1.5}
 .stsum svg{width:100%;height:auto;display:block}
 
+body:has(.rw) #kBars{display:none!important}
 @media all{.svbar{display:flex;gap:8px;margin:8px 0}.svbar button{flex:1;font-size:.9rem;padding:9px 6px;margin:0}.svbar small{opacity:.75}.svbar .svph{flex:1;display:flex;align-items:center;justify-content:center;font-size:.9rem;opacity:.8;text-align:center}.svbar .dot{color:#e67e22}}
 #fsBtn{opacity:.6;position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);right:6px;z-index:2147483000;min-width:40px;height:40px;padding:0 12px;border:1.5px solid rgba(255,255,255,.7);border-radius:20px;background:rgba(30,30,34,.72);color:#fff;font:600 .85rem system-ui,sans-serif;cursor:pointer}#fsBtn[hidden]{display:none}#fsBtn:active{opacity:.9}
 </style>
@@ -222,7 +223,6 @@ body{zoom:var(--fs,1)}
     <div class="stat"><b id="sDone">0</b><span>Tanult</span></div>
   </div>
   <select id="modeSel" aria-label="Mód" hidden></select>
-  <div class="svbar" id="svHome"></div>
   <div id="home"></div>
   <div id="qview" hidden></div>
   <div id="lview" hidden></div>
@@ -233,8 +233,8 @@ body{zoom:var(--fs,1)}
   <div class="rates" id="rates"></div>
   <p class="msg" id="vmsg" role="status"></p>
   <div class="modebar"><button class="reset" id="homeBtn" type="button">‹ Főoldal</button><b id="modeName"></b></div>
-  <div class="svbar" id="svStudy"></div>
   </div>
+  <div class="svbar" id="svFoot"></div>
   <div class="foot"><span id="sync" hidden></span><button type="button" class="reset" id="setAll">⚙ Beállítások megnyitása ▾</button></div>
   <details class="backup"><summary>Napi új szavak</summary>
     <p>Naponta ennyi még nem látott szót mutat az app. Az esedékes ismétlések ezen felül mindig megjelennek.</p>
@@ -3439,7 +3439,7 @@ function stats(){
 }
 function setRates(){
   var c=cur>=0?SI(cur):null,sug=flipped&&TYPED?(TYPED.g===2?2:TYPED.g===1?1:0):-1;
-  ratesEl.style.visibility=(flipped&&c)?'':'hidden';
+  ratesEl.style.visibility=(flipped&&c&&!window.RTP)?'':'hidden';
   if(!isLearn()){
     ratesEl.className='rates two';
     ratesEl.innerHTML=[[0,'Még gyakorlom'],[2,'Tudom']].map(function(x){return '<button class="rate'+(sug===x[0]||(sug===1&&x[0]===2)?' sug':'')+'" type="button" data-r="'+x[0]+'"'+(flipped&&c?'':' disabled')+'><span>'+x[1]+'</span></button>';}).join('');
@@ -4219,7 +4219,7 @@ function buildHome(){
 }
 function showView(v){
   var pv=VIEW;VIEW=v;if(v==='home'&&pv!=='home')HOMEOPEN=null;if(pv!==v){try{var sw0=document.getElementById('setWrap');if(sw0)Array.prototype.forEach.call(sw0.querySelectorAll('details.backup'),function(d){d.open=false;});}catch(e){}}if(pv==='free'&&v!=='free'&&window.fStopAll)window.fStopAll();
-  document.getElementById('home').hidden=v!=='home';var svh=document.getElementById('svHome');if(svh)svh.hidden=v!=='home';document.getElementById('study').hidden=v!=='study';document.getElementById('qview').hidden=v!=='q';document.getElementById('lview').hidden=v!=='listen';document.getElementById('fview').hidden=v!=='free';if(v!=='listen'&&typeof L!=='undefined'&&L.on)lsStop();
+  document.getElementById('home').hidden=v!=='home';document.getElementById('study').hidden=v!=='study';document.getElementById('qview').hidden=v!=='q';document.getElementById('lview').hidden=v!=='listen';document.getElementById('fview').hidden=v!=='free';if(v!=='listen'&&typeof L!=='undefined'&&L.on)lsStop();
   if(v==='study'){var nm=document.getElementById('modeName'),s=document.getElementById('modeSel');buildModeSel();var op=s.options[s.selectedIndex];nm.textContent=op?op.textContent.replace(/\s*\(\d+\)$/,''):'';}
   if(v==='q'){renderQ();}else if(v==='listen'){renderL();}else if(v==='free'){renderF();}else render();try{window.scrollTo(0,0);}catch(e){}
 }
@@ -4270,7 +4270,7 @@ window.addEventListener('resize',fit);
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fit);
 function flip(){
   if(cur<0||busy)return;flipped=!flipped;
-  document.getElementById('card').classList.toggle('flipped',flipped);fit();setRates();
+  document.getElementById('card').classList.toggle('flipped',flipped);fit();window.RTP=flipped?1:0;clearTimeout(window.RTT);if(flipped)window.RTT=setTimeout(function(){window.RTP=0;setRates();},480);setRates();
   if(flipped&&AUTO&&'speechSynthesis' in window&&typeof speak==='function')speak(sayTarget(DATA[cur]));
 }
 function streak(){
@@ -4993,7 +4993,7 @@ async function kHealth(){
     if(need&&!g.key)add('gem','warn','Gemini funkció be van kapcsolva, de nincs Google hozzáférés. Kérj hozzáférést a fejlesztőtől.','Üzenet a fejlesztőnek',function(){var b=document.getElementById('pfMsg');if(b)b.click();});
     else if(g.src==='proxy'&&lsGet('szokartya-gemleft')==='0')add('gemq','warn','A mai Gemini keret elfogyott, holnap újra használhatod.');}catch(e){}
   var hs=hlRead(),sel=[];
-  if(hgGet()==='p'){var hv=ppVoice();sel.push(hv);if(!ppHave(hv))add('hu',adm?'warn':'info','A kiválasztott magyar Piper hang ('+(PPNAME[String(hv).split('-')[1]]||hv)+') nincs a telefonon.',adm?'Letöltés':'',adm?function(){return ppOfferGo();}:null);}
+  if(hgGet()==='p'){var hv=ppVoice();sel.push(hv);if(!ppHave(hv)&&!adm)add('hu','info','A kiválasztott magyar Piper hang ('+(PPNAME[String(hv).split('-')[1]]||hv)+') nincs a telefonon, a hangtárból szól.');}
   if(enVid())sel.push(enVid());
   if(!hs||Date.now()-hs.t>3*86400000){if(onl)add('hs0','info','A hangtár ellenőrzése még nem futott le.');}
   else{
@@ -5003,14 +5003,27 @@ async function kHealth(){
       if(adm)add('gap','warn','A hangtárból hiányzik '+hs.gap+' hang ('+nm+').','Elkészítés',function(){return kRun('admin: hiányzó hangok');});
       else add('gapu','info','A hangtárban még nincs minden hang kész ('+hs.gap+'), addig a telefon hangja szól. Az admin pótolja.');}}
   if(adm){
-    PPEN.forEach(function(v){if(!ppHave(v))add('en-'+v,'warn','A(z) '+ENNAME[v]+' hangmodell nincs letöltve, enélkül nem tudsz angol hangot készíteni.','Letöltés',function(){return netEnsure('kb. 60 MB hangmodellt','Letöltenék').then(function(){return ppSetupEn(v,function(t,pc){ppChip(ENNAME[v]+': '+t,pc);});}).then(function(){ppChipHide();});});});
-    if(!ppAllHave())add('hum','warn','A magyar Piper hangmodellek nincsenek mind letöltve.','Letöltés',ppOfferGo);
+    var mn=kModelsMissing();if(mn.n)add('models','warn','Hangmodellek letöltése szükséges ('+mn.txt+'), enélkül nem tudsz hangot készíteni.','Mind letöltése',function(){return kModelsAll(false);});
     if(!(lsGet(HST)||''))add('ghk','warn','Nincs megadva a GitHub kulcs, a hangokat nem tudod feltölteni.','Kulcs megadása',kOpenHs);
     else{var gc=null;try{gc=JSON.parse(lsGet('szokartya-hlth-gh')||'null');}catch(e){}
       if(onl&&(!gc||Date.now()-gc.t>86400000)){try{var c=hsCfg(),rr=await fetch('https://api.github.com/repos/'+c.o+'/'+c.r,{headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+lsGet(HST)}}),jj=await rr.json().catch(function(){return {};});gc={t:Date.now(),s:rr.status,push:!!(jj.permissions&&jj.permissions.push)};lsSet('szokartya-hlth-gh',JSON.stringify(gc));}catch(e){}}
       if(gc&&gc.s&&gc.s>=400)add('ghb','err','A GitHub kulcs nem érvényes vagy lejárt (hiba: '+gc.s+').','Kulcs megadása',kOpenHs);
       else if(gc&&gc.s===200&&!gc.push)add('ghw','err','A GitHub kulcs csak olvasásra jó, feltölteni nem tud.','Kulcs megadása',kOpenHs);}}
   return it;}
+var KMDL=0;
+function kModelsMissing(){var en=PPEN.filter(function(v){return !ppHave(v);}),hu=!ppAllHave(),mb=en.length*60+(hu?200:0),n=en.length+(hu?1:0),p=[];if(en.length)p.push(en.length+' angol');if(hu)p.push('magyar');return {en:en,hu:hu,n:n,mb:mb,txt:p.join(' és ')+' hangmodell, kb. '+mb+' MB'};}
+async function kModelsAll(auto){if(!isAdm()||KMDL||PPBUSY)return;var m=kModelsMissing();if(!m.n)return;KMDL=1;
+  try{if(!auto)await netEnsure('kb. '+m.mb+' MB hangmodellt','Letöltenék');var i=0;
+    for(var k=0;k<m.en.length;k++){i++;var vv=m.en[k],ii=i;await ppSetupEn(vv,function(t,pc){ppChip('Hangmodellek ('+ii+'/'+m.n+'): '+ENNAME[vv]+', '+t,pc);});}
+    if(m.hu){i++;var ii2=i;await ppAll(function(t,pc){ppChip('Hangmodellek ('+ii2+'/'+m.n+'): magyar, '+t,pc);});lsSet(PPDEC,'done');}
+    ppChipHide();klog('modell','hangmodellek letöltve ('+m.txt+')');toast5('A hangmodellek letöltve.');
+  }catch(e){ppChipHide();if(!(e&&e.declined))klog('hiba','modell letöltés: '+String(e&&e.message||e).slice(0,100));}
+  finally{KMDL=0;try{if(window.ppUi)window.ppUi();}catch(e){}setTimeout(function(){kHealthRun('modellek után');},800);}}
+async function kModelsAuto(){if(!isAdm()||KMDL||PPBUSY)return;var m=kModelsMissing();if(!m.n)return;
+  var r=null;try{r=await netCheck();}catch(e){}
+  if(r&&r.ok){kModelsAll(true);return;}
+  if(window.kBar)kBar('mdl','Hangmodellek letöltése szükséges ('+m.txt+'). Wifin magától letöltődik.','Letöltés most',function(){kModelsAll(false);});}
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(function(){});}catch(e){}
 function hlText(it){return it.map(function(x){return (x.lvl==='err'?'HIBA: ':x.lvl==='warn'?'Figyelmeztetés: ':'Info: ')+x.t;}).join('\n');}
 async function kHealthRun(why){
   if(HL.busy)return;HL.busy=1;
@@ -5042,7 +5055,7 @@ async function kRun(why){
     setTimeout(function(){kHealthRun(why);},4000);
     try{if(navigator.serviceWorker){var rg=await navigator.serviceWorker.getRegistration();if(rg)rg.update().catch(function(){});}}catch(e){}
     if(navigator.onLine===false){klog('hálózat','nincs kapcsolat');return;}
-    var rp=netCheck(),mp=hsMan(),r=await rp;try{if(pfGet()){await pfSync('karmester',{pull:true});svRefresh();var ok0=parseInt(lsGet('szokartya-pfok')||'0',10);if(lsGet('szokartya-pfd')==='1'&&Date.now()-ok0>86400000&&window.kBar)kBar('pfrem','Több mint egy napja nem mentettél felhőbe.','Mentés felhőbe',function(){svCloud();});}}catch(e){}try{await pfGate();}catch(e){}try{await kNews();}catch(e){}if(!r.ok&&r.unk&&Date.now()-KWIFI<21600000){r.ok=true;r.cur='wifi (te megerősítetted)';}if(!r.ok&&r.cur==='mobilnet'&&Date.now()-KMOB<600000){r.ok=true;r.cur='mobilnet (te engedélyezted)';}klog('hálózat',r.cur+(r.ok?' (rendben)':' ('+r.why+')'));
+    var rp=netCheck(),mp=hsMan(),r=await rp;try{if(pfGet()){await pfSync('karmester',{pull:true});svRefresh();var ok0=parseInt(lsGet('szokartya-pfok')||'0',10);if(lsGet('szokartya-pfd')==='1'&&Date.now()-ok0>86400000&&window.kBar)kBar('pfrem','Több mint egy napja nem mentettél felhőbe.','Mentés felhőbe',function(){svCloud();});}}catch(e){}try{if(!pfGet()&&(lsGet('szokartya-inv')||lsGet('szokartya-dc'))&&window.kBar)kBar('invw','Még nincs profilod. A meghívód kész, hozd létre, hogy a haladásod mentve legyen.','Profil létrehozása',function(){pfNew(function(){});});}catch(e){}try{await pfGate();}catch(e){}try{await kNews();}catch(e){}try{kModelsAuto();}catch(e){}if(!r.ok&&r.unk&&Date.now()-KWIFI<21600000){r.ok=true;r.cur='wifi (te megerősítetted)';}if(!r.ok&&r.cur==='mobilnet'&&Date.now()-KMOB<600000){r.ok=true;r.cur='mobilnet (te engedélyezted)';}klog('hálózat',r.cur+(r.ok?' (rendben)':' ('+r.why+')'));
     if(isAdm()&&lsGet(PPDEC)==='go'&&!ppAllHave()){if(r.ok){klog('hangmodell','a megszakadt letöltés folytatódik');ppStartAll();return;}kBar('ppr','A hangmodell letöltése megszakadt.','Folytatás',ppOfferGo,function(){});}
     if(isAdm()&&!lsGet(PPDEC)&&!ppAllHave()&&!window.__ppfirst){window.__ppfirst=1;if(r.ok){klog('hangmodell','első indítás: a hangmodellek letöltése wifin');ppStartAll();return;}kModal('ppf','Hangmodellek letöltése','A magyar mondatok és a Szabad beszélgetés hangjához le kell tölteni a Piper hangmodelleket (kb. 190 MB). A kész hangfájlokat a GitHubról töltöm le. Jelenlegi kapcsolat: '+r.cur+'. Wifin érdemes letölteni.',[{t:'Letöltés most',fn:ppOfferGo},{t:'Wifin majd magától',fn:function(){}},{t:'Nem kérem',fn:function(){lsSet(PPDEC,'skip');}}]);}
     await kHang(r,await mp);
@@ -5344,11 +5357,15 @@ function pfUrl(){var u=(lsGet(PFW)||'').trim().replace(/\/+$/,'');if(u&&!/^https
 async function pfCall(path,body){var u=pfUrl();if(!u)throw new Error('nincs profil szerver beállítva (Beállítások, Profil és felhős mentés)');
   var r=await fetch(u+path,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,cache:'no-store'});
   var j=null;try{j=await r.json();}catch(e){}if(!r.ok){var e=new Error((j&&j.error)||('szerver hiba '+r.status));e.status=r.status;if(j&&j.wait)e.wait=j.wait;throw e;}return j;}
-async function pfFid(name){return pfHex(new Uint8Array(await crypto.subtle.digest('SHA-256',pfEnc('szk2|'+pfNk(name))))).slice(0,24);}
-async function pfPw(name,pass){var ck=pfNk(name)+'|'+pass;if(PFKC[ck])return PFKC[ck];
+function pfEk(e){return String(e||'').trim().toLowerCase();}
+function pfV4(name){return lsGet('szokartya-pfv-'+pfNk(name))==='4';}
+function pfEmFor(name){return pfV4(name)?pfEk(pfEmGet(name)):'';}
+function pfIdStr(name,em){em=pfEk(em);return em?'szk4|'+pfNk(name)+'|'+em:'szk2|'+pfNk(name);}
+async function pfFid(name,em){if(em===undefined)em=pfEmFor(name);return pfHex(new Uint8Array(await crypto.subtle.digest('SHA-256',pfEnc(pfIdStr(name,em))))).slice(0,24);}
+async function pfPw(name,pass,em){if(em===undefined)em=pfEmFor(name);em=pfEk(em);var ck=pfNk(name)+'|'+em+'|'+pass;if(PFKC[ck])return PFKC[ck];
   var base=await crypto.subtle.importKey('raw',pfEnc(pass),'PBKDF2',false,['deriveBits']);
-  var u=new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',salt:pfEnc('szk2|'+pfNk(name)),iterations:200000,hash:'SHA-256'},base,512));
-  return (PFKC[ck]={kek:await crypto.subtle.importKey('raw',u.slice(0,32),'AES-GCM',false,['encrypt','decrypt']),wcode:pfHex(u.slice(32,64)),fid:await pfFid(name)});}
+  var u=new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',salt:pfEnc(pfIdStr(name,em)),iterations:200000,hash:'SHA-256'},base,512));
+  return (PFKC[ck]={kek:await crypto.subtle.importKey('raw',u.slice(0,32),'AES-GCM',false,['encrypt','decrypt']),wcode:pfHex(u.slice(32,64)),fid:await pfFid(name,em)});}
 async function pfGz(u8,dec){var cs=new (dec?DecompressionStream:CompressionStream)('gzip'),w=cs.writable.getWriter();w.write(u8);w.close();return new Uint8Array(await new Response(cs.readable).arrayBuffer());}
 async function pfAesEnc(key,u8){var iv=crypto.getRandomValues(new Uint8Array(12)),ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},key,u8)),o=new Uint8Array(12+ct.length);o.set(iv,0);o.set(ct,12);return o;}
 async function pfAesDec(key,u8){try{return new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:u8.slice(0,12)},key,u8.slice(12)));}catch(e){throw new Error('rossz jelszó');}}
@@ -5356,7 +5373,7 @@ async function pfOpen(key,u8){return JSON.parse(new TextDecoder().decode(await p
 async function pfDK(kek,meta){var raw=await pfAesDec(kek,pfB64d(meta.wk_pw));return {raw:raw,key:await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt'])};}
 async function pfRsaEnc(pubJwk,u8){var k=await crypto.subtle.importKey('jwk',pubJwk,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);return hsB64(new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},k,u8)));}
 async function pfEmEnc(em){try{var pb=await pfCall('/pub');if(pb&&pb.pub)return await pfRsaEnc(pb.pub,pfEnc(JSON.stringify({e:em})));}catch(e){}return '';}
-var APPV='v67';
+var APPV='v68';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
@@ -5374,9 +5391,14 @@ function pfShowKey(key,title,cb){var o=document.createElement('div');o.className
   var d=document.createElement('button');d.type='button';d.className='reset';d.textContent='Elmentettem';d.addEventListener('click',function(){o.remove();if(cb)cb();});
   box.appendChild(c);box.appendChild(d);document.body.appendChild(o);}
 function pfKeyWait(key,title){return new Promise(function(res){pfShowKey(key,title,res);});}
-async function pfAuth(name,pass){var fid=await pfFid(name),meta=await pfMeta(fid);if(!meta)throw new Error('Nincs ilyen profil (a név hibás).');
-  var d=await pfPw(name,pass);try{var dk=await pfDK(d.kek,meta);return {fid:fid,meta:meta,kek:d.kek,wcode:d.wcode,dk:dk};}catch(e){}
+async function pfResolve(name,em){em=pfEk(em);
+  if(em){var f=await pfFid(name,em),m=await pfMeta(f);if(m)return {fid:f,meta:m,em:em,v4:true};}
+  var f1=await pfFid(name,''),m1=await pfMeta(f1);if(m1)return {fid:f1,meta:m1,em:'',v4:false};
+  throw new Error('Nincs ilyen profil (a név vagy az e-mail cím hibás).');}
+async function pfAuth(name,pass,em){var r=await pfResolve(name,em===undefined?pfEmFor(name):em);
+  var d=await pfPw(name,pass,r.v4?r.em:'');try{var dk=await pfDK(d.kek,r.meta);return {fid:r.fid,meta:r.meta,kek:d.kek,wcode:d.wcode,dk:dk,v4:r.v4,em:r.em};}catch(e){}
   throw new Error('rossz jelszó');}
+function pfEmCheck(name,val){var s=pfEk(pfEmGet(name));if(s&&pfEk(val)!==s)throw new Error('Az e-mail cím nem egyezik a profil e-mail címével.');}
 async function pfMeta(fid){try{var j=await pfCall('/get/'+fid+'/json');return JSON.parse(decodeURIComponent(escape(atob(j.content))));}catch(e){if(e.status===404)return null;throw e;}}
 async function pfGetBin(fid){try{var j=await pfCall('/get/'+fid+'/bin');return {u8:pfB64d(j.content),sha:j.sha};}catch(e){if(e.status===404)return {u8:null,sha:''};throw e;}}
 function pfObj(){return JSON.parse(decodeURIComponent(escape(atob(mkCode()))));}
@@ -5449,7 +5471,7 @@ function pfEmGet(n){return lsGet('szokartya-pfem-'+pfNk(n))||'';}
 var SVBUSY=0;
 function svLeft(){var o=null;try{o=JSON.parse(lsGet('szokartya-pfleft')||'null');}catch(e){}return o&&o.d===kDay()&&o.n>=0?o.n:-1;}
 function svRefresh(){var dirty=lsGet('szokartya-pfd')==='1'&&!!pfGet(),l=svLeft();
-  ['svHome','svStudy'].forEach(function(id){var e=document.getElementById(id);if(!e)return;
+  ['svFoot'].forEach(function(id){var e=document.getElementById(id);if(!e)return;
     if(!e.firstChild)e.innerHTML='<span class="svph" role="status">✓ Telefonon mentve</span><button class="reset" type="button" data-sv="cl">☁ Mentés felhőbe</button>';
     var b=e.querySelector('[data-sv=cl]');b.innerHTML='☁ Mentés felhőbe'+(dirty?' <span class="dot">●</span>':'')+(l>=0?' <small>(ma még '+l+')</small>':'');});}
 async function svCloud(){var P=pfGet();
@@ -5466,6 +5488,18 @@ async function svCloud(){var P=pfGet();
 function svPhone(){var n=window.dlBackup?window.dlBackup():'';toast5(n?'Telefonra mentve (Letöltések): '+n:'A mentés nem sikerült.');}
 document.addEventListener('click',function(ev){var b=ev.target.closest&&ev.target.closest('[data-sv]');if(!b)return;if(b.getAttribute('data-sv')==='cl')svCloud();else svPhone();});
 setTimeout(svRefresh,400);
+function welcomeLink(){var iv=lsGet('szokartya-inv')||'',dc=lsGet('szokartya-dc')||'';if(!iv&&!dc)return;
+  if(pfGet()){lsSet('szokartya-inv','');lsSet('szokartya-dc','');return;}
+  if(lsGet('szokartya-welcomed')===(iv||dc))return;
+  var t='Szia! Én vagyok a Karmester, az app segítője. Hogy a haladásod ne vesszen el, és másik telefonon is elérd, először hozz létre egy saját profilt.\n\n'+
+  '1. Profil létrehozása: '+(iv?'a meghívó kódod már ki van töltve. Add meg a neved, ugyanazt az e-mail címet, amelyre a meghívót kaptad, és egy jelszót (legalább 10 karakter, betűvel és számmal).':'add meg a neved, az e-mail címed és egy jelszót (legalább 10 karakter, betűvel és számmal). A mai link csak ma és holnap reggelig érvényes.')+'\n'+
+  '2. Helyreállító kulcs: e-mailben kapod meg. Őrizd meg jól, mert ha elfelejted a jelszót, ezzel kapod vissza az adataidat.\n'+
+  '3. Telepítés: a Chrome menüjében (⋮) válaszd az „Alkalmazás telepítése” vagy a „Hozzáadás a kezdőképernyőhöz” pontot, így appként indul.\n'+
+  '4. Mentés: a haladásod a telefonon magától mentődik. A felhőbe a „Mentés felhőbe” gombbal mentsd, naponta legfeljebb 3-szor, így más telefonról is eléred.\n'+
+  '5. Hangok: wifin az app letölti a hangokat, hogy offline is szóljanak. Ha rákérdez, engedélyezd.';
+  var ok=kModal('welcome','Üdvözlünk a Szókártyában!',t,[{t:'Profil létrehozása',fn:function(){lsSet('szokartya-welcomed',iv||dc);pfNew(function(){});}},{t:'Később',fn:function(){lsSet('szokartya-welcomed',iv||dc);}}]);
+  if(ok){var p=document.querySelector('#welcome p');if(p){p.style.whiteSpace='pre-line';p.style.textAlign='left';}}}
+setTimeout(welcomeLink,1800);
 var GTK='szokartya-gate';
 function gateGet(){var o=null;try{o=JSON.parse(lsGet(GTK)||'null');}catch(e){}return o;}
 function gateShow(){var g=gateGet(),P=pfGet(),o=document.getElementById('gateLock');
@@ -5501,13 +5535,14 @@ function pfNew2(done,mode){
       if(!n||n.length>40)throw new Error('A név 1-40 karakter legyen.');if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)||em.length>100)throw new Error('Adj meg érvényes e-mail címet.');
       var s=pfStrong(p);if(s)throw new Error(s);if(p!==v('p2'))throw new Error('A két jelszó nem egyezik.');
       var P0=pfGet(),same=P0&&pfNk(P0.cur)===pfNk(n);
-      var d=await pfPw(n,p),dkRaw=crypto.getRandomValues(new Uint8Array(32)),rec=pfRecGen(),rd=await pfRecD(d.fid,rec);
+      if(P0&&P0.list.some(function(x){return pfNk(x)===pfNk(n);}))throw new Error('Ezen a telefonon már van ilyen nevű profil. Válassz másik nevet (például becenevet).');
+      var d=await pfPw(n,p,em),dkRaw=crypto.getRandomValues(new Uint8Array(32)),rec=pfRecGen(),rd=await pfRecD(d.fid,rec);
       var meta={wk_pw:hsB64(await pfAesEnc(d.kek,dkRaw)),wk_rec:hsB64(await pfAesEnc(rd.kek,dkRaw)),em:await pfEmEnc(em)};
       var dk=await crypto.subtle.importKey('raw',dkRaw,'AES-GCM',false,['encrypt']),mine=pfObj();mine.at=Date.now();
       var data=hsB64(await pfAesEnc(dk,await pfGz(pfEnc(JSON.stringify(mine)))));
       var rg=await pfCall('/register',{fid:d.fid,wcode:d.wcode,rcode:rd.rcode,meta:meta,data:data,email:em,name:n,rec:rec,stats:pfStats(),inv:ivc,dc:lsGet('szokartya-dc')||''});
       lsSet('szokartya-inv','');lsSet('szokartya-dc','');
-      lsSet('szokartya-pfpw-'+pfNk(n),p);lsSet('szokartya-pfem-'+pfNk(n),em);lsSet('szokartya-pfat-'+pfNk(n),String(mine.at));lsSet('szokartya-pfok',String(mine.at));lsSet('szokartya-pfres','mentve');klog('profil','új profil létrehozva: '+n+(rg&&rg.mail?', e-mail elküldve':(rg&&rg.mailSkipped?', e-mailt ma nem tudtunk küldeni (írd fel a kulcsot!)':', az e-mailt nem sikerült elküldeni')));
+      lsSet('szokartya-pfpw-'+pfNk(n),p);lsSet('szokartya-pfem-'+pfNk(n),em);lsSet('szokartya-pfv-'+pfNk(n),'4');lsSet('szokartya-pfat-'+pfNk(n),String(mine.at));lsSet('szokartya-pfok',String(mine.at));lsSet('szokartya-pfres','mentve');klog('profil','új profil létrehozva: '+n+(rg&&rg.mail?', e-mail elküldve':(rg&&rg.mailSkipped?', e-mailt ma nem tudtunk küldeni (írd fel a kulcsot!)':', az e-mailt nem sikerült elküldeni')));
       await kNewsBase(d.fid);
       await pfKeyWait(rec,'Mentsd el a helyreállító kulcsot');
       if(P0&&P0.cur&&!same){pfSwitchPrep(P0.cur);pfSetCur(n);setTimeout(function(){location.reload();},700);return;}
@@ -5515,36 +5550,38 @@ function pfNew2(done,mode){
 async function pfAfterJoin(n,p,done){var P0=pfGet(),same=P0&&pfNk(P0.cur)===pfNk(n);lsSet('szokartya-pfpw-'+pfNk(n),p);
   if(P0&&P0.cur&&!same){pfSwitchPrep(P0.cur);pfSetCur(n);lsSet('szokartya-pfjoin','1');setTimeout(function(){location.reload();},700);return;}
   pfSetCur(n);await pfSync('betöltés',{join:true});if(done)done(true);}
+function pfLocalNameCheck(n,em){var P=pfGet();if(P&&P.list.some(function(x){return pfNk(x)===pfNk(n);})){var s=pfEk(pfEmGet(n));if(s&&s!==pfEk(em))throw new Error('Ezen a telefonon már van egy másik, ilyen nevű profil. Előbb azt töröld erről a telefonról.');}}
+function pfJoinFlags(n,r,em){var k=pfNk(n);if(r.v4){lsSet('szokartya-pfv-'+k,'4');lsSet('szokartya-pfem-'+k,pfEk(em));}else{lsSet('szokartya-pfv-'+k,'');if(em&&!lsGet('szokartya-pfem-'+k))lsSet('szokartya-pfem-'+k,pfEk(em));}}
 function pfJoin(done){
-  pfDlg('pfjoin','Meglévő profil betöltése','Add meg a profil nevét és jelszavát. A haladásod letöltődik erre a telefonra.',PFURLF().concat([{id:'n',ph:'Profil neve'},{id:'p',ph:'Jelszó',type:'password'}]),'Betöltés',
-    async function(v,E){pfCheckUrl(v);var n=v('n').trim(),p=v('p');if(!n||!p)throw new Error('Add meg a nevet és a jelszót.');
-      await pfAuth(n,p);await pfAfterJoin(n,p,done);},
-    [{t:'Elfelejtettem a jelszavam',fn:function(o,E){var n=o.querySelector('#pfjoin-n').value.trim();o.remove();pfRecover(n,done);}}]);}
-function pfRecover(name,done){
-  pfDlg('pfrec','Elfelejtett jelszó','Add meg a profil nevét, a regisztrációkor e-mailben kapott helyreállító kulcsot és egy új jelszót. A felhős adatod (haladás, megtanult szavak, beállítások) megmarad.',
-    PFURLF().concat([{id:'n',ph:'Profil neve',val:name||''},{id:'k',ph:'Helyreállító kulcs (XXXX-XXXX-XXXX-XXXX)'},{id:'p',ph:'Új jelszó',type:'password'},{id:'p2',ph:'Új jelszó újra',type:'password'}]),'Helyreállítás',
-    async function(v){pfCheckUrl(v);var n=v('n').trim(),k=v('k'),p=v('p');if(!n)throw new Error('Add meg a profil nevét.');if(pfRecNorm(k).length<12)throw new Error('Add meg a helyreállító kulcsot.');
+  pfDlg('pfjoin','Meglévő profil betöltése','Add meg a profil nevét, az e-mail címét és a jelszavát. A haladásod letöltődik erre a telefonra.',PFURLF().concat([{id:'n',ph:'Profil neve'},{id:'e',ph:'E-mail cím',type:'email'},{id:'p',ph:'Jelszó',type:'password'}]),'Betöltés',
+    async function(v,E){pfCheckUrl(v);var n=v('n').trim(),p=v('p'),em=v('e').trim();if(!n||!p||!em)throw new Error('Add meg a nevet, az e-mail címet és a jelszót.');
+      pfLocalNameCheck(n,em);var r=await pfAuth(n,p,em);pfJoinFlags(n,r,em);await pfAfterJoin(n,p,done);},
+    [{t:'Elfelejtettem a jelszavam',fn:function(o,E){var n=o.querySelector('#pfjoin-n').value.trim(),em0=o.querySelector('#pfjoin-e')?o.querySelector('#pfjoin-e').value.trim():'';o.remove();pfRecover(n,done,em0);}}]);}
+function pfRecover(name,done,email0){
+  pfDlg('pfrec','Elfelejtett jelszó','Add meg a profil nevét, az e-mail címét, a regisztrációkor e-mailben kapott helyreállító kulcsot és egy új jelszót. A felhős adatod (haladás, megtanult szavak, beállítások) megmarad.',
+    PFURLF().concat([{id:'n',ph:'Profil neve',val:name||''},{id:'e',ph:'E-mail cím',type:'email',val:email0||''},{id:'k',ph:'Helyreállító kulcs (XXXX-XXXX-XXXX-XXXX)'},{id:'p',ph:'Új jelszó',type:'password'},{id:'p2',ph:'Új jelszó újra',type:'password'}]),'Helyreállítás',
+    async function(v){pfCheckUrl(v);var n=v('n').trim(),k=v('k'),p=v('p'),em=v('e').trim();if(!n||!em)throw new Error('Add meg a profil nevét és az e-mail címét.');pfLocalNameCheck(n,em);if(pfRecNorm(k).length<12)throw new Error('Add meg a helyreállító kulcsot.');
       var s=pfStrong(p);if(s)throw new Error(s);if(p!==v('p2'))throw new Error('A két jelszó nem egyezik.');
-      var fid=await pfFid(n),meta=await pfMeta(fid);if(!meta)throw new Error('Nincs ilyen profil (a név hibás).');if(!meta.wk_rec)throw new Error('Ehhez a profilhoz nincs helyreállító kulcs.');
+      var rs=await pfResolve(n,em),fid=rs.fid,meta=rs.meta;if(!meta.wk_rec)throw new Error('Ehhez a profilhoz nincs helyreállító kulcs.');
       var rd=await pfRecD(fid,k),raw;try{raw=await pfAesDec(rd.kek,pfB64d(meta.wk_rec));}catch(e){throw new Error('Hibás helyreállító kulcs.');}
-      var nd=await pfPw(n,p);await pfCall('/recover',{fid:fid,rcode:rd.rcode,newWcode:nd.wcode,wk_pw:hsB64(await pfAesEnc(nd.kek,raw))});
-      klog('profil','jelszó visszaállítva helyreállító kulccsal');await pfAfterJoin(n,p,done);});}
+      var nd=await pfPw(n,p,rs.v4?rs.em:'');await pfCall('/recover',{fid:fid,rcode:rd.rcode,newWcode:nd.wcode,wk_pw:hsB64(await pfAesEnc(nd.kek,raw))});
+      klog('profil','jelszó visszaállítva helyreállító kulccsal');pfJoinFlags(n,rs,em);await pfAfterJoin(n,p,done);});}
 function pfChange(){var P=pfGet();if(!P){return;}
   pfDlg('pfchg','Jelszó módosítása','Add meg a régi és az új jelszót. A felhős adatod megmarad.',
-    [{id:'o',ph:'Régi jelszó',type:'password'},{id:'p',ph:'Új jelszó',type:'password'},{id:'p2',ph:'Új jelszó újra',type:'password'}],'Módosítás',
-    async function(v){var p=v('p');var s=pfStrong(p);if(s)throw new Error(s);if(p!==v('p2'))throw new Error('A két jelszó nem egyezik.');
+    [{id:'m',ph:'E-mail cím',type:'email'},{id:'o',ph:'Régi jelszó',type:'password'},{id:'p',ph:'Új jelszó',type:'password'},{id:'p2',ph:'Új jelszó újra',type:'password'}],'Módosítás',
+    async function(v){pfEmCheck(P.cur,v('m'));var p=v('p');var s=pfStrong(p);if(s)throw new Error(s);if(p!==v('p2'))throw new Error('A két jelszó nem egyezik.');
       var od=await pfAuth(P.cur,v('o')),nd=await pfPw(P.cur,p);
       await pfCall('/meta',{fid:od.fid,wcode:od.wcode,newWcode:nd.wcode,meta:{wk_pw:hsB64(await pfAesEnc(nd.kek,od.dk.raw))}});
       lsSet('szokartya-pfpw-'+pfNk(P.cur),p);klog('profil','jelszó módosítva');if(window.pfUi)window.pfUi();});}
 function pfNewRec(){var P=pfGet();if(!P){return;}
-  pfDlg('pfnrec','Új helyreállító kulcs','Új kulcsot készítünk, a régi érvénytelen lesz. Add meg a jelszavad. Ha megadsz e-mail címet, oda is elküldjük.',
-    [{id:'p',ph:'Jelszó',type:'password'},{id:'e',ph:'E-mail cím (nem kötelező)',type:'email',val:pfEmGet(P.cur)}],'Új kulcs készítése',
-    async function(v){var em=v('e').trim();if(em&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em))throw new Error('Az e-mail cím hibás.');
+  pfDlg('pfnrec','Új helyreállító kulcs','Új kulcsot készítünk, a régi érvénytelen lesz. Add meg a profil e-mail címét és a jelszavad. A kulcsot e-mailben is elküldjük.',
+    [{id:'e',ph:'E-mail cím',type:'email'},{id:'p',ph:'Jelszó',type:'password'}],'Új kulcs készítése',
+    async function(v){var em=v('e').trim();pfEmCheck(P.cur,em);if(!em||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em))throw new Error('Add meg a profil e-mail címét.');
       var od=await pfAuth(P.cur,v('p')),rec=pfRecGen(),rd=await pfRecD(od.fid,rec);
       var r=await pfCall('/meta',{fid:od.fid,wcode:od.wcode,meta:{wk_pw:od.meta.wk_pw,wk_rec:hsB64(await pfAesEnc(rd.kek,od.dk.raw)),em:em?await pfEmEnc(em):undefined},newRcode:rd.rcode,email:em,rec:rec});
       if(em)lsSet('szokartya-pfem-'+pfNk(P.cur),em);klog('profil','új helyreállító kulcs'+(r&&r.mail?', e-mail elküldve':''));await pfKeyWait(rec,'Az új helyreállító kulcsod');});}
-function pfRelogin(){var P=pfGet();if(!P)return;pfDlg('pfre','Jelszó megadása','A(z) "'+P.cur+'" profil jelszava megváltozott vagy hibás. Add meg a jelenlegi jelszót.',[{id:'p',ph:'Jelszó',type:'password'}],'Mentés',
-  async function(v){var pw=v('p');if(!pw)throw new Error('Add meg a jelszót.');await pfAuth(P.cur,pw);lsSet('szokartya-pfpw-'+pfNk(P.cur),pw);klog('profil','új jelszó elmentve a telefonon');pfSync('új jelszó').catch(function(){});});}
+function pfRelogin(){var P=pfGet();if(!P)return;pfDlg('pfre','Jelszó megadása','A(z) "'+P.cur+'" profil jelszava megváltozott vagy hibás. Add meg a jelenlegi jelszót.',[{id:'m',ph:'E-mail cím',type:'email'},{id:'p',ph:'Jelszó',type:'password'}],'Mentés',
+  async function(v){pfEmCheck(P.cur,v('m'));var pw=v('p');if(!pw)throw new Error('Add meg a jelszót.');await pfAuth(P.cur,pw);lsSet('szokartya-pfpw-'+pfNk(P.cur),pw);klog('profil','új jelszó elmentve a telefonon');pfSync('új jelszó').catch(function(){});});}
 
 function pfWipeAll(){window.PFWIPE=true;try{localStorage.clear();}catch(e){}try{sessionStorage.clear();}catch(e){}
   var P=[];
@@ -5555,7 +5592,7 @@ function pfWipeAll(){window.PFWIPE=true;try{localStorage.clear();}catch(e){}try{
 function pfWipeCore(n){var k=pfNk(n),P=pfGet();
   if(!P||!P.list.filter(function(x){return pfNk(x)!==k;}).length){pfWipeAll();return;}
   window.PFWIPE=true;
-  ['szokartya-pfpw-','szokartya-pfem-','szokartya-pfat-','szokartya-snap-'].forEach(function(p){try{localStorage.removeItem(p+k);}catch(e){}});
+  ['szokartya-pfpw-','szokartya-pfem-','szokartya-pfat-','szokartya-snap-','szokartya-pfv-'].forEach(function(p){try{localStorage.removeItem(p+k);}catch(e){}});
   var list=P.list.filter(function(x){return pfNk(x)!==k;}),wasCur=pfNk(P.cur)===k,next=wasCur?list[0]:P.cur;
   lsSet(PFK,JSON.stringify({cur:next,list:list}));
   if(wasCur){[KEY,OLD,'szokartya-set',EDKEY,'szokartya-pref','szokartya-pfd','szokartya-pfres','szokartya-pfok','szokartya-pfnext','szokartya-pfleft','szokartya-gate','szokartya-swappend','szokartya-pfjoin'].forEach(function(x){try{localStorage.removeItem(x);}catch(e){}});
@@ -5571,8 +5608,8 @@ function pfWipe(){var P=pfGet(),n=P&&P.cur,others=P?P.list.filter(function(x){re
   b.push({t:'Mégse'});
   kModal('pfwipe','Minden adat törlése erről a telefonról',txt,b);}
 function pfDelete(after){var P=pfGet();if(!P)return;
-  pfDlg('pfdel','Profil törlése a felhőből','A felhőben lévő profilod (haladás, név, jelszó-adatok) véglegesen törlődik. A telefonon lévő adat megmarad. Add meg a jelszavad. Ha megadsz e-mail címet, értesítő levelet küldünk.',[{id:'p',ph:'Jelszó',type:'password'},{id:'e',ph:'E-mail cím (nem kötelező)',type:'email',val:pfEmGet(P.cur)}],'Törlés a felhőből',
-    async function(v){var d=await pfAuth(P.cur,v('p'));var dr=await pfCall('/delete',{fid:d.fid,wcode:d.wcode,email:v('e').trim()});
+  pfDlg('pfdel','Profil törlése a felhőből','A felhőben lévő profilod (haladás, név, jelszó-adatok) véglegesen törlődik. A telefonon lévő adat megmarad. Add meg a profil e-mail címét és a jelszavad. Értesítő levelet küldünk.',[{id:'e',ph:'E-mail cím',type:'email'},{id:'p',ph:'Jelszó',type:'password'}],'Törlés a felhőből',
+    async function(v){pfEmCheck(P.cur,v('e'));var d=await pfAuth(P.cur,v('p'));var dr=await pfCall('/delete',{fid:d.fid,wcode:d.wcode,email:v('e').trim()});
       if(after){klog('profil','felhős profil törölve'+(dr&&dr.mail?', értesítő levél elküldve':''));after(dr);return;}
       var o=pfGet();o.list=o.list.filter(function(x){return x!==P.cur;});lsSet('szokartya-pfpw-'+pfNk(P.cur),'');if(o.list.length)o.cur=o.list[0];else{lsSet(PFK,'');o=null;}if(o)lsSet(PFK,JSON.stringify(o));klog('profil','felhős profil törölve'+(dr&&dr.mail?', értesítő levél elküldve':''));kBar('pfdelm',dr&&dr.mail?'A profil törölve. Értesítő levelet küldtünk.':'A profil törölve a felhőből.');if(window.pfUi)window.pfUi();if(!pfGet())lsSet(GTK,'');gateShow();});}
 var NWK='szokartya-news';
@@ -5645,7 +5682,7 @@ render();applyRole();
   var wrap=document.createElement('div');wrap.id='setWrap';var ds=Array.prototype.filter.call(document.querySelectorAll('details.backup'),function(d){return !d.parentNode.closest('details.backup');});
   if(ds.length){ds[0].parentNode.insertBefore(wrap,ds[0]);Array.prototype.forEach.call(ds,function(d){wrap.appendChild(d);});}
   function apply(o,reset){wrap.hidden=!o;if(!o&&window.PFRL){window.PFRL=0;setTimeout(function(){location.reload();},300);}if(o&&reset)Array.prototype.forEach.call(wrap.querySelectorAll('details.backup'),function(d){d.open=false;});btn.textContent=o?'⚙ Beállítások bezárása ▴':'⚙ Beállítások megnyitása ▾';btn.setAttribute('aria-expanded',o?'true':'false');}
-  apply(uiGet().setOpen==='1',true);
+  apply(false,true);try{var u0=uiGet();u0.setOpen='0';localStorage.setItem(UIK,JSON.stringify(u0));}catch(e){}
   btn.addEventListener('click',function(){var o=!(uiGet().setOpen==='1'),u=uiGet();u.setOpen=o?'1':'0';try{localStorage.setItem(UIK,JSON.stringify(u));}catch(e){}apply(o,true);if(o){try{wrap.scrollIntoView({block:'nearest'});}catch(e){}}});
 })();
 (function(){
