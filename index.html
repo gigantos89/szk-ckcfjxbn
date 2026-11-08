@@ -5165,7 +5165,14 @@ async function hsUpload0(st){
         var f=await hsGetManifest();f.m.clips=f.m.clips||{};ent.forEach(function(x){(f.m.clips[x[0]]=f.m.clips[x[0]]||{})[x[1]]=[name,x[2],x[3]];});M=f.m;sha=f.sha;}}
     n+=ent.length;}
   return n;}
+async function hsViaWorker(path){var P=null;try{P=pfGet();}catch(e){}if(!P||!P.cur)return null;var pw=lsGet('szokartya-pfpw-'+pfNk(P.cur));if(!pw)return null;
+  var d=await pfPw(P.cur,pw),r=await fetch(pfUrl()+'/hang/'+encodeURIComponent(path),{headers:{'X-Fid':d.fid,'X-Wc':d.wcode},cache:'no-store'});
+  if(r.ok)return await r.arrayBuffer();
+  if(r.status===403){var e=new Error('A hangtárhoz nincs hozzáférésed (a profil le van tiltva).');e.denied=true;throw e;}
+  if(r.status===429){var j=null;try{j=await r.json();}catch(x){}var e2=new Error((j&&j.error)||'Mára elfogyott a hangletöltési keret.');e2.denied=true;throw e2;}
+  return null;}
 async function hsFetch(path,fresh){var c=hsCfg(),q=fresh?'?_='+Date.now():'',urls=['https://'+c.o+'.github.io/'+c.r+'/'+path+q,'https://raw.githubusercontent.com/'+c.o+'/'+c.r+'/main/'+path+q];
+  try{var wb=await hsViaWorker(path);if(wb)return wb;}catch(e){if(e&&e.denied)throw e;}
   for(var i=0;i<urls.length;i++){try{var r=await fetch(urls[i],{cache:fresh?'no-store':'default'});if(r.ok)return await r.arrayBuffer();}catch(e){}}
   throw new Error('a hangtár nem érhető el (nincs internet, vagy a tároló neve nem jó)');}
 async function hsDownload(st,man){
@@ -5373,7 +5380,7 @@ async function pfOpen(key,u8){return JSON.parse(new TextDecoder().decode(await p
 async function pfDK(kek,meta){var raw=await pfAesDec(kek,pfB64d(meta.wk_pw));return {raw:raw,key:await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt'])};}
 async function pfRsaEnc(pubJwk,u8){var k=await crypto.subtle.importKey('jwk',pubJwk,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);return hsB64(new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},k,u8)));}
 async function pfEmEnc(em){try{var pb=await pfCall('/pub');if(pb&&pb.pub)return await pfRsaEnc(pb.pub,pfEnc(JSON.stringify({e:em})));}catch(e){}return '';}
-var APPV='v68';
+var APPV='v69';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
