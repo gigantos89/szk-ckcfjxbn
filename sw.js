@@ -1,4 +1,4 @@
-var V='szk-v70',LIB='szk-lib',LIBH=['cdn.jsdelivr.net','cdnjs.cloudflare.com','unpkg.com'];
+var V='szk-v71',LIB='szk-lib',LIBH=['cdn.jsdelivr.net','cdnjs.cloudflare.com','unpkg.com'];
 self.addEventListener('install',function(e){e.waitUntil(caches.open(V).then(function(c){return c.addAll(['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png']);}));self.skipWaiting();});
 self.addEventListener('activate',function(e){e.waitUntil(caches.keys().then(function(k){return Promise.all(k.filter(function(x){return x!==V&&x!==LIB;}).map(function(x){return caches.delete(x);}));}));self.clients.claim();});
 self.addEventListener('fetch',function(e){var r=e.request,u=new URL(r.url);
