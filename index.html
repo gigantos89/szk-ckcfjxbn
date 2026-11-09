@@ -384,6 +384,8 @@ body:has(.rw) #kBars{display:none!important}
     <p class="msg">A haladásod, a megtanult szavaid és a beállításaid titkosítva (a jelszavaddal) mentődnek a felhőbe. A mentéshez nem kell GitHub kulcs. A Google és a GitHub kulcs soha nem kerül bele. Regisztrációkor e-mailben kapsz egy helyreállító kulcsot: ha elfelejted a jelszavad, ezzel visszakapod az adatodat. A kulcs és a jelszó nélkül az adat senkinek sem nyitható meg. Az adminisztrátor a neved és az összesített haladásod (hány szót tanultál, mikor voltál aktív) látja, a tartalmat nem.</p>
     <p class="msg" id="pfSt" role="status"></p>
     <p class="msg" id="pfRole" role="status"></p>
+    <p class="msg" id="micSt" role="status"></p>
+    <div class="vrow"><button class="reset" id="micAsk" type="button">Mikrofon engedélyezése</button><button class="reset" id="micTestB" type="button">Mikrofon próba</button></div>
     <div class="vrow"><button class="reset" id="pfNew" type="button">Új profil</button><button class="reset" id="pfJoin" type="button">Meglévő profil betöltése</button></div>
     <div class="vrow"><button class="reset" id="pfShare" type="button" hidden>Mai link ismerősnek</button></div>
     <div class="vrow"><button class="reset" id="pfNow" type="button">Szinkron most</button><button class="reset" id="pfSw" type="button">Profil váltása (ezen a telefonon)</button></div>
@@ -3517,18 +3519,18 @@ function gErr(e){
   if(c===401||c===403)return 'A kulcs nem használható ehhez (hozzáférés megtagadva). '+m;
   if(c===404)return 'A modell nem található. A beállításokban a „Modellek lekérése” gombbal válassz egy elérhetőt.';
   if(c===429)return 'Elfogyott az ingyenes keret vagy túl gyorsan kérdeztél. Várj egy kicsit, vagy próbáld később.';
-  if(c>=500)return 'A Google szolgáltatása éppen nem válaszol, próbáld később.';
+  if(c>=500)return 'A Google szolgáltatása éppen nem válaszol. Háttérben keresek egy működő modellt, próbáld újra egy perc múlva.';
   if(e&&e.bad)return 'A válasz nem volt feldolgozható, nyomd meg újra a gombot.';
   return 'Nincs kapcsolat a Google-lel. Ellenőrizd az internetet. Ez a környezet (pl. a Claude-ban lévő oldal) a külső kapcsolatot le is tilthatja, a telefonos Chrome-fájlban működik.';}
 function gClean(v){v=String(v||'');var m=v.match(/AIza[0-9A-Za-z_\-]{20,}/);if(m)return m[0];return v.replace(/^\s*(?:api[_ -]?key|kulcs)\s*[:=]\s*/i,'').replace(/[\s"'`“”‘’<>]/g,'');}
-async function gProxy(url,opt){var P=pfGet();if(!P)throw Object.assign(new Error('Nincs profil'),{status:401});
+async function gProxy(url,opt,tmo){var P=pfGet();if(!P)throw Object.assign(new Error('Nincs profil'),{status:401});
   if(!window.PFGA||window.PFGA.n!==P.cur){var pw=lsGet('szokartya-pfpw-'+pfNk(P.cur));if(!pw)throw Object.assign(new Error('A profil jelszava nincs elmentve ezen a telefonon'),{status:401});var d=await pfPw(P.cur,pw);window.PFGA={n:P.cur,fid:d.fid,wc:d.wcode};}
-  var path=String(url).replace('https://generativelanguage.googleapis.com/','');var ctl=typeof AbortController!=='undefined'?new AbortController():null,tm=setTimeout(function(){if(ctl)ctl.abort();},75000);
-  var r=await fetch(pfUrl()+'/gem?p='+encodeURIComponent(path),{method:(opt&&opt.method)||'POST',headers:{'Content-Type':'application/json','X-Fid':window.PFGA.fid,'X-Wc':window.PFGA.wc},body:opt&&opt.body,signal:ctl?ctl.signal:undefined});
+  var path=String(url).replace('https://generativelanguage.googleapis.com/','');var ctl=typeof AbortController!=='undefined'?new AbortController():null,tm=setTimeout(function(){if(ctl)ctl.abort();},tmo||75000);
+  var r=await fetch(pfUrl()+'/gem?p='+encodeURIComponent(path)+(opt&&opt.ping?'&ping=1':''),{method:(opt&&opt.method)||'POST',headers:{'Content-Type':'application/json','X-Fid':window.PFGA.fid,'X-Wc':window.PFGA.wc},body:opt&&opt.body,signal:ctl?ctl.signal:undefined});
   var gl=r.headers.get('X-Gem-Left');if(gl!==null)lsSet('szokartya-gemleft',gl);var j=await r.json().catch(function(){return {};});clearTimeout(tm);if(!r.ok){var e=new Error((j.error&&j.error.message)||(typeof j.error==='string'?j.error:'')||('HTTP '+r.status));e.status=r.status;throw e;}return j;}
-function gFetch(url,opt,key){
-  if(key==='@proxy')return gProxy(url,opt);
-  var ctl=typeof AbortController!=='undefined'?new AbortController():null,tm=setTimeout(function(){if(ctl)ctl.abort();},75000);
+function gFetch(url,opt,key,tmo){
+  if(key==='@proxy')return gProxy(url,opt,tmo);
+  var ctl=typeof AbortController!=='undefined'?new AbortController():null,tm=setTimeout(function(){if(ctl)ctl.abort();},tmo||75000);
   opt=opt||{};opt.headers=Object.assign({'x-goog-api-key':key},opt.headers||{});if(ctl)opt.signal=ctl.signal;
   return fetch(url,opt).then(function(r){return r.json().catch(function(){return {};}).then(function(j){clearTimeout(tm);
     if(!r.ok){var e=new Error((j.error&&j.error.message)||('HTTP '+r.status));e.status=r.status;throw e;}return j;});},function(e){clearTimeout(tm);throw e;});}
@@ -3540,18 +3542,62 @@ function gFetchList(key){return gFetch('https://generativelanguage.googleapis.co
   var ms=(j.models||[]).filter(function(m){return (m.supportedGenerationMethods||[]).indexOf('generateContent')>=0;}).map(function(m){return String(m.name).replace(/^models\//,'');}).filter(function(n){return /^gemini/i.test(n)&&!/(image|tts|audio|live|embed|robot|computer|vision|exp|thinking|customtools|learnlm|gemma|aqa|nano|banana|preview)/i.test(n);});
   ms.sort(function(a,b){return gRank(a)-gRank(b)||((/latest/.test(b)?1:0)-(/latest/.test(a)?1:0))||b.localeCompare(a);});
   lsSet(GLK,JSON.stringify({t:Date.now(),l:ms}));return ms;});}
-function gCall(g,pr,fast){
-  return gCall1(g,pr,fast).catch(function(e){
-    var c=e&&e.status;if(!(c===404||c===429||c===400||c>=500)||(c===400&&/API key|key not valid|API_KEY/i.test(e.message||'')))throw e;
-    var have=gListGet();var pl=have?Promise.resolve(have.l):gFetchList(g.key);
-    return pl.then(function(l){var cand=l.filter(function(n){return n!==g.model&&gRank(n)<=1;}).slice(0,3);
-      var p=Promise.reject(e);cand.forEach(function(n){p=p.catch(function(){var g2=Object.assign({},g,{model:n});return gCall1(g2,pr,fast).then(function(j){lsSet(GM,n);if(window.gSwitched)window.gSwitched(n);return j;});});});
-      return p;}).catch(function(){throw e;});});}
-function gCall1(g,pr,fast){
+var GSK='szokartya-gst';
+function gStGet(){var o=null;try{o=JSON.parse(lsGet(GSK)||'null');}catch(e){}if(!o||typeof o!=='object')o={};o.bad=o.bad||{};return o;}
+function gStPut(o){lsSet(GSK,JSON.stringify(o));}
+var GLOGT={};
+function gLog(msg,key){var k=key||msg,n=Date.now();if(GLOGT[k]&&n-GLOGT[k]<600000)return;GLOGT[k]=n;try{klog('gemini',msg);}catch(e){}}
+function gChain(g){var l=(gListGet()||{}).l||[],pref=g.model,base=l.length?l.slice():[GDEF,'gemini-flash-latest','gemini-pro-latest'],hi=0,out=[pref];
+  base.forEach(function(n){if(n===pref||out.indexOf(n)>=0)return;var r=gRank(n);if(r>=2){if(hi>=2)return;hi++;}out.push(n);});return out.slice(0,8);}
+function gKind(e){var c=e&&e.status,m=(e&&e.message)||'';
+  if(e&&e.name==='AbortError')return {k:'időtúllépés',ttl:600000};
+  if(c===400&&/API key|key not valid|API_KEY/i.test(m))return {k:'kulcs',stop:1};
+  if(c===401||c===403)return {k:'hozzáférés',stop:1};
+  if(c===404)return {k:'nincs ilyen modell',ttl:86400000};
+  if(c===429)return {k:'keret/túlterhelt',ttl:900000};
+  if(c>=500)return {k:'szolgáltatás nem válaszol',ttl:600000};
+  if(c===400)return {k:'a modell elutasította',ttl:3600000};
+  if(e&&e.bad)return {k:'rossz válasz',stop:1};
+  return {k:'nincs kapcsolat',stop:1};}
+function gOk(m,pref){var S=gStGet(),was=S.act;S.act=m;delete S.bad[m];S.okAt=Date.now();S.allFail=0;gStPut(S);
+  if(m!==pref){if(was!==m)gLog('átváltva: '+m+' (a '+pref+' nem válaszol)','sw|'+m);}else if(was&&was!==pref){gLog('visszaváltva: '+pref,'back');}}
+function gFail(m,k,e){var S=gStGet();if(k.ttl){S.bad[m]=Date.now()+k.ttl;gStPut(S);}gLog('a(z) '+m+' nem válaszolt: '+k.k+(e&&e.status?' ('+e.status+')':''),'f|'+m+'|'+k.k);}
+// attempt(model,timeoutMs) -> promise; tries the active model, then the others (small to larger)
+function gRun(g,attempt){var S=gStGet(),pref=g.model,now=Date.now(),chain=gChain(g);S.lastUse=now;gStPut(S);
+  var act=S.act&&chain.indexOf(S.act)>=0?S.act:null,order=(act?[act]:[]).concat(chain.filter(function(n){return n!==act;}));
+  var cands=order.filter(function(n){return !(S.bad[n]>now);});if(!cands.length)cands=[pref];
+  function step(i,last){if(i>=cands.length){gAllFail(g,last);throw last;}
+    var m=cands[i];return attempt(m,cands.length>1?30000:75000).then(function(j){gOk(m,pref);return j;},function(e){var k=gKind(e);
+      if(k.stop){if(k.k!=='rossz válasz')gLog('Gemini: '+k.k+(e&&e.status?' ('+e.status+')':'')+', a lánc leállt','stop|'+k.k);throw e;}
+      gFail(m,k,e);return step(i+1,e);});}
+  return step(0,null);}
+var GHUNT=0,GHN=0;
+function gAllFail(g,e){var S=gStGet();S.allFail=Date.now();gStPut(S);gLog('egyik modell sem válaszolt, háttérben keresem a működőt','all');setTimeout(function(){gHunt(true);},3000);}
+function gProbe(g,m){var url='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(m)+':generateContent';
+  function go(th){var gc={maxOutputTokens:8,temperature:0};if(th)gc.thinkingConfig={thinkingBudget:0};
+    return gFetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:'ping'}]}],generationConfig:gc}),ping:1},g.key,15000);}
+  return go(true).catch(function(e){if(e&&e.status===400&&!/API key|API_KEY/i.test(e.message||''))return go(false);throw e;});}
+// hunt: try the chain smallest-first in the background until something answers
+async function gHunt(retry){var g=gGet();if(!g.key||GHUNT||navigator.onLine===false)return;GHUNT=1;
+  try{var chain=gChain(g),found=null,lastK=null;
+    for(var i=0;i<chain.length;i++){var m=chain[i];try{await gProbe(g,m);found=m;break;}catch(e){var k=gKind(e);lastK=k;if(k.stop){gLog('Gemini: '+k.k+(e&&e.status?' ('+e.status+')':'')+', a keresés leállt','stop|'+k.k);GHUNT=0;return;}gFail(m,k,e);}}
+    if(found){gOk(found,g.model);gLog('a háttérkeresés talált működő modellt: '+found,'hunt|'+found);GHN=0;}
+    else{GHN++;if(retry&&GHN<8)setTimeout(function(){GHUNT=0;gHunt(true);},120000);else gLog('egyik modell sem válaszol'+(lastK?' ('+lastK.k+')':'')+', később újra próbálom','hunt-end');}
+  }finally{GHUNT=0;}}
+// periodic: while on a fallback model, test the smaller ones in the background
+async function gTick(why){var g=gGet();if(!g.key||navigator.onLine===false||document.hidden)return;var S=gStGet(),now=Date.now();
+  if(S.allFail&&now-S.allFail<3600000&&!GHUNT&&GHN===0){gHunt(true);return;}
+  if(!S.act||S.act===g.model&&!S.bad[g.model])return;
+  if(now-(S.lastUse||0)>3600000)return;if(now-(S.probeAt||0)<600000)return;S.probeAt=now;gStPut(S);
+  var chain=gChain(g),ai=chain.indexOf(S.act);if(ai<0)ai=chain.length;var smaller=chain.slice(0,ai),n=0;
+  for(var i=0;i<smaller.length&&n<3;i++){n++;try{await gProbe(g,smaller[i]);gOk(smaller[i],g.model);return;}catch(e){var k=gKind(e);if(k.stop)return;gLog('próba: '+smaller[i]+' még nem válaszol ('+k.k+')','p|'+smaller[i]);}}}
+setInterval(function(){try{gTick('időzítő');}catch(e){}},60000);
+function gCall(g,pr,fast){return gRun(g,function(m,tmo){return gCall1(Object.assign({},g,{model:m}),pr,fast,tmo);});}
+function gCall1(g,pr,fast,tmo){
   var url='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(g.model)+':generateContent';
   function go(level){
     var gc=level>=2?{}:{temperature:0.2,responseMimeType:'application/json',maxOutputTokens:fast?64:3000};if(level===0)gc.thinkingConfig={thinkingBudget:0};
-    return gFetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({systemInstruction:{parts:[{text:pr.sys}]},contents:[{role:'user',parts:[{text:pr.user}]}],generationConfig:gc})},g.key);}
+    return gFetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({systemInstruction:{parts:[{text:pr.sys}]},contents:[{role:'user',parts:[{text:pr.user}]}],generationConfig:gc})},g.key,tmo);}
   function keyBad(e){return e&&e.status===400&&/API key|key not valid|API_KEY/i.test(e.message||'');}
   return go(0).catch(function(e){if(e&&e.status===400&&!keyBad(e))return go(1);throw e;}).catch(function(e){if(e&&e.status===400&&!keyBad(e))return go(2);throw e;}).then(function(j){
     var t='';try{(j.candidates[0].content.parts||[]).forEach(function(p){if(p.text&&!p.thought)t+=p.text;});}catch(x){}
@@ -3621,7 +3667,7 @@ function gPrompt(g,md,q,text,words,fup){
     var ctl=typeof AbortController!=='undefined'?new AbortController():null,to=setTimeout(function(){if(ctl)ctl.abort();},8000);
     fetch('https://generativelanguage.googleapis.com/',{mode:'no-cors',cache:'no-store',signal:ctl?ctl.signal:undefined}).then(function(){clearTimeout(to);
       var g=gGet();if(!g.key){ts('Van internet, a Google elérhető. A Google-kulcs még nincs elmentve.');return;}
-      var t0=Date.now();return gCall(g,{sys:'Return only JSON: {"ok":true}',user:'ping'},true).then(function(){ts('Működik. Van internet, a kulcs és a modell rendben ('+g.model+'), válaszidő: '+((Date.now()-t0)/1000).toFixed(1)+' mp.');},function(e){ts('Van internet, de: '+gErr(e));});
+      var t0=Date.now();return gCall(g,{sys:'Return only JSON: {"ok":true}',user:'ping'},true).then(function(){ts('Működik. Van internet, a kulcs és a modell rendben ('+(gStGet().act||g.model)+'), válaszidő: '+((Date.now()-t0)/1000).toFixed(1)+' mp.');},function(e){ts('Van internet, de: '+gErr(e));});
     },function(){clearTimeout(to);ts('Nincs kapcsolat a Google-lel. Ellenőrizd az internetet.');});});
   [['gExp','exp'],['gLvl','lvl'],['gStr','str'],['gCor','cor'],['gRel','rel'],['gFlu','flu']].forEach(function(x){
     var el=$(x[0]);el.value=gGet().o[x[1]];
@@ -3862,9 +3908,11 @@ function recWav(blob){
 function b64(ab){var b=new Uint8Array(ab),s='';for(var i=0;i<b.length;i+=8192)s+=String.fromCharCode.apply(null,b.subarray(i,i+8192));return btoa(s);}
 function gTranscribe(ab,lang){
   var g=gGet();if(!g.key)return Promise.reject({code:'nokey'});
-  var url='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(g.model)+':generateContent';
+  return gRun(g,function(m,tmo){return gTranscribe1(g,m,tmo,ab,lang);});}
+function gTranscribe1(g,model,tmo,ab,lang){
+  var url='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent';
   var body={contents:[{role:'user',parts:[{text:'Transcribe this audio recording exactly as spoken. The speaker is a Hungarian learner of English with a possible accent, answering a spoken-exam question. The language is mostly '+(/^hu/i.test(lang)?'Hungarian':'British English')+'; use British spelling and recognise British pronunciation and vocabulary, and transcribe the words actually said, without correcting the learner\'s grammar. Do not add punctuation or capital letters yourself: the speaker dictates punctuation and edits by voice, so write spoken commands such as delete, full stop, comma, question mark, exclamation mark, new line exactly as those words. Return ONLY the transcript text, without quotes or comments. If there is no speech, return an empty string.'},{inline_data:{mime_type:'audio/wav',data:b64(ab)}}]}],generationConfig:{temperature:0}};
-  return gFetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)},g.key).then(function(j){var t='';try{j.candidates[0].content.parts.forEach(function(p){if(p.text&&!p.thought)t+=p.text;});}catch(x){}return t.replace(/^["“\s]+|["”\s]+$/g,'').trim();});}
+  return gFetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)},g.key,tmo).then(function(j){var t='';try{j.candidates[0].content.parts.forEach(function(p){if(p.text&&!p.thought)t+=p.text;});}catch(x){}return t.replace(/^["“\s]+|["”\s]+$/g,'').trim();});}
 function cvListenRec(onText){
   var finished=false,aborted=false,stream=null,ac=null,timer=null,res,rec=null,parts=[],err='',anyHeard=false,lastErr='';
   var pr=new Promise(function(r){res=r;});
@@ -3951,15 +3999,38 @@ function chatAdd(role,text){var c=document.getElementById('qChat');if(!c)return 
 function vSend(t){var m=String(t||'').match(/^(.*?)[\s,.;:!?]*\b(send|done)\b[\s.!?]*$/i);return m&&m[1].trim()?{text:m[1],send:true}:{text:String(t||''),send:false};}
 function chatFb(o){var l=[];if(!o.M.length)l.push('Nagyon jó, nem találtam hibát.');else{l.push('Találtam '+o.M.length+' javítanivalót:');o.M.slice(0,4).forEach(function(m){l.push('• „'+(m.orig||'')+'” → „'+(m.rep[0]||'')+'”'+(m.msg?' ('+m.msg+')':''));});}
   if(o.j&&o.j.content)l.push(o.j.content);return l.join('\n');}
+function micEnv(){return {ok:!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia),sec:window.isSecureContext!==false};}
+async function micState(){try{if(navigator.permissions&&navigator.permissions.query){var p=await navigator.permissions.query({name:'microphone'});return p.state;}}catch(e){}return 'unknown';}
+async function micRequest(){var s=null;try{s=await navigator.mediaDevices.getUserMedia({audio:true});}catch(e){var n=e&&e.name;klog('mikrofon','engedélykérés: '+(n||'hiba'));return n==='NotFoundError'?'nomic':'denied';}
+  try{s.getTracks().forEach(function(t){t.stop();});}catch(e){}klog('mikrofon','engedélyezve');return 'granted';}
+async function micTest(){var m=micEnv();if(!m.ok)return 'Ez a böngésző nem enged mikrofont.';if(!m.sec)return 'Az oldal nem biztonságos környezetben fut, ezért a mikrofon tiltott. Nyisd meg a Chrome-ban a rendes címen.';
+  var s=null;try{s=await navigator.mediaDevices.getUserMedia({audio:true});}catch(e){klog('mikrofon','próba: '+((e&&e.name)||'hiba'));return (e&&e.name==='NotFoundError')?'Nem találok mikrofont.':'A mikrofon nincs engedélyezve.';}
+  var peak=0;try{var AC=window.AudioContext||window.webkitAudioContext,ac=new AC(),an=ac.createAnalyser();an.fftSize=1024;ac.createMediaStreamSource(s).connect(an);var buf=new Uint8Array(an.fftSize),t0=Date.now();
+    while(Date.now()-t0<2500){await new Promise(function(r){setTimeout(r,100);});an.getByteTimeDomainData(buf);for(var i=0;i<buf.length;i++){var d=Math.abs(buf[i]-128);if(d>peak)peak=d;}}ac.close();}catch(e){}
+  try{s.getTracks().forEach(function(t){t.stop();});}catch(e){}klog('mikrofon','próba: csúcs '+peak);
+  return peak>14?'A mikrofon működik, hallom a hangot.':'A mikrofon engedélyezve, de nem hallottam hangot. Beszélj hangosabban, vagy nézd meg, hogy más app nem használja-e.';}
+async function micHelp(){var st=await micState(),m=micEnv(),L=[],btn=[];
+  if(!m.sec)L.push('Az oldal nem biztonságos környezetben fut, ezért a böngésző tiltja a mikrofont. Nyisd meg az appot a rendes https címén (vagy telepítve).');
+  else if(st==='granted')L.push('A Chrome szerint a mikrofon engedélyezve van ennél az oldalnál. Ha mégsem működik: zárd be a mikrofont használó más appokat, majd próbáld a Mikrofon próbát.');
+  else if(st==='denied')L.push('A mikrofon le van tiltva ennél az oldalnál, a Chrome ilyenkor nem kérdez újra. Engedélyezés:\n1. Chrome, jobb felső ⋮ menü, Beállítások.\n2. Webhelybeállítások, Mikrofon.\n3. Keresd meg ezt az oldalt (vagy az appot) a Letiltva listában, és válaszd az Engedélyezés lehetőséget.\n4. Gyorsabb: koppints a cím melletti ikonra, Engedélyek, Mikrofon, Engedélyezés. A telepített appnál: hosszan nyomd az app ikonját, Alkalmazásinfó, Engedélyek, Mikrofon.\nUtána gyere vissza, és nyomd meg a Mikrofon próbát.');
+  else L.push('A mikrofon még nincs engedélyezve. Nyomd meg az „Engedélyezés most” gombot, és a Chrome kérdésére válaszolj: Engedélyezés.');
+  if(window.MICERR&&Date.now()-window.MICERR.t<120000)L.push('Utolsó hibakód: '+window.MICERR.e);
+  if(st!=='granted'&&st!=='denied'&&m.sec)btn.push({t:'Engedélyezés most',fn:function(){micRequest().then(function(r){toast5(r==='granted'?'A mikrofon engedélyezve.':r==='nomic'?'Nem találok mikrofont.':'Nem sikerült: a mikrofon tiltva van.');micRefresh();});}});
+  btn.push({t:'Mikrofon próba',fn:function(){toast5('Beszélj 2 másodpercig...');micTest().then(function(t){toast5(t);micRefresh();});}});btn.push({t:'Bezár'});
+  var ok=kModal('michelp','Mikrofon',L.join('\n\n'),btn);if(ok){var p=document.querySelector('#michelp p');if(p){p.style.whiteSpace='pre-line';p.style.textAlign='left';}}}
+async function micRefresh(){var e=document.getElementById('micSt');if(!e)return;var s=await micState();e.textContent='Mikrofon: '+(s==='granted'?'engedélyezve':s==='denied'?'letiltva':s==='prompt'?'még nincs engedélyezve':'ismeretlen');}
+document.addEventListener('click',function(ev){var t=ev.target&&ev.target.closest&&ev.target.closest('.cb,#qMsg,#qCvS,#fSt,.pfE,#qCv');if(!t||String(t.textContent).indexOf('Koppints ide a megoldásért')<0)return;micHelp();});
+setTimeout(micRefresh,900);
 function cvErrMsg(err){
-  if(err==='not-allowed'||err==='service-not-allowed')return 'A mikrofon nincs engedélyezve. Engedélyezd a böngésző címsorában vagy a telefon beállításaiban.';
-  if(err==='network')return 'A diktáláshoz internet kell (a Google szervere ismeri fel a beszédet).';
-  if(err==='audio-capture')return 'Nem találok mikrofont.';
+  window.MICERR={e:err,t:Date.now()};
+  if(err==='not-allowed'||err==='service-not-allowed')return 'A mikrofon nincs engedélyezve. Koppints ide a megoldásért.';
+  if(err==='network')return 'A diktáláshoz internet kell (a Chrome beépített hangfelismerője online szolgáltatást használ, ez nem a Gemini). Koppints ide a megoldásért.';
+  if(err==='audio-capture')return 'Nem találok mikrofont. Koppints ide a megoldásért.';
   if(err==='no-speech')return 'Nem hallottam beszédet.';
   if(err==='nokey')return 'A felvételes felismeréshez Google-kulcs kell (Beállítások, Google-ellenőrzés).';
   if(err==='insecure')return 'Ez az oldal nem biztonságos környezetben fut, ezért a böngésző letiltja a mikrofont. Nyisd meg a fájlt a Chrome-ban a Fájlok appból (file:// cím), ne másik appból.';
   if(/^gem/.test(err))return 'A felvételt nem sikerült leírni a Google-lel ('+err+'). Ellenőrizd a kulcsot és az internetet.';
-  if(err==='start')return 'A mikrofon nem indult el. Koppints újra.';
+  if(err==='start')return 'A mikrofon nem indult el. Koppints ide a megoldásért.';
   return 'A felismerés megszakadt ('+err+').';}
 function cvSet(t){var e=document.getElementById('qCvS');if(e)e.textContent=t;}
 function cvShow(on){var c=document.getElementById('qCv'),b=document.getElementById('qConvBtn');if(c)c.hidden=!on;if(b)b.hidden=true;var m=document.getElementById('qMic');if(m&&on)m.hidden=true;else if(m)m.hidden=cvGet().mode==='off';}
@@ -4991,7 +5062,8 @@ async function kHealth(){
     else if(navigator.permissions&&navigator.permissions.query){var pm=await navigator.permissions.query({name:'microphone'}).catch(function(){return null;});if(pm&&pm.state==='denied')add('mic','warn','A mikrofon tiltva van: Chrome, a cím melletti ikon, Webhely beállítások, Mikrofon: Engedélyezés.');}}}catch(e){}
   try{var g=gGet(),need=cvGet().eng==='gemini'||fGet().voice==='gemini'||hgGet()==='m'||hgGet()==='f';
     if(need&&!g.key)add('gem','warn','Gemini funkció be van kapcsolva, de nincs Google hozzáférés. Kérj hozzáférést a fejlesztőtől.','Üzenet a fejlesztőnek',function(){var b=document.getElementById('pfMsg');if(b)b.click();});
-    else if(g.src==='proxy'&&lsGet('szokartya-gemleft')==='0')add('gemq','warn','A mai Gemini keret elfogyott, holnap újra használhatod.');}catch(e){}
+    else if(g.src==='proxy'&&lsGet('szokartya-gemleft')==='0')add('gemq','warn','A mai Gemini keret elfogyott, holnap újra használhatod.');
+    if(need&&g.key){var GS=gStGet();if(GS.allFail&&Date.now()-GS.allFail<900000)add('gemall','warn','A Gemini egyik modellje sem válaszol, háttérben keresem a működőt.');else if(GS.act&&GS.act!==g.model)add('gemfb','info','A Gemini a tartalék modellel működik ('+GS.act+'), mert a(z) '+g.model+' nem válaszol. Háttérben újra próbálom.');}}catch(e){}
   var hs=hlRead(),sel=[];
   if(hgGet()==='p'){var hv=ppVoice();sel.push(hv);if(!ppHave(hv)&&!adm)add('hu','info','A kiválasztott magyar Piper hang ('+(PPNAME[String(hv).split('-')[1]]||hv)+') nincs a telefonon, a hangtárból szól.');}
   if(enVid())sel.push(enVid());
@@ -5055,7 +5127,7 @@ async function kRun(why){
     setTimeout(function(){kHealthRun(why);},4000);
     try{if(navigator.serviceWorker){var rg=await navigator.serviceWorker.getRegistration();if(rg)rg.update().catch(function(){});}}catch(e){}
     if(navigator.onLine===false){klog('hálózat','nincs kapcsolat');return;}
-    var rp=netCheck(),mp=hsMan(),r=await rp;try{if(pfGet()){await pfSync('karmester',{pull:true});svRefresh();var ok0=parseInt(lsGet('szokartya-pfok')||'0',10);if(lsGet('szokartya-pfd')==='1'&&Date.now()-ok0>86400000&&window.kBar)kBar('pfrem','Több mint egy napja nem mentettél felhőbe.','Mentés felhőbe',function(){svCloud();});}}catch(e){}try{if(!pfGet()&&(lsGet('szokartya-inv')||lsGet('szokartya-dc'))&&window.kBar)kBar('invw','Még nincs profilod. A meghívód kész, hozd létre, hogy a haladásod mentve legyen.','Profil létrehozása',function(){pfNew(function(){});});}catch(e){}try{await pfGate();}catch(e){}try{await kNews();}catch(e){}try{kModelsAuto();}catch(e){}if(!r.ok&&r.unk&&Date.now()-KWIFI<21600000){r.ok=true;r.cur='wifi (te megerősítetted)';}if(!r.ok&&r.cur==='mobilnet'&&Date.now()-KMOB<600000){r.ok=true;r.cur='mobilnet (te engedélyezted)';}klog('hálózat',r.cur+(r.ok?' (rendben)':' ('+r.why+')'));
+    var rp=netCheck(),mp=hsMan(),r=await rp;try{if(pfGet()){await pfSync('karmester',{pull:true});svRefresh();var ok0=parseInt(lsGet('szokartya-pfok')||'0',10);if(lsGet('szokartya-pfd')==='1'&&Date.now()-ok0>86400000&&window.kBar)kBar('pfrem','Több mint egy napja nem mentettél felhőbe.','Mentés felhőbe',function(){svCloud();});}}catch(e){}try{if(!pfGet()&&(lsGet('szokartya-inv')||lsGet('szokartya-dc'))&&window.kBar)kBar('invw','Még nincs profilod. A meghívód kész, hozd létre, hogy a haladásod mentve legyen.','Profil létrehozása',function(){pfNew(function(){});});}catch(e){}try{await pfGate();}catch(e){}try{await kNews();}catch(e){}try{kModelsAuto();}catch(e){}try{gTick('karmester');}catch(e){}if(!r.ok&&r.unk&&Date.now()-KWIFI<21600000){r.ok=true;r.cur='wifi (te megerősítetted)';}if(!r.ok&&r.cur==='mobilnet'&&Date.now()-KMOB<600000){r.ok=true;r.cur='mobilnet (te engedélyezted)';}klog('hálózat',r.cur+(r.ok?' (rendben)':' ('+r.why+')'));
     if(isAdm()&&lsGet(PPDEC)==='go'&&!ppAllHave()){if(r.ok){klog('hangmodell','a megszakadt letöltés folytatódik');ppStartAll();return;}kBar('ppr','A hangmodell letöltése megszakadt.','Folytatás',ppOfferGo,function(){});}
     if(isAdm()&&!lsGet(PPDEC)&&!ppAllHave()&&!window.__ppfirst){window.__ppfirst=1;if(r.ok){klog('hangmodell','első indítás: a hangmodellek letöltése wifin');ppStartAll();return;}kModal('ppf','Hangmodellek letöltése','A magyar mondatok és a Szabad beszélgetés hangjához le kell tölteni a Piper hangmodelleket (kb. 190 MB). A kész hangfájlokat a GitHubról töltöm le. Jelenlegi kapcsolat: '+r.cur+'. Wifin érdemes letölteni.',[{t:'Letöltés most',fn:ppOfferGo},{t:'Wifin majd magától',fn:function(){}},{t:'Nem kérem',fn:function(){lsSet(PPDEC,'skip');}}]);}
     await kHang(r,await mp);
@@ -5380,7 +5452,7 @@ async function pfOpen(key,u8){return JSON.parse(new TextDecoder().decode(await p
 async function pfDK(kek,meta){var raw=await pfAesDec(kek,pfB64d(meta.wk_pw));return {raw:raw,key:await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt'])};}
 async function pfRsaEnc(pubJwk,u8){var k=await crypto.subtle.importKey('jwk',pubJwk,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);return hsB64(new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},k,u8)));}
 async function pfEmEnc(em){try{var pb=await pfCall('/pub');if(pb&&pb.pub)return await pfRsaEnc(pb.pub,pfEnc(JSON.stringify({e:em})));}catch(e){}return '';}
-var APPV='v69';
+var APPV='v70';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
@@ -5645,6 +5717,8 @@ function pfFirst(){if(pfGet()||lsGet('szokartya-pfsnz')===kDay())return;if(docum
   document.getElementById('pfRec').addEventListener('click',function(){if(!pfGet()){st.textContent='Előbb hozz létre profilt.';return;}pfNewRec();});
   document.getElementById('pfMsg').addEventListener('click',function(){pfFeedback('');});
   document.getElementById('pfWipe').addEventListener('click',pfWipe);
+  document.getElementById('micAsk').addEventListener('click',micHelp);
+  document.getElementById('micTestB').addEventListener('click',function(){toast5('Beszélj 2 másodpercig...');micTest().then(function(t){toast5(t);micRefresh();});});
   document.getElementById('pfDel').addEventListener('click',function(){if(!pfGet()){st.textContent='Nincs profil.';return;}pfDelete();});
   document.getElementById('pfSw').addEventListener('click',function(){var P=pfGet();if(!P||P.list.length<2){st.textContent='Nincs másik profil ezen a telefonon. Hozz létre újat vagy tölts be egy meglévőt.';return;}
     var other=P.list.filter(function(x){return x!==P.cur;});kModal('pfsw','Profil váltása','Melyik profilra váltsak?',other.map(function(n){return {t:n,fn:function(){if(!lsGet('szokartya-pfpw-'+pfNk(n))){pfJoin();return;}pfSwitch(n);}};}).concat([{t:'Mégse'}]));});}
