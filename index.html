@@ -149,7 +149,7 @@ h1{font-size:1.2rem;margin:0}
 .mic.rec{background:var(--red);color:#fff;border-color:var(--red);animation:micp 1.1s infinite}
 @keyframes micp{0%{box-shadow:0 0 0 0 rgba(192,38,45,.5)}100%{box-shadow:0 0 0 12px rgba(192,38,45,0)}}
 .cvst{border:1.5px solid var(--fg);border-radius:8px;padding:10px;font-size:.95rem;display:flex;flex-direction:column;gap:8px}
-.kr{position:relative;height:6px;margin-top:8px;border-radius:3px;background:rgba(0,0,0,.28);overflow:hidden}.kr i{position:absolute;top:0;left:0;height:100%;width:26%;background:linear-gradient(90deg,transparent,#ff1a1a 55%,#ff9a9a 82%,transparent);filter:drop-shadow(0 0 4px #f00);animation:krs 1.3s ease-in-out infinite alternate}@keyframes krs{from{left:-12%}to{left:86%}}@media (prefers-reduced-motion:reduce){.kr i{animation:none;left:37%}}.krt{font-size:.78rem;opacity:.8;margin-top:4px}
+.kr{position:relative;height:6px;margin-top:8px;border-radius:3px;background:rgba(0,0,0,.28);overflow:hidden}.kr i{position:absolute;top:0;left:0;height:100%;width:26%;background:linear-gradient(90deg,transparent,#ff1a1a 55%,#ff9a9a 82%,transparent);filter:drop-shadow(0 0 4px #f00);animation:krs 1.3s ease-in-out infinite alternate}@keyframes krs{from{left:-12%}to{left:86%}}@media (prefers-reduced-motion:reduce){.kr i{animation:none;left:37%}}.krt{font-size:.78rem;opacity:.8;margin-top:4px}.krb{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.krb button{font:inherit;font-size:.8rem;padding:6px 10px;border-radius:8px;border:1px solid currentColor;background:transparent;color:inherit;cursor:pointer}
 .cmdq{font-size:.82rem;line-height:1.5;margin:0}.cmdq div{display:flex;gap:8px}.cmdq b{min-width:7.2em;font-weight:600}.cmdq details{margin-top:2px}.cmdq summary{cursor:pointer;opacity:.8}
 .cvst[hidden],.mic[hidden],#qConvBtn[hidden]{display:none}
 #qConvBtn{display:none!important}
@@ -3602,7 +3602,7 @@ async function gTick(why){var g=gGet();if(!g.key||navigator.onLine===false||docu
   for(var i=0;i<smaller.length&&n<3;i++){n++;if(n>1)await new Promise(function(r){setTimeout(r,31000);});try{await gProbe(g,smaller[i]);gOk(smaller[i],g.model);return;}catch(e){var k=gKind(e);if(k.stop)return;gLog('próba: '+smaller[i]+' még nem válaszol ('+k.k+')','p|'+smaller[i]);}}}
 setInterval(function(){try{gTick('időzítő');}catch(e){}},60000);
 setTimeout(function(){try{gEnsureList(false);}catch(e){}},2500);
-function gCall(g,pr,fast){return gRun(g,function(m,tmo){return gCall1(Object.assign({},g,{model:m}),pr,fast,tmo);});}
+function gCall(g,pr,fast){var f=gGet();if(!f.key)return Promise.reject(Object.assign(new Error('nokey'),{code:'nokey'}));g=Object.assign({},g,{key:f.key,src:f.src});return gRun(g,function(m,tmo){return gCall1(Object.assign({},g,{model:m}),pr,fast,tmo);});}
 function gCall1(g,pr,fast,tmo){
   var url='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(g.model)+':generateContent';
   function go(level){
@@ -3615,18 +3615,58 @@ function gCall1(g,pr,fast,tmo){
     var o=null;try{o=JSON.parse(t);}catch(x){var a=t.indexOf('{'),b=t.lastIndexOf('}');if(a>=0&&b>a){try{o=JSON.parse(t.slice(a,b+1));}catch(y){}}}
     if(!o||typeof o!=='object'){var e=new Error('bad');e.bad=1;throw e;}return o;});}
 /* --- türelmes hívás: ideiglenes hibánál a háttérben újrapróbál, nem kell újra küldeni --- */
-var GAPOL=['Sorry for the wait, my connection was slow. Here is my answer.','Sorry about the delay, I am back now. Here is what I think.','Apologies for the wait, something went wrong on my side. Let me answer you now.','Sorry, I had a technical problem for a moment. Now, let me answer you.'];
-function gApology(){return GAPOL[Math.floor(Math.random()*GAPOL.length)];}
-function gTransient(e){if(e&&e.code==='nokey')return false;var k=gKind(e);if(k.stop&&k.k!=='nincs kapcsolat')return false;return true;}
-function gWaitEvt(ms){return new Promise(function(res){var d=false,t=null;function done(){if(d)return;d=true;clearTimeout(t);window.removeEventListener('online',done);window.removeEventListener('gfound',done);document.removeEventListener('visibilitychange',vis);res();}function vis(){if(!document.hidden)done();}t=setTimeout(done,ms);window.addEventListener('online',done);window.addEventListener('gfound',done);document.addEventListener('visibilitychange',vis);});}
-async function gPatient(fn,o){o=o||{};var D=[5000,10000,20000,30000],t0=Date.now(),failed=false;
-  for(var i=0;;i++){try{var r=await fn();if(failed&&o.onOk)o.onOk();return r;}
-    catch(e){if(!gTransient(e)||(o.alive&&!o.alive())||Date.now()-t0>600000){throw e;}
-      if(!failed){failed=true;try{klog('gemini','a válasz késik, a háttérben újrapróbálom ('+gErr(e).slice(0,80)+')');}catch(x){}}
-      if(o.onWait)o.onWait(e);
-      await gWaitEvt(D[Math.min(i,D.length-1)]);if(o.alive&&!o.alive())throw e;}}}
-function gSetWait(sp,e){if(!sp)return;var b=sp.parentNode,k=gKind(e);sp.textContent=(k.k==='nincs kapcsolat'?'Nincs kapcsolat, a válasz késik.':'A válasz késik: a Google most nem válaszol'+(e&&e.status?' (kód: '+e.status+')':'')+'.');if(!b)return;if(!b.querySelector('.kr')){var k=document.createElement('div');k.className='kr';k.setAttribute('aria-hidden','true');k.appendChild(document.createElement('i'));var t=document.createElement('div');t.className='krt';t.textContent='Újrapróbálom a háttérben, nem kell újra küldened.';b.appendChild(k);b.appendChild(t);}}
-function gWaitDone(sp,text){if(!sp)return;var b=sp.parentNode;if(b){b.querySelectorAll('.kr,.krt').forEach(function(x){x.remove();});}sp.textContent=text;}
+var GAPOL={tmp:['Sorry for the wait, my connection was slow. Here is my answer.','Sorry about the delay, I am back now. Here is what I think.','Apologies for the wait, something went wrong on my side. Let me answer you now.','Sorry, I had a technical problem for a moment. Now, let me answer you.'],
+ acc:['Sorry, I could not answer for a while because I had no access. I am back now. Here is my answer.','Apologies, my connection to the service was cut off for a moment. It works again now, so let me answer you.'],
+ quota:['Sorry for the long wait, I had used up my limit for the day. I am back now. Here is my answer.'],
+ fatal:['Sorry, I got confused for a moment. Let me try again and answer you now.']};
+function gApology(c){var l=GAPOL[c]||GAPOL.tmp;return l[Math.floor(Math.random()*l.length)];}
+/* hibaosztály: tmp (ideiglenes), acc (hozzáférés/kulcs), quota (napi keret), fatal (nem feldolgozható válasz) */
+function gClass(e){if(e&&(e.code==='nokey'||e.message==='nokey'))return 'acc';if(e&&e.wk&&e.status===429)return 'quota';var k=gKind(e);if(k.k==='kulcs'||k.k==='hozzáférés')return 'acc';if(k.k==='a modell elutasította'||(e&&e.bad))return 'fatal';return 'tmp';}
+function gHuman(e){if(e&&e.code==='cancel')return 'A várakozást leállítottad.';var c=gClass(e);
+  if(c==='acc')return (e&&(e.code==='nokey'||e.message==='nokey'))?'Ehhez Google-kulcs vagy az admin által adott hozzáférés kell (Beállítások, Nyelvi ellenőrzés).':'A Gemini-hozzáférés most nem működik: a kulcs hiányzik, érvénytelen, vagy az admin elvette a hozzáférést.';
+  if(c==='quota')return 'Elfogyott a mai Gemini-keret. Holnap újra használható.';
+  if(c==='fatal')return 'A válasz nem volt feldolgozható, kérlek próbáld újra.';
+  var k=gKind(e);if(k.k==='nincs kapcsolat')return 'Nincs kapcsolat az internettel vagy a Google-lel.';
+  return 'A Google most nem válaszol. '+(e&&e.name==='AbortError'?'(időtúllépés)':'');}
+function gWaitText(e,c){
+  if(c==='acc')return 'A Gemini-hozzáférés most nem működik (kulcs hiányzik/érvénytelen, vagy az admin elvette). Ha visszakapod vagy megadod, a háttérben folytatom.';
+  if(c==='quota')return 'Elfogyott a mai Gemini-keret. Ha visszajön, a háttérben folytatom.';
+  if(c==='fatal')return 'A válasz nem volt feldolgozható, még egyszer megpróbálom.';
+  return (gKind(e).k==='nincs kapcsolat'?'Nincs kapcsolat, a válasz késik.':'A válasz késik: a Google most nem válaszol'+(e&&e.status?' (kód: '+e.status+')':'')+'.');}
+function gTransient(e){return true;}
+function gKeySig(){var g=gGet();return g.key+'|'+g.src+'|'+(lsGet('szokartya-gem')||'');}
+function gWaitEvt(ms,o){o=o||{};return new Promise(function(res){var d=false,t=null,iv=null,sig=gKeySig();function done(){if(d)return;d=true;clearTimeout(t);clearInterval(iv);window.removeEventListener('online',done);window.removeEventListener('gfound',done);document.removeEventListener('visibilitychange',vis);res();}function vis(){if(!document.hidden)done();}t=setTimeout(done,ms);
+  iv=setInterval(function(){var c=o.ctl;if((c&&(c.now||c.cancel))||(o.alive&&!o.alive())||gKeySig()!==sig)done();},1500);
+  window.addEventListener('online',done);window.addEventListener('gfound',done);document.addEventListener('visibilitychange',vis);});}
+async function gPatient(fn,o){o=o||{};var D=[5000,10000,20000,30000],t0=Date.now(),failed=false,fatalN=0,cat='tmp',ctl=o.ctl=o.ctl||{};
+  for(var i=0;;i++){
+    try{var r=await fn();if(failed&&o.onOk)o.onOk(cat);return r;}
+    catch(e){cat=gClass(e);
+      if(ctl.cancel)throw Object.assign(new Error('cancel'),{code:'cancel',last:e});
+      if(cat==='fatal'&&++fatalN>1)throw e;
+      if(cat==='acc'&&(e.code==='nokey'||e.message==='nokey')&&!lsGet('szokartya-gemok')&&!failed)throw e;
+      if((o.alive&&!o.alive())||Date.now()-t0>(cat==='tmp'?600000:1800000))throw e;
+      if(!failed||ctl.cat!==cat){failed=true;try{klog('gemini','hiba ('+cat+'), a háttérben újrapróbálom ('+gErr(e).slice(0,80)+')');}catch(x){}}
+      ctl.cat=cat;ctl.now=0;
+      if(o.onWait)o.onWait(e,cat,ctl);
+      await gWaitEvt(cat==='acc'?60000:cat==='quota'?600000:cat==='fatal'?3000:D[Math.min(i,D.length-1)],{ctl:ctl,alive:o.alive});
+      if(ctl.cancel)throw Object.assign(new Error('cancel'),{code:'cancel',last:e});
+      if(o.alive&&!o.alive())throw e;
+      if(cat==='acc'||cat==='quota'){try{if(window.gFlags)await Promise.race([window.gFlags(),new Promise(function(r){setTimeout(r,8000);})]);}catch(x){}}}}}
+function gOpenBox(){try{var w=document.getElementById('setWrap');if(w&&w.hidden){var bb=Array.prototype.filter.call(document.querySelectorAll('button'),function(x){return /^⚙ Beállítások megnyitása/.test(x.textContent);})[0];if(bb)bb.click();}var bx=document.getElementById('gBox');if(bx){var dv=document.getElementById('devBox');if(dv)dv.open=true;bx.open=true;bx.scrollIntoView({block:'start'});}}catch(e){}}
+function gSetWait(sp,e,c,ctl){if(!sp)return;c=c||gClass(e);sp.textContent=gWaitText(e,c);
+  var w=sp._krw;if(!w||!w.parentNode){w=document.createElement('div');w.className='krw';sp._krw=w;
+    var k=document.createElement('div');k.className='kr';k.setAttribute('aria-hidden','true');k.appendChild(document.createElement('i'));
+    var t=document.createElement('div');t.className='krt';t.textContent='Újrapróbálom a háttérben, nem kell újra küldened.';
+    var bs=document.createElement('div');bs.className='krb';
+    function mk(txt,fn){var b=document.createElement('button');b.type='button';b.textContent=txt;b.addEventListener('click',fn);bs.appendChild(b);return b;}
+    mk('Megpróbálom most',function(){if(ctl)ctl.now=1;});
+    var kb=mk('Kulcs megadása',function(){gOpenBox();});kb.className='krk';
+    mk('Leállítás',function(){if(ctl)ctl.cancel=1;});
+    w.appendChild(k);w.appendChild(t);w.appendChild(bs);
+    if(sp.insertAdjacentElement)sp.insertAdjacentElement('afterend',w);else if(sp.parentNode)sp.parentNode.appendChild(w);}
+  var kk=w.querySelector('.krk');if(kk)kk.hidden=(c!=='acc');}
+function gWaitDone(sp,text){if(!sp)return;if(sp._krw){sp._krw.remove();sp._krw=null;}var b=sp.parentNode;if(b){b.querySelectorAll('.krw').forEach(function(x){x.remove();});}if(text!=null)sp.textContent=text;}
 function gWaitUi(t){try{cvSet('🎤 '+t);}catch(e){}try{var f=document.getElementById('fSt');if(f)fSt('🎤 '+t);}catch(e){}}
 function gPrompt(g,md,q,text,words,fup){
   var o=g.o,lang=o.exp==='hu'?'Hungarian':'English';
@@ -3973,7 +4013,7 @@ function cvListenRec(onText){
       if(!finished&&!aborted)seg();
       if(!heard||!chunks.length){if(finished){closing=true;maybeDone();}return;}
       anyHeard=true;pending++;var tCut=Date.now(),dur=tCut-t0;
-      recWav(new Blob(chunks,{type:me.mimeType||'audio/webm'})).then(function(ab){return gPatient(function(){return gTranscribe(ab,cvGet().lang);},{alive:function(){return !aborted;},onWait:function(){gWaitUi('Az átírás vár a Google-re, újrapróbálom…');}});}).then(function(t){parts[idx]=t;var tn=Date.now();try{klog('mikrofon','Gemini átírás: hang '+(dur/1000).toFixed(1)+' mp, válasz '+((tn-tCut)/1000).toFixed(1)+' mp'+(stopAt?', kattintástól '+((tn-stopAt)/1000).toFixed(1)+' mp':'')+', modell '+(gStGet().act||gGet().model));}catch(x){}if(onText&&t)onText(out());},function(e){lastErr=e&&e.code==='nokey'?'nokey':(e&&e.status?'gem'+e.status:(e&&e.name==='AbortError'?'network':'gemfail'));}).then(function(){pending--;maybeDone();});
+      recWav(new Blob(chunks,{type:me.mimeType||'audio/webm'})).then(function(ab){return gPatient(function(){return gTranscribe(ab,cvGet().lang);},{alive:function(){return !aborted;},onWait:function(e,c){gWaitUi(c==='acc'?'Az átírás vár: nincs Gemini-hozzáférés, a háttérben újrapróbálom…':c==='quota'?'Az átírás vár: elfogyott a Gemini-keret…':'Az átírás vár a Google-re, újrapróbálom…');}});}).then(function(t){parts[idx]=t;var tn=Date.now();try{klog('mikrofon','Gemini átírás: hang '+(dur/1000).toFixed(1)+' mp, válasz '+((tn-tCut)/1000).toFixed(1)+' mp'+(stopAt?', kattintástól '+((tn-stopAt)/1000).toFixed(1)+' mp':'')+', modell '+(gStGet().act||gGet().model));}catch(x){}if(onText&&t)onText(out());},function(e){lastErr=e&&e.code==='nokey'?'nokey':(e&&e.status?'gem'+e.status:(e&&e.name==='AbortError'?'network':'gemfail'));}).then(function(){pending--;maybeDone();});
       if(finished){closing=true;}
     };
     me.start();
@@ -4115,11 +4155,11 @@ async function cvConverse(){
       none=0;meB.textContent=got;A.ta.value='';window.CVLAST=got;hist.push('Student: '+got);
       cvSet('A tanár válaszol…');
       var rep='',g=gGet();
-      var waitSp=null,gotWait=false;
-      try{var j=await gPatient(function(){return gCall(g,{sys:'You are a friendly British English teacher having a spoken conversation with a Hungarian student (level '+g.o.lvl+') about this exam topic question: "'+A.qtext+'". Reply in natural spoken English in at most two short sentences: react briefly to what the student said, then ask one natural follow-up question that keeps the conversation on the topic. Never explain grammar, never correct mistakes, do not use Hungarian unless the student does. Return ONLY a JSON object {"reply":"..."}.',user:hist.slice(-8).join('\n')},false);},{alive:function(){return cvAlive(tok);},onWait:function(e){if(!waitSp)waitSp=chatAdd('t','');gSetWait(waitSp,e);cvSet('A tanár válasza késik, a háttérben újrapróbálom…');},onOk:function(){gotWait=true;}});rep=String(j.reply||'').trim();}
-      catch(e){if(!cvAlive(tok))return;if(waitSp)gWaitDone(waitSp,gErr(e));else chatAdd('t',gErr(e));cvStop();return;}
+      var waitSp=null,gotWait=false,gotCat='tmp',wctl={};
+      try{var j=await gPatient(function(){return gCall(g,{sys:'You are a friendly British English teacher having a spoken conversation with a Hungarian student (level '+g.o.lvl+') about this exam topic question: "'+A.qtext+'". Reply in natural spoken English in at most two short sentences: react briefly to what the student said, then ask one natural follow-up question that keeps the conversation on the topic. Never explain grammar, never correct mistakes, do not use Hungarian unless the student does. Return ONLY a JSON object {"reply":"..."}.',user:hist.slice(-8).join('\n')},false);},{alive:function(){return cvAlive(tok);},ctl:wctl,onWait:function(e,c,ctl){if(!waitSp)waitSp=chatAdd('t','');gSetWait(waitSp,e,c,ctl);cvSet(c==='acc'?'A tanár vár: nincs Gemini-hozzáférés…':c==='quota'?'A tanár vár: elfogyott a Gemini-keret…':'A tanár válasza késik, a háttérben újrapróbálom…');},onOk:function(c){gotWait=true;gotCat=c;}});rep=String(j.reply||'').trim();}
+      catch(e){if(!cvAlive(tok))return;if(waitSp)gWaitDone(waitSp,gHuman(e));else chatAdd('t',gHuman(e));cvStop();return;}
       if(!cvAlive(tok))return;
-      if(gotWait&&waitSp){var apo=gApology();gWaitDone(waitSp,apo);await cvSayAll([{t:apo,l:'en'}],false,tok);if(!cvAlive(tok))return;}
+      if(gotWait&&waitSp){var apo=gApology(gotCat);gWaitDone(waitSp,apo);await cvSayAll([{t:apo,l:'en'}],false,tok);if(!cvAlive(tok))return;}
       if(!rep)rep='Interesting. Can you tell me more about that?';
       hist.push('Teacher: '+rep);chatAdd('t',rep);
       await cvSayAll([{t:rep,l:'en'}],false,tok);
@@ -4209,8 +4249,8 @@ function bindAns(key,qtext,wordsList,qmain){
     if(text.length>8000){msg.textContent='A válasz túl hosszú az ellenőrzéshez.';return Promise.resolve(null);}
     if(!g.key){msg.textContent='Nincs Google API-kulcs. Állítsd be: Beállítások, Nyelvi ellenőrzés (Google Gemini).';return Promise.resolve(null);}
     mode=md;bs.disabled=bg.disabled=true;msg.textContent='Ellenőrzés… (akár fél percig is eltarthat)';
-    return gCall(g,gPrompt(g,md,qtext,text,wordsList,!!(window.CONVON&&cvGet().fup==='1'))).then(function(j){
-      bs.disabled=bg.disabled=false;
+    var rctl={};return gPatient(function(){return gCall(g,gPrompt(g,md,qtext,text,wordsList,!!(window.CONVON&&cvGet().fup==='1')));},{ctl:rctl,alive:function(){return !!document.body.contains(msg);},onWait:function(e,c,ctl){gSetWait(msg,e,c,ctl);}}).then(function(j){
+      gWaitDone(msg,null);bs.disabled=bg.disabled=false;
       var low=text,pos=0,notes=[];M=[];
       (j.issues||[]).forEach(function(it){
         if(!it||typeof it.text!=='string'||!it.text)return;
@@ -4232,7 +4272,7 @@ function bindAns(key,qtext,wordsList,qmain){
       var xe=document.getElementById('qEx');xe.innerHTML=ex;
       var cb=document.getElementById('qCorB');if(cb)cb.addEventListener('click',function(){ta.value=j.corrected.trim();ta.dispatchEvent(new Event('input'));showEdit();xe.innerHTML='';});
       return {j:j,M:M,text:text};
-    }).catch(function(e){bs.disabled=bg.disabled=false;msg.textContent=gErr(e);return null;});
+    }).catch(function(e){bs.disabled=bg.disabled=false;gWaitDone(msg,gHuman(e));return null;});
   }
   bs.addEventListener('click',function(){run('sp');});
   bg.addEventListener('click',function(){run('gr');});
@@ -4874,14 +4914,14 @@ function fSay(text){var o=fGet();gtStop();try{speechSynthesis.cancel();}catch(e)
 function fBtns(){var c=fEl('fConv'),m=fEl('fMic');if(c)c.firstChild.textContent=FON?'■ Hangos beszélgetés leállítása':'🗣 Hangos beszélgetés';if(m)m.firstChild.textContent=(FLIST&&!FON)?'■ Kész, a diktálás vége':'🎤 Diktálás';}
 function fStopAll(){FON=false;FTOK++;gtStop();try{speechSynthesis.cancel();}catch(e){}if(FLIST){try{FLIST.abort();}catch(e){}FLIST=null;}fSt('');fBtns();}
 window.fStopAll=fStopAll;
-async function fAsk(msg,o){var g=gGet();if(!g.key)throw new Error('nokey');FH.push('Student: '+msg);
+async function fAsk(msg,o){var g=gGet();FH.push('Student: '+msg);
   var j=await gPatient(function(){return gCall(g,{sys:'You are a friendly, patient British English conversation partner and teacher ('+(fGender()==='f'?'a woman':'a man')+') talking with a Hungarian student (level '+g.o.lvl+'). The conversation is free: follow the topic the student chooses, or suggest an easy one if the student has none. Reply in natural spoken English in at most three short sentences: react to what the student said, then ask one natural follow-up question. Do not correct mistakes unless the student asks for it. Use Hungarian only if the student asks for help in Hungarian. Return ONLY a JSON object {"reply":"..."}.',user:FH.slice(-12).join('\n')},false);},o||{});
   var rep=String(j.reply||'').trim()||'Interesting. Can you tell me more about that?';FH.push('Teacher: '+rep);return rep;}
 async function fSend(txt){txt=String(txt||'').trim();if(!txt||FBUSY)return;FBUSY=true;var ta=fEl('fTa');if(ta)ta.value='';fAdd('me',txt);var tb=fAdd('t','…',true);fSt('A '+fName().toLowerCase()+' válaszol…');
-  var gotW=false;
-  try{var rep=await fAsk(txt,{alive:function(){return !!fEl('fLog');},onWait:function(e){gSetWait(tb,e);fSt('');},onOk:function(){gotW=true;}});
-    if(gotW&&tb){var apo=gApology();gWaitDone(tb,apo);FL.push({r:'t',t:apo});FL.push({r:'t',t:rep});fSt('');await fSay(apo);tb=fAdd('t',rep,true);}else{FL.push({r:'t',t:rep});if(tb)tb.textContent=rep;}var gl=lsGet('szokartya-gemleft');fSt(gl&&gl!=='-1'&&gGet().src==='proxy'?'Mára még '+gl+' Gemini kérésed maradt.':'');await fSay(rep);}
-  catch(e){var m=e&&e.message==='nokey'?'A szabad beszélgetéshez Google-kulcs kell (Beállítások, Nyelvi ellenőrzés), vagy az admin által adott hozzáférés.':gErr(e);if(tb)gWaitDone(tb,m);FL.push({r:'t',t:m});fSt('');}
+  var gotW=false,gotC='tmp';
+  try{var rep=await fAsk(txt,{alive:function(){return !!fEl('fLog');},onWait:function(e,c,ctl){gSetWait(tb,e,c,ctl);fSt('');},onOk:function(c){gotW=true;gotC=c;}});
+    if(gotW&&tb){var apo=gApology(gotC);gWaitDone(tb,apo);FL.push({r:'t',t:apo});FL.push({r:'t',t:rep});fSt('');await fSay(apo);tb=fAdd('t',rep,true);}else{FL.push({r:'t',t:rep});if(tb)tb.textContent=rep;}var gl=lsGet('szokartya-gemleft');fSt(gl&&gl!=='-1'&&gGet().src==='proxy'?'Mára még '+gl+' Gemini kérésed maradt.':'');await fSay(rep);}
+  catch(e){var m=gHuman(e);if(tb)gWaitDone(tb,m);FL.push({r:'t',t:m});fSt('');}
   finally{FBUSY=false;}}
 async function fListenOnce(auto){if(!canMic()){fSt('Ebben a böngészőben nincs mikrofon-felismerés. Írj a szövegdobozba.');return false;}
   var ta=fEl('fTa'),sent=false,tok=FTOK;fSt('🎤 Hallgatlak');
@@ -4895,8 +4935,8 @@ async function fLoop(){if(FON){fStopAll();return;}FON=true;var tok=++FTOK,none=0
   if(tok===FTOK)fStopAll();}
 async function fFix(){var last=null;for(var i=FL.length-1;i>=0;i--)if(FL[i].r==='me'){last=FL[i].t;break;}if(!last){fSt('Még nincs mit javítani, írj előbb egy mondatot.');return;}
   var g=gGet();if(!g.key){fSt('Google-kulcs vagy admin hozzáférés kell.');return;}fSt('Javítás készül…');
-  try{var j=await gCall(g,{sys:'You are a British English teacher. A Hungarian student (level '+g.o.lvl+') wrote or said the text below. Return ONLY a JSON object {"corrected":"the corrected natural English version, or the same text if it is already correct","note":"one or two short sentences in Hungarian explaining the main mistakes, or praise if there are none"}.',user:last},false);
-    var m='Javított változat: '+String(j.corrected||last)+'\n'+String(j.note||'');fAdd('t',m);fSt('');}catch(e){fSt(gErr(e));}}
+  var sp=fEl('fSt');try{var j=await gPatient(function(){return gCall(gGet(),{sys:'You are a British English teacher. A Hungarian student (level '+g.o.lvl+') wrote or said the text below. Return ONLY a JSON object {"corrected":"the corrected natural English version, or the same text if it is already correct","note":"one or two short sentences in Hungarian explaining the main mistakes, or praise if there are none"}.',user:last},false);},{alive:function(){return !!fEl('fSt');},onWait:function(e,c,ctl){gSetWait(sp,e,c,ctl);}});
+    gWaitDone(sp,'');var m='Javított változat: '+String(j.corrected||last)+'\n'+String(j.note||'');fAdd('t',m);fSt('');}catch(e){gWaitDone(sp,gHuman(e));}}
 function renderF(){var v=fEl('fview');if(!v)return;var o=fGet(),cv=cvGet();
   v.innerHTML='<div class="qc"><div class="qh" style="background:#2a9d8f"><span>Szabad beszélgetés</span><button type="button" class="reset" id="fBack" style="margin:0">‹ Vissza</button></div><div class="qb">'+
   '<p class="hint">Beszélgess angolul, bármiről. A tanár válaszol, és kérdez. </p>'+
@@ -5204,7 +5244,7 @@ try{if(navigator.connection&&navigator.connection.addEventListener)navigator.con
   function add(k,m){try{var a=get();a.push({t:Date.now(),k:k,m:String(m).slice(0,200)});if(a.length>200)a=a.slice(-200);lsSet(K,JSON.stringify(a));}catch(e){}}
   window.vlog=add;
   function fmt(t){var d=new Date(t),z=function(n){return ('0'+n).slice(-2);};return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes());}
-  var CH={v69:'Hangok a privát tárból, a Worker közvetítésével',v70:'Gemini automatikus modellváltás, mikrofon-segítség, Karmester Gemini napló',v71:'Verzió-követő, GitHub kulcs háttérben (admin), „minden szó" a Hallgatásban, mai nap haladásának törlése, mentés-emlékeztető kivéve',v72:'Hallgatás: alapból a letöltött Piper hang (magyar és angol is), nem a telefoné',v82:'Ha a Gemini hibát ad beszélgetés közben: pásztázó sáv, háttérben újrapróbálás, a tanár angolul elnézést kér és automatikusan válaszol; a mikrofon átírás is újrapróbál; gyorsabb modellváltás (15 mp); a Worker nem számolja a hibás hívásokat',v81:'Egészség-ellenőrzés: a háttérben megadott GitHub kulcsot már a Workeren át ellenőrzi (nem adott hamis 401-et)',v80:'Gemini hang (felolvasás): a hangmodelleket a Google listájából választja, a nem működőt kihagyja, átvált a működőre, és a Karmester naplóba írja',v79:'Hangparancsok: a beállításokból kikerült, a „Hallgatlak” alatt látszik (3 sor + legördülő), máshol nincs utasítás',v78:'Hangos beszélgetés: a szövegdoboz beküldés után kiürül, és a következő mondatot várja (a beszélt szöveg csak a beszélgetés buborékban látszik)',v77:'Beszélgetés: adaptív (2 soros, lefelé növő) szövegdoboz, a beszélgetés nem görgethető kis ablakban, hanem az oldallal együtt nő; a mikrofon szöveg hamarabb jelenik meg (1,2 mp szünetnél)',v76:'Gemini állapotsor: az utolsó sikeres hívás ideje, admin hozzáférésnél a próba nem mond kulcsot, az éppen használt modell kiírva',v75:'Mikrofon: csendes felvétel (nincs pittyegés) minden funkciónál, ha van Google-kulcs vagy admin hozzáférés; a hang csak akkor megy a Geminihez, ha elküldöd vagy hosszabb csend után; sebesség a Karmester naplóban. Kulcs nélkül a böngésző felismerője marad',v74:'Gemini admin hozzáférés: élő állapotsor, a közös kulcs azonosítója, a Worker saját hibaüzenete, Worker CORS javítás (hangfeltöltés háttérkulccsal)',v73:'Gemini: a modelllistát magától lekéri, a rossz modelleket nem próbálja újra (csak ha egy jó sincs, akkor háttérben), a hibakódot kiírja'};
+  var CH={v83:'Minden Gemini-hibánál (hozzáférés elvétele, kulcs hiánya, napi keret, szolgáltatás-hiba) ugyanaz: pásztázó sáv, háttérben újrapróbálás, gombok (Megpróbálom most, Kulcs megadása, Leállítás), angol elnézéskérés és automatikus válasz; ez a Helyesírásnál, Beküldés nyelvtanra, Javítás kérésénél és a mikrofon átírásnál is működik; egységes magyar hibaüzenetek',v69:'Hangok a privát tárból, a Worker közvetítésével',v70:'Gemini automatikus modellváltás, mikrofon-segítség, Karmester Gemini napló',v71:'Verzió-követő, GitHub kulcs háttérben (admin), „minden szó" a Hallgatásban, mai nap haladásának törlése, mentés-emlékeztető kivéve',v72:'Hallgatás: alapból a letöltött Piper hang (magyar és angol is), nem a telefoné',v82:'Ha a Gemini hibát ad beszélgetés közben: pásztázó sáv, háttérben újrapróbálás, a tanár angolul elnézést kér és automatikusan válaszol; a mikrofon átírás is újrapróbál; gyorsabb modellváltás (15 mp); a Worker nem számolja a hibás hívásokat',v81:'Egészség-ellenőrzés: a háttérben megadott GitHub kulcsot már a Workeren át ellenőrzi (nem adott hamis 401-et)',v80:'Gemini hang (felolvasás): a hangmodelleket a Google listájából választja, a nem működőt kihagyja, átvált a működőre, és a Karmester naplóba írja',v79:'Hangparancsok: a beállításokból kikerült, a „Hallgatlak” alatt látszik (3 sor + legördülő), máshol nincs utasítás',v78:'Hangos beszélgetés: a szövegdoboz beküldés után kiürül, és a következő mondatot várja (a beszélt szöveg csak a beszélgetés buborékban látszik)',v77:'Beszélgetés: adaptív (2 soros, lefelé növő) szövegdoboz, a beszélgetés nem görgethető kis ablakban, hanem az oldallal együtt nő; a mikrofon szöveg hamarabb jelenik meg (1,2 mp szünetnél)',v76:'Gemini állapotsor: az utolsó sikeres hívás ideje, admin hozzáférésnél a próba nem mond kulcsot, az éppen használt modell kiírva',v75:'Mikrofon: csendes felvétel (nincs pittyegés) minden funkciónál, ha van Google-kulcs vagy admin hozzáférés; a hang csak akkor megy a Geminihez, ha elküldöd vagy hosszabb csend után; sebesség a Karmester naplóban. Kulcs nélkül a böngésző felismerője marad',v74:'Gemini admin hozzáférés: élő állapotsor, a közös kulcs azonosítója, a Worker saját hibaüzenete, Worker CORS javítás (hangfeltöltés háttérkulccsal)',v73:'Gemini: a modelllistát magától lekéri, a rossz modelleket nem próbálja újra (csak ha egy jó sincs, akkor háttérben), a hibakódot kiírja'};
   function note(){var o=lsGet('szokartya-appv')||'';if(o!==APPV){add('app',(o?(o+' → '+APPV):('első indítás: '+APPV))+(CH[APPV]?': '+CH[APPV]:''));lsSet('szokartya-appv',APPV);}}
   async function wk(force){if(!isAdm())return '';var u='';try{u=pfUrl();}catch(e){}if(!u)return '';var last=parseInt(lsGet('szokartya-wkat')||'0',10);if(!force&&Date.now()-last<21600000)return '';
     try{var r=await fetch(u+'/status',{cache:'no-store'});if(!r.ok)return '';var j=await r.json(),n=String(j.kod||'');if(!n)return '';lsSet('szokartya-wkat',String(Date.now()));var o=lsGet('szokartya-wkod')||'';if(o!==n){add('worker',o?(o+' → '+n):('első mérés: '+n));lsSet('szokartya-wkod',n);}return n;}catch(e){return '';}}
@@ -5537,7 +5577,7 @@ async function pfOpen(key,u8){return JSON.parse(new TextDecoder().decode(await p
 async function pfDK(kek,meta){var raw=await pfAesDec(kek,pfB64d(meta.wk_pw));return {raw:raw,key:await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt'])};}
 async function pfRsaEnc(pubJwk,u8){var k=await crypto.subtle.importKey('jwk',pubJwk,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);return hsB64(new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},k,u8)));}
 async function pfEmEnc(em){try{var pb=await pfCall('/pub');if(pb&&pb.pub)return await pfRsaEnc(pb.pub,pfEnc(JSON.stringify({e:em})));}catch(e){}return '';}
-var APPV='v82';
+var APPV='v83';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
