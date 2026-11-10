@@ -149,6 +149,7 @@ h1{font-size:1.2rem;margin:0}
 .mic.rec{background:var(--red);color:#fff;border-color:var(--red);animation:micp 1.1s infinite}
 @keyframes micp{0%{box-shadow:0 0 0 0 rgba(192,38,45,.5)}100%{box-shadow:0 0 0 12px rgba(192,38,45,0)}}
 .cvst{border:1.5px solid var(--fg);border-radius:8px;padding:10px;font-size:.95rem;display:flex;flex-direction:column;gap:8px}
+.cmdq{font-size:.82rem;line-height:1.5;margin:0}.cmdq div{display:flex;gap:8px}.cmdq b{min-width:7.2em;font-weight:600}.cmdq details{margin-top:2px}.cmdq summary{cursor:pointer;opacity:.8}
 .cvst[hidden],.mic[hidden],#qConvBtn[hidden]{display:none}
 #qConvBtn{display:none!important}
 .qw+.chips,#wChips{max-height:4cm;overflow-y:auto;overscroll-behavior:contain;padding-right:4px}
@@ -309,22 +310,6 @@ body:has(.rw) #kBars{display:none!important}
     <div class="vrow"><select id="cvHv" aria-label="Magyarázat hangja"><option value="hu">Magyar szöveg hangja: a telefon magyar hangja</option><option value="same">Magyar szöveg hangja: ugyanaz, mint az angol</option></select></div>
     <div class="vrow"><button class="reset" id="cvTest" type="button">Mikrofon próbája</button><button class="reset" id="cvTestHu" type="button">Magyar hang próbája</button></div>
     <p class="msg" id="cvMsg" role="status"></p>
-  </details>
-  <details class="backup"><summary>Hangparancsok (diktáláshoz)</summary>
-    <p>Diktálás közben angolul mondd ki ezeket, és az app elvégzi őket:</p>
-    <table class="cmd"><thead><tr><th>Mondd</th><th>Eredmény</th></tr></thead><tbody>
-    <tr><td>delete</td><td>törli az utolsó szót</td></tr>
-    <tr><td>delete last word / delete that</td><td>törli az utolsó szót</td></tr>
-    <tr><td>delete sentence</td><td>törli az utolsó mondatot</td></tr>
-    <tr><td>delete all / clear all / start over</td><td>mindent töröl</td></tr>
-    <tr><td>full stop / period</td><td>pont (.)</td></tr>
-    <tr><td>comma</td><td>vessző (,)</td></tr>
-    <tr><td>question mark</td><td>kérdőjel (?)</td></tr>
-    <tr><td>exclamation mark / exclamation point</td><td>felkiáltójel (!)</td></tr>
-    <tr><td>colon / semicolon</td><td>kettőspont (:) / pontosvessző (;)</td></tr>
-    <tr><td>new line / new paragraph</td><td>új sor</td></tr>
-    </tbody></table>
-    <p>A mondat első szava és az „I” automatikusan nagybetű lesz. A parancsokat külön, érthetően mondd, pl. „… tickets, full stop”.</p>
   </details>
   <details class="backup"><summary>Megjelenés</summary>
     <div class="vrow"><select id="uiTheme" aria-label="Téma"><option value="auto">Téma: automatikus (a telefon szerint)</option><option value="light">Téma: világos</option><option value="dark">Téma: sötét</option></select></div>
@@ -4058,6 +4043,7 @@ function cvErrMsg(err){
   if(/^gem/.test(err))return 'A felvételt nem sikerült leírni a Google-lel ('+err+'). Ellenőrizd a kulcsot és az internetet.';
   if(err==='start')return 'A mikrofon nem indult el. Koppints ide a megoldásért.';
   return 'A felismerés megszakadt ('+err+').';}
+function cmdHtml(id){return '<div class="cmdq" id="'+id+'"><div><b>send</b><span>küldés</span></div><div><b>delete</b><span>törli az utolsó szót (delete that)</span></div><div><b>delete sentence</b><span>törli az utolsó mondatot</span></div><details><summary>További parancsok</summary><div><b>delete all</b><span>mindent töröl (clear all)</span></div><div><b>full stop</b><span>pont (period)</span></div><div><b>comma</b><span>vessző</span></div><div><b>question mark</b><span>kérdőjel</span></div><div><b>exclamation mark</b><span>felkiáltójel</span></div><div><b>new line</b><span>új sor</span></div></details></div>';}
 function cvSet(t){var e=document.getElementById('qCvS');if(e)e.textContent=t;}
 function cvShow(on){var c=document.getElementById('qCv'),b=document.getElementById('qConvBtn');if(c)c.hidden=!on;if(b)b.hidden=true;var m=document.getElementById('qMic');if(m&&on)m.hidden=true;else if(m)m.hidden=cvGet().mode==='off';}
 function cvStop(){gtStop();CONVTOK++;window.CONVON=false;try{if(window.CVAPI)window.CVAPI.ta.hidden=false;}catch(e){}try{speechSynthesis.cancel();}catch(e){}if(CVLIST){CVLIST.abort();CVLIST=null;}cvShow(false);var m=document.getElementById('qMsg');if(m)m.textContent='A beszélgetés leállt.';}
@@ -4086,7 +4072,7 @@ async function cvConverse(){
     await cvSayAll([{t:A.qmain,l:'en'}],true,tok);
     for(;;){
       if(!cvAlive(tok))return;
-      cvSet('🎤 Hallgatlak. Mondd angolul, szünetet tarthatsz. Ha végeztél, nyomd meg a „Kész a válaszom” gombot.');
+      cvSet('🎤 Hallgatlak');
       var meB=chatAdd('me','🎤 …');
       var sentFlag=false;CVLIST=cvListen(function(t){var sd=vSend(t),v=vApply(sd.text);if(meB)meB.textContent=v||'…';if(sd.send&&v&&!sentFlag){sentFlag=true;cvDone();}});
       var res=await CVLIST.promise;CVLIST=null;if(!cvAlive(tok))return;
@@ -4239,7 +4225,7 @@ function renderQ(){
    '<div class="leg" id="qLeg" hidden><span class="ok">Zöld: rendben</span><span class="gr">Aláhúzott: nyelvtan</span><span class="sp">Piros vastag: hibás szó</span></div>'+
    '<div class="asug" id="qSug" hidden></div>'+
    '<div class="qbtns"><button type="button" class="hb" id="qSp"><span style="text-align:center">Helyesírás</span></button><button type="button" class="hb" id="qGr"><span style="text-align:center">Beküldés nyelvtanra</span></button></div>'+
-   '<button type="button" class="hb" id="qConvBtn"><span style="text-align:center">🎤 Beszélgessünk (hanggal)</span></button><div class="cvst" id="qCv" hidden><div id="qCvS"></div><div class="qbtns"><button type="button" class="reset" id="qCvDone">Kész a válaszom</button><button type="button" class="reset" id="qCvHelp">Magyarázat kérése</button><button type="button" class="reset" id="qCvStop">Leállítás</button></div></div><button type="button" class="reset" id="qEd" hidden>✎ Szerkesztés</button><p class="msg" id="qMsg" role="status"></p><div id="qEx" class="myans"></div></div>'+
+   '<button type="button" class="hb" id="qConvBtn"><span style="text-align:center">🎤 Beszélgessünk (hanggal)</span></button><div class="cvst" id="qCv" hidden><div id="qCvS"></div>'+cmdHtml("qCvC")+'<div class="qbtns"><button type="button" class="reset" id="qCvDone">Kész a válaszom</button><button type="button" class="reset" id="qCvHelp">Magyarázat kérése</button><button type="button" class="reset" id="qCvStop">Leállítás</button></div></div><button type="button" class="reset" id="qEd" hidden>✎ Szerkesztés</button><p class="msg" id="qMsg" role="status"></p><div id="qEx" class="myans"></div></div>'+
    (mm?'':'<div class="qbtns"><button type="button" class="hb" id="qPrev"'+(QS.i>0?'':' disabled')+'><span style="text-align:center">‹ Előző kérdés</span></button><button type="button" class="hb" id="qNext"><span style="text-align:center">'+(QS.i+1<QS.list.length?'Következő kérdés ›':'Befejezés ✓')+'</span></button></div>')+
    '<div class="qbtns"><button type="button" class="reset" id="qHome">‹ Főoldal</button></div></div></div>';
   var ws=[];
@@ -4850,7 +4836,7 @@ function fGender(){return cvGet().teach==='f'?'f':'m';}
 function fName(){return fGender()==='f'?'Tanárnő':'Tanár úr';}
 function fGemVoice(){return fGender()==='f'?(lsGet('szokartya-gtf')||'Aoede'):gtVoice();}
 function fAdd(role,text,keep){var c=fEl('fLog');if(!keep)FL.push({r:role,t:text});if(!c)return null;var d=document.createElement('div');d.className='cb '+role;var b=document.createElement('b');b.textContent=role==='me'?'Én':fName();var sp=document.createElement('span');sp.textContent=text||'…';d.appendChild(b);d.appendChild(sp);c.appendChild(d);try{d.scrollIntoView({block:'nearest'});}catch(e){}return sp;}
-function fSt(t){var e=fEl('fSt');if(e)e.textContent=t||'';}
+function fSt(t){var e=fEl('fSt');if(e)e.textContent=t||'';var c=fEl('fCmd');if(c)c.hidden=!(t&&String(t).indexOf('🎤')===0);}
 function fSay(text){var o=fGet();gtStop();try{speechSynthesis.cancel();}catch(e){}
   if(o.voice==='gem'&&gGet().key)return gtPlay(text,fGemVoice()).then(function(ok){if(ok)return;fSt(gtErrText());return cvSayPhone(text,'en');});
   return cvSayPhone(text,'en');}
@@ -4865,7 +4851,7 @@ async function fSend(txt){txt=String(txt||'').trim();if(!txt||FBUSY)return;FBUSY
   catch(e){var m=e&&e.message==='nokey'?'A szabad beszélgetéshez Google-kulcs kell (Beállítások, Nyelvi ellenőrzés), vagy az admin által adott hozzáférés.':gErr(e);if(tb)tb.textContent=m;FL.push({r:'t',t:m});fSt('');}
   finally{FBUSY=false;}}
 async function fListenOnce(auto){if(!canMic()){fSt('Ebben a böngészőben nincs mikrofon-felismerés. Írj a szövegdobozba.');return false;}
-  var ta=fEl('fTa'),sent=false,tok=FTOK;fSt('🎤 Hallgatlak. Mondd angolul. Vége: „send” vagy a Küldés gomb.');
+  var ta=fEl('fTa'),sent=false,tok=FTOK;fSt('🎤 Hallgatlak');
   FLIST=cvListen(function(t){var sd=vSend(t),v=vApply(sd.text);if(ta)ta.value=v;if(sd.send&&v&&!sent){sent=true;if(FLIST)FLIST.stop();}});fBtns();
   var res=await FLIST.promise;FLIST=null;fBtns();if(tok!==FTOK)return false;fSt('');
   var got=vApply(vSend(res.text||'').text);
@@ -4880,9 +4866,9 @@ async function fFix(){var last=null;for(var i=FL.length-1;i>=0;i--)if(FL[i].r===
     var m='Javított változat: '+String(j.corrected||last)+'\n'+String(j.note||'');fAdd('t',m);fSt('');}catch(e){fSt(gErr(e));}}
 function renderF(){var v=fEl('fview');if(!v)return;var o=fGet(),cv=cvGet();
   v.innerHTML='<div class="qc"><div class="qh" style="background:#2a9d8f"><span>Szabad beszélgetés</span><button type="button" class="reset" id="fBack" style="margin:0">‹ Vissza</button></div><div class="qb">'+
-  '<p class="hint">Beszélgess angolul, bármiről. A tanár válaszol, és kérdez. Írhatsz a szövegdobozba, vagy diktálhatsz. Hangparancsok: comma, full stop, question mark, new line, send.</p>'+
+  '<p class="hint">Beszélgess angolul, bármiről. A tanár válaszol, és kérdez. </p>'+
   '<div class="vrow"><select id="fTeach" aria-label="Tanár"><option value="m">Tanár úr (férfi hang)</option><option value="f">Tanárnő (női hang)</option></select><select id="fVoice" aria-label="Hang"><option value="phone">Hang: a telefon hangja</option><option value="gem">Hang: Google Gemini</option></select></div>'+
-  '<div class="chat" id="fLog"></div><p class="hint" id="fSt" role="status"></p>'+
+  '<div class="chat" id="fLog"></div><p class="hint" id="fSt" role="status"></p><div id="fCmd" hidden>'+cmdHtml('fCmdI')+'</div>'+
   '<textarea id="fTa" rows="2" lang="en-GB" spellcheck="true" autocapitalize="sentences" style="width:100%" placeholder="Írj angolul, vagy diktálj."></textarea>'+
   '<div class="qbtns"><button type="button" class="hb" id="fSend"><span style="text-align:center">Küldés</span></button><button type="button" class="hb" id="fMic"><span style="text-align:center">🎤 Diktálás</span></button></div>'+
   '<div class="qbtns"><button type="button" class="hb" id="fConv"><span style="text-align:center">🗣 Hangos beszélgetés</span></button><button type="button" class="hb" id="fFix"><span style="text-align:center">Javítás kérése</span></button></div>'+
@@ -5185,7 +5171,7 @@ try{if(navigator.connection&&navigator.connection.addEventListener)navigator.con
   function add(k,m){try{var a=get();a.push({t:Date.now(),k:k,m:String(m).slice(0,200)});if(a.length>200)a=a.slice(-200);lsSet(K,JSON.stringify(a));}catch(e){}}
   window.vlog=add;
   function fmt(t){var d=new Date(t),z=function(n){return ('0'+n).slice(-2);};return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes());}
-  var CH={v69:'Hangok a privát tárból, a Worker közvetítésével',v70:'Gemini automatikus modellváltás, mikrofon-segítség, Karmester Gemini napló',v71:'Verzió-követő, GitHub kulcs háttérben (admin), „minden szó" a Hallgatásban, mai nap haladásának törlése, mentés-emlékeztető kivéve',v72:'Hallgatás: alapból a letöltött Piper hang (magyar és angol is), nem a telefoné',v78:'Hangos beszélgetés: a szövegdoboz beküldés után kiürül, és a következő mondatot várja (a beszélt szöveg csak a beszélgetés buborékban látszik)',v77:'Beszélgetés: adaptív (2 soros, lefelé növő) szövegdoboz, a beszélgetés nem görgethető kis ablakban, hanem az oldallal együtt nő; a mikrofon szöveg hamarabb jelenik meg (1,2 mp szünetnél)',v76:'Gemini állapotsor: az utolsó sikeres hívás ideje, admin hozzáférésnél a próba nem mond kulcsot, az éppen használt modell kiírva',v75:'Mikrofon: csendes felvétel (nincs pittyegés) minden funkciónál, ha van Google-kulcs vagy admin hozzáférés; a hang csak akkor megy a Geminihez, ha elküldöd vagy hosszabb csend után; sebesség a Karmester naplóban. Kulcs nélkül a böngésző felismerője marad',v74:'Gemini admin hozzáférés: élő állapotsor, a közös kulcs azonosítója, a Worker saját hibaüzenete, Worker CORS javítás (hangfeltöltés háttérkulccsal)',v73:'Gemini: a modelllistát magától lekéri, a rossz modelleket nem próbálja újra (csak ha egy jó sincs, akkor háttérben), a hibakódot kiírja'};
+  var CH={v69:'Hangok a privát tárból, a Worker közvetítésével',v70:'Gemini automatikus modellváltás, mikrofon-segítség, Karmester Gemini napló',v71:'Verzió-követő, GitHub kulcs háttérben (admin), „minden szó" a Hallgatásban, mai nap haladásának törlése, mentés-emlékeztető kivéve',v72:'Hallgatás: alapból a letöltött Piper hang (magyar és angol is), nem a telefoné',v79:'Hangparancsok: a beállításokból kikerült, a „Hallgatlak” alatt látszik (3 sor + legördülő), máshol nincs utasítás',v78:'Hangos beszélgetés: a szövegdoboz beküldés után kiürül, és a következő mondatot várja (a beszélt szöveg csak a beszélgetés buborékban látszik)',v77:'Beszélgetés: adaptív (2 soros, lefelé növő) szövegdoboz, a beszélgetés nem görgethető kis ablakban, hanem az oldallal együtt nő; a mikrofon szöveg hamarabb jelenik meg (1,2 mp szünetnél)',v76:'Gemini állapotsor: az utolsó sikeres hívás ideje, admin hozzáférésnél a próba nem mond kulcsot, az éppen használt modell kiírva',v75:'Mikrofon: csendes felvétel (nincs pittyegés) minden funkciónál, ha van Google-kulcs vagy admin hozzáférés; a hang csak akkor megy a Geminihez, ha elküldöd vagy hosszabb csend után; sebesség a Karmester naplóban. Kulcs nélkül a böngésző felismerője marad',v74:'Gemini admin hozzáférés: élő állapotsor, a közös kulcs azonosítója, a Worker saját hibaüzenete, Worker CORS javítás (hangfeltöltés háttérkulccsal)',v73:'Gemini: a modelllistát magától lekéri, a rossz modelleket nem próbálja újra (csak ha egy jó sincs, akkor háttérben), a hibakódot kiírja'};
   function note(){var o=lsGet('szokartya-appv')||'';if(o!==APPV){add('app',(o?(o+' → '+APPV):('első indítás: '+APPV))+(CH[APPV]?': '+CH[APPV]:''));lsSet('szokartya-appv',APPV);}}
   async function wk(force){if(!isAdm())return '';var u='';try{u=pfUrl();}catch(e){}if(!u)return '';var last=parseInt(lsGet('szokartya-wkat')||'0',10);if(!force&&Date.now()-last<21600000)return '';
     try{var r=await fetch(u+'/status',{cache:'no-store'});if(!r.ok)return '';var j=await r.json(),n=String(j.kod||'');if(!n)return '';lsSet('szokartya-wkat',String(Date.now()));var o=lsGet('szokartya-wkod')||'';if(o!==n){add('worker',o?(o+' → '+n):('első mérés: '+n));lsSet('szokartya-wkod',n);}return n;}catch(e){return '';}}
@@ -5518,7 +5504,7 @@ async function pfOpen(key,u8){return JSON.parse(new TextDecoder().decode(await p
 async function pfDK(kek,meta){var raw=await pfAesDec(kek,pfB64d(meta.wk_pw));return {raw:raw,key:await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt'])};}
 async function pfRsaEnc(pubJwk,u8){var k=await crypto.subtle.importKey('jwk',pubJwk,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);return hsB64(new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},k,u8)));}
 async function pfEmEnc(em){try{var pb=await pfCall('/pub');if(pb&&pb.pub)return await pfRsaEnc(pb.pub,pfEnc(JSON.stringify({e:em})));}catch(e){}return '';}
-var APPV='v78';
+var APPV='v79';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
