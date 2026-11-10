@@ -171,7 +171,10 @@ body{zoom:var(--fs,1)}
 #setWrap[hidden]{display:none}
 #setAll{display:block;width:100%;margin:8px 0}
 .cmd{width:100%;border-collapse:collapse;font-size:.92rem;margin:6px 0}.cmd th,.cmd td{border:1px solid rgba(128,128,128,.45);padding:6px 8px;text-align:left;vertical-align:top}.cmd th{opacity:.8}
-.chat{display:flex;flex-direction:column;gap:6px;max-height:55vh;overflow-y:auto}.chat[hidden]{display:none}
+.chat{display:flex;flex-direction:column;gap:8px;margin:6px 0 10px}.chat[hidden]{display:none}
+#fTa,#qAns{min-height:3.6em;resize:none;overflow:hidden;box-sizing:border-box;line-height:1.35}
+#fSt:empty,#qMsg:empty{display:none}#fSt,#qMsg{margin:6px 0 8px}
+.chat+.hint,.chat+.arow{margin-top:4px}
 .cb{padding:8px 10px;border-radius:12px;max-width:92%;line-height:1.35;overflow-wrap:anywhere}.cb b{display:block;font-size:.72rem;opacity:.75;margin-bottom:2px}
 .cb.t{background:rgba(47,111,237,.14);align-self:flex-start}.cb.me{background:rgba(46,160,67,.18);align-self:flex-end}
 .qhu .qsay{float:right;margin:0 0 4px 8px;width:34px;height:34px}
@@ -3937,7 +3940,7 @@ function gTranscribe1(g,model,tmo,ab,lang){
   var body={contents:[{role:'user',parts:[{text:'Transcribe this audio recording exactly as spoken. The speaker is a Hungarian learner of English with a possible accent, answering a spoken-exam question. The language is mostly '+(/^hu/i.test(lang)?'Hungarian':'British English')+'; use British spelling and recognise British pronunciation and vocabulary, and transcribe the words actually said, without correcting the learner\'s grammar. Do not add punctuation or capital letters yourself: the speaker dictates punctuation and edits by voice, so write spoken commands such as delete, full stop, comma, question mark, exclamation mark, new line exactly as those words. Return ONLY the transcript text, without quotes or comments. If there is no speech, return an empty string.'},{inline_data:{mime_type:'audio/wav',data:b64(ab)}}]}],generationConfig:{temperature:0}};
   return gFetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)},g.key,tmo).then(function(j){var t='';try{j.candidates[0].content.parts.forEach(function(p){if(p.text&&!p.thought)t+=p.text;});}catch(x){}return t.replace(/^["“\s]+|["”\s]+$/g,'').trim();});}
 function cvListenRec(onText){
-  var finished=false,aborted=false,stream=null,ac=null,timer=null,res,rec=null,parts=[],err='',anyHeard=false,lastErr='',stopAt=0,SIL=Math.max(1200,parseInt(lsGet('szokartya-silms')||'2200',10)||2200);
+  var finished=false,aborted=false,stream=null,ac=null,timer=null,res,rec=null,parts=[],err='',anyHeard=false,lastErr='',stopAt=0,SIL=Math.max(700,parseInt(lsGet('szokartya-silms')||'1200',10)||1200);
   var pr=new Promise(function(r){res=r;});
   function out(){return parts.filter(Boolean).join(' ').replace(/\s+/g,' ').trim();}
   function cleanup(){if(timer)clearInterval(timer);try{if(stream)stream.getTracks().forEach(function(t){t.stop();});}catch(e){}try{if(ac)ac.close();}catch(e){}}
@@ -4018,7 +4021,7 @@ function vApply(txt){
     out.push(tk);}
   return out.join(' ').replace(/ ?\n ?/g,'\n').trim();}
 function vJoin(base,t){return vApply((base?base+' ':'')+t);}
-function chatAdd(role,text){var c=document.getElementById('qChat');if(!c)return null;c.hidden=false;var d=document.createElement('div');d.className='cb '+role;var b=document.createElement('b');b.textContent=role==='me'?'Én':(cvGet().teach==='f'?'Tanárnő':'Tanár úr');var sp=document.createElement('span');sp.textContent=text||'…';d.appendChild(b);d.appendChild(sp);c.appendChild(d);try{c.scrollTop=c.scrollHeight;d.scrollIntoView({block:'nearest'});}catch(e){}return sp;}
+function chatAdd(role,text){var c=document.getElementById('qChat');if(!c)return null;c.hidden=false;var d=document.createElement('div');d.className='cb '+role;var b=document.createElement('b');b.textContent=role==='me'?'Én':(cvGet().teach==='f'?'Tanárnő':'Tanár úr');var sp=document.createElement('span');sp.textContent=text||'…';d.appendChild(b);d.appendChild(sp);c.appendChild(d);try{d.scrollIntoView({block:'nearest'});}catch(e){}return sp;}
 function vSend(t){var m=String(t||'').match(/^(.*?)[\s,.;:!?]*\b(send|done)\b[\s.!?]*$/i);return m&&m[1].trim()?{text:m[1],send:true}:{text:String(t||''),send:false};}
 function chatFb(o){var l=[];if(!o.M.length)l.push('Nagyon jó, nem találtam hibát.');else{l.push('Találtam '+o.M.length+' javítanivalót:');o.M.slice(0,4).forEach(function(m){l.push('• „'+(m.orig||'')+'” → „'+(m.rep[0]||'')+'”'+(m.msg?' ('+m.msg+')':''));});}
   if(o.j&&o.j.content)l.push(o.j.content);return l.join('\n');}
@@ -4232,7 +4235,7 @@ function renderQ(){
   q.innerHTML='<div class="qc"><div class="qh" style="background:'+T.c+'"><span>'+esc(T.n)+'</span><span>'+(QS.i+1)+' / '+QS.list.length+'</span></div><div class="qb">'+
    '<p class="qen">'+esc(it.en)+'<button type="button" class="say" id="qSay" aria-label="Felolvasás">'+SAYSVG+'</button></p>'+pts+
    '<div class="qhu"><button type="button" class="say qsay" id="qSayHu" aria-label="Magyarázat felolvasása">'+SAYSVG+'</button><small>Mit jelent és mit kérdez?</small>'+esc(it.hu)+'</div>'+words+
-   '<div class="myans"><div class="chat" id="qChat" hidden></div><div class="arow"><textarea id="qAns" rows="3" spellcheck="true" lang="en-GB" autocapitalize="sentences" placeholder="Írd ide, vagy mondd el a mikrofonnal…"></textarea><button type="button" class="mic" id="qMic" aria-label="Diktálás mikrofonnal">'+MICSVG+'</button></div><div class="fbk" id="qFb" hidden></div>'+
+   '<div class="myans"><div class="chat" id="qChat" hidden></div><div class="arow"><textarea id="qAns" rows="2" spellcheck="true" lang="en-GB" autocapitalize="sentences" placeholder="Írd ide, vagy mondd el a mikrofonnal…"></textarea><button type="button" class="mic" id="qMic" aria-label="Diktálás mikrofonnal">'+MICSVG+'</button></div><div class="fbk" id="qFb" hidden></div>'+
    '<div class="leg" id="qLeg" hidden><span class="ok">Zöld: rendben</span><span class="gr">Aláhúzott: nyelvtan</span><span class="sp">Piros vastag: hibás szó</span></div>'+
    '<div class="asug" id="qSug" hidden></div>'+
    '<div class="qbtns"><button type="button" class="hb" id="qSp"><span style="text-align:center">Helyesírás</span></button><button type="button" class="hb" id="qGr"><span style="text-align:center">Beküldés nyelvtanra</span></button></div>'+
@@ -4846,7 +4849,7 @@ function fSetO(k,v){var o=fGet();o[k]=v;lsSet('szokartya-fv',JSON.stringify(o));
 function fGender(){return cvGet().teach==='f'?'f':'m';}
 function fName(){return fGender()==='f'?'Tanárnő':'Tanár úr';}
 function fGemVoice(){return fGender()==='f'?(lsGet('szokartya-gtf')||'Aoede'):gtVoice();}
-function fAdd(role,text,keep){var c=fEl('fLog');if(!keep)FL.push({r:role,t:text});if(!c)return null;var d=document.createElement('div');d.className='cb '+role;var b=document.createElement('b');b.textContent=role==='me'?'Én':fName();var sp=document.createElement('span');sp.textContent=text||'…';d.appendChild(b);d.appendChild(sp);c.appendChild(d);try{c.scrollTop=c.scrollHeight;}catch(e){}return sp;}
+function fAdd(role,text,keep){var c=fEl('fLog');if(!keep)FL.push({r:role,t:text});if(!c)return null;var d=document.createElement('div');d.className='cb '+role;var b=document.createElement('b');b.textContent=role==='me'?'Én':fName();var sp=document.createElement('span');sp.textContent=text||'…';d.appendChild(b);d.appendChild(sp);c.appendChild(d);try{d.scrollIntoView({block:'nearest'});}catch(e){}return sp;}
 function fSt(t){var e=fEl('fSt');if(e)e.textContent=t||'';}
 function fSay(text){var o=fGet();gtStop();try{speechSynthesis.cancel();}catch(e){}
   if(o.voice==='gem'&&gGet().key)return gtPlay(text,fGemVoice()).then(function(ok){if(ok)return;fSt(gtErrText());return cvSayPhone(text,'en');});
@@ -4880,7 +4883,7 @@ function renderF(){var v=fEl('fview');if(!v)return;var o=fGet(),cv=cvGet();
   '<p class="hint">Beszélgess angolul, bármiről. A tanár válaszol, és kérdez. Írhatsz a szövegdobozba, vagy diktálhatsz. Hangparancsok: comma, full stop, question mark, new line, send.</p>'+
   '<div class="vrow"><select id="fTeach" aria-label="Tanár"><option value="m">Tanár úr (férfi hang)</option><option value="f">Tanárnő (női hang)</option></select><select id="fVoice" aria-label="Hang"><option value="phone">Hang: a telefon hangja</option><option value="gem">Hang: Google Gemini</option></select></div>'+
   '<div class="chat" id="fLog"></div><p class="hint" id="fSt" role="status"></p>'+
-  '<textarea id="fTa" rows="3" lang="en-GB" spellcheck="true" autocapitalize="sentences" style="width:100%" placeholder="Írj angolul, vagy diktálj."></textarea>'+
+  '<textarea id="fTa" rows="2" lang="en-GB" spellcheck="true" autocapitalize="sentences" style="width:100%" placeholder="Írj angolul, vagy diktálj."></textarea>'+
   '<div class="qbtns"><button type="button" class="hb" id="fSend"><span style="text-align:center">Küldés</span></button><button type="button" class="hb" id="fMic"><span style="text-align:center">🎤 Diktálás</span></button></div>'+
   '<div class="qbtns"><button type="button" class="hb" id="fConv"><span style="text-align:center">🗣 Hangos beszélgetés</span></button><button type="button" class="hb" id="fFix"><span style="text-align:center">Javítás kérése</span></button></div>'+
   '<div class="qbtns"><button type="button" class="hb" id="fNew"><span style="text-align:center">Új beszélgetés</span></button></div></div></div>';
@@ -5182,7 +5185,7 @@ try{if(navigator.connection&&navigator.connection.addEventListener)navigator.con
   function add(k,m){try{var a=get();a.push({t:Date.now(),k:k,m:String(m).slice(0,200)});if(a.length>200)a=a.slice(-200);lsSet(K,JSON.stringify(a));}catch(e){}}
   window.vlog=add;
   function fmt(t){var d=new Date(t),z=function(n){return ('0'+n).slice(-2);};return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes());}
-  var CH={v69:'Hangok a privát tárból, a Worker közvetítésével',v70:'Gemini automatikus modellváltás, mikrofon-segítség, Karmester Gemini napló',v71:'Verzió-követő, GitHub kulcs háttérben (admin), „minden szó" a Hallgatásban, mai nap haladásának törlése, mentés-emlékeztető kivéve',v72:'Hallgatás: alapból a letöltött Piper hang (magyar és angol is), nem a telefoné',v76:'Gemini állapotsor: az utolsó sikeres hívás ideje, admin hozzáférésnél a próba nem mond kulcsot, az éppen használt modell kiírva',v75:'Mikrofon: csendes felvétel (nincs pittyegés) minden funkciónál, ha van Google-kulcs vagy admin hozzáférés; a hang csak akkor megy a Geminihez, ha elküldöd vagy hosszabb csend után; sebesség a Karmester naplóban. Kulcs nélkül a böngésző felismerője marad',v74:'Gemini admin hozzáférés: élő állapotsor, a közös kulcs azonosítója, a Worker saját hibaüzenete, Worker CORS javítás (hangfeltöltés háttérkulccsal)',v73:'Gemini: a modelllistát magától lekéri, a rossz modelleket nem próbálja újra (csak ha egy jó sincs, akkor háttérben), a hibakódot kiírja'};
+  var CH={v69:'Hangok a privát tárból, a Worker közvetítésével',v70:'Gemini automatikus modellváltás, mikrofon-segítség, Karmester Gemini napló',v71:'Verzió-követő, GitHub kulcs háttérben (admin), „minden szó" a Hallgatásban, mai nap haladásának törlése, mentés-emlékeztető kivéve',v72:'Hallgatás: alapból a letöltött Piper hang (magyar és angol is), nem a telefoné',v77:'Beszélgetés: adaptív (2 soros, lefelé növő) szövegdoboz, a beszélgetés nem görgethető kis ablakban, hanem az oldallal együtt nő; a mikrofon szöveg hamarabb jelenik meg (1,2 mp szünetnél)',v76:'Gemini állapotsor: az utolsó sikeres hívás ideje, admin hozzáférésnél a próba nem mond kulcsot, az éppen használt modell kiírva',v75:'Mikrofon: csendes felvétel (nincs pittyegés) minden funkciónál, ha van Google-kulcs vagy admin hozzáférés; a hang csak akkor megy a Geminihez, ha elküldöd vagy hosszabb csend után; sebesség a Karmester naplóban. Kulcs nélkül a böngésző felismerője marad',v74:'Gemini admin hozzáférés: élő állapotsor, a közös kulcs azonosítója, a Worker saját hibaüzenete, Worker CORS javítás (hangfeltöltés háttérkulccsal)',v73:'Gemini: a modelllistát magától lekéri, a rossz modelleket nem próbálja újra (csak ha egy jó sincs, akkor háttérben), a hibakódot kiírja'};
   function note(){var o=lsGet('szokartya-appv')||'';if(o!==APPV){add('app',(o?(o+' → '+APPV):('első indítás: '+APPV))+(CH[APPV]?': '+CH[APPV]:''));lsSet('szokartya-appv',APPV);}}
   async function wk(force){if(!isAdm())return '';var u='';try{u=pfUrl();}catch(e){}if(!u)return '';var last=parseInt(lsGet('szokartya-wkat')||'0',10);if(!force&&Date.now()-last<21600000)return '';
     try{var r=await fetch(u+'/status',{cache:'no-store'});if(!r.ok)return '';var j=await r.json(),n=String(j.kod||'');if(!n)return '';lsSet('szokartya-wkat',String(Date.now()));var o=lsGet('szokartya-wkod')||'';if(o!==n){add('worker',o?(o+' → '+n):('első mérés: '+n));lsSet('szokartya-wkod',n);}return n;}catch(e){return '';}}
@@ -5198,6 +5201,12 @@ try{if(navigator.connection&&navigator.connection.addEventListener)navigator.con
       if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(function(){msg.textContent='Átmásolva ('+get().length+' sor).';},fb);else fb();});
     setTimeout(function(){wk(false);},4000);}
   setTimeout(init,0);})();
+
+/* --- adaptív szövegdoboz --- */
+(function(){var last={};function grow(t){if(!t)return;t.style.height='auto';var h=t.scrollHeight+2,mx=Math.round(window.innerHeight*0.55);t.style.height=Math.min(h,mx)+'px';t.style.overflow=h>mx?'auto':'hidden';}
+  window.taGrow=grow;
+  document.addEventListener('input',function(e){var t=e.target;if(t&&(t.id==='fTa'||t.id==='qAns'))grow(t);});
+  setInterval(function(){['fTa','qAns'].forEach(function(id){var t=document.getElementById(id);if(!t)return;var k=t.value.length+'|'+t.clientWidth;if(last[id]!==k){last[id]=k;grow(t);}});},300);})();
 
 /* --- előre elkészítés --- */
 var PG={run:false,pause:false,stop:false,plan:null},PGSYNC=null;
@@ -5509,7 +5518,7 @@ async function pfOpen(key,u8){return JSON.parse(new TextDecoder().decode(await p
 async function pfDK(kek,meta){var raw=await pfAesDec(kek,pfB64d(meta.wk_pw));return {raw:raw,key:await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt'])};}
 async function pfRsaEnc(pubJwk,u8){var k=await crypto.subtle.importKey('jwk',pubJwk,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);return hsB64(new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},k,u8)));}
 async function pfEmEnc(em){try{var pb=await pfCall('/pub');if(pb&&pb.pub)return await pfRsaEnc(pb.pub,pfEnc(JSON.stringify({e:em})));}catch(e){}return '';}
-var APPV='v76';
+var APPV='v77';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
