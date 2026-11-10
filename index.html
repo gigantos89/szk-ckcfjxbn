@@ -4075,7 +4075,7 @@ async function cvHelp(){
   var sv=A.ta.value;A.ta.value=last;var out=await A.run('gr');
   ['qFb','qLeg','qEd'].forEach(function(i){var e=document.getElementById(i);if(e)e.hidden=true;});A.ta.hidden=true;
   var xe=document.getElementById('qEx');if(xe)xe.innerHTML='';
-  if(out)chatAdd('t',chatFb(out));}
+  A.ta.value='';if(out)chatAdd('t',chatFb(out));}
 async function cvConverse(){
   if(window.CONVON||!canMic())return;
   var g0=gGet();if(!g0.key){var mm=document.getElementById('qMsg');if(mm)mm.textContent='A beszélgetéshez Google-kulcs kell (Beállítások, Nyelvi ellenőrzés).';return;}
@@ -4088,7 +4088,7 @@ async function cvConverse(){
       if(!cvAlive(tok))return;
       cvSet('🎤 Hallgatlak. Mondd angolul, szünetet tarthatsz. Ha végeztél, nyomd meg a „Kész a válaszom” gombot.');
       var meB=chatAdd('me','🎤 …');
-      var sentFlag=false;CVLIST=cvListen(function(t){var sd=vSend(t),v=vApply(sd.text);A.ta.value=v;if(meB)meB.textContent=v||'…';if(sd.send&&v&&!sentFlag){sentFlag=true;cvDone();}});
+      var sentFlag=false;CVLIST=cvListen(function(t){var sd=vSend(t),v=vApply(sd.text);if(meB)meB.textContent=v||'…';if(sd.send&&v&&!sentFlag){sentFlag=true;cvDone();}});
       var res=await CVLIST.promise;CVLIST=null;if(!cvAlive(tok))return;
       var got=vApply(vSend(res.text||'').text);
       if(!got){
@@ -4097,7 +4097,7 @@ async function cvConverse(){
         none++;
         if(none>=2){await cvSayAll([{t:'Nem hallottalak, a beszélgetést leállítom.',l:'hu'}],false,tok);cvStop();return;}
         await cvSayAll([{t:'Nem hallottalak, próbáld újra.',l:'hu'}],false,tok);continue;}
-      none=0;meB.textContent=got;A.ta.value=got;window.CVLAST=got;hist.push('Student: '+got);
+      none=0;meB.textContent=got;A.ta.value='';window.CVLAST=got;hist.push('Student: '+got);
       cvSet('A tanár válaszol…');
       var rep='',g=gGet();
       try{var j=await gCall(g,{sys:'You are a friendly British English teacher having a spoken conversation with a Hungarian student (level '+g.o.lvl+') about this exam topic question: "'+A.qtext+'". Reply in natural spoken English in at most two short sentences: react briefly to what the student said, then ask one natural follow-up question that keeps the conversation on the topic. Never explain grammar, never correct mistakes, do not use Hungarian unless the student does. Return ONLY a JSON object {"reply":"..."}.',user:hist.slice(-8).join('\n')},false);rep=String(j.reply||'').trim();}
@@ -5185,7 +5185,7 @@ try{if(navigator.connection&&navigator.connection.addEventListener)navigator.con
   function add(k,m){try{var a=get();a.push({t:Date.now(),k:k,m:String(m).slice(0,200)});if(a.length>200)a=a.slice(-200);lsSet(K,JSON.stringify(a));}catch(e){}}
   window.vlog=add;
   function fmt(t){var d=new Date(t),z=function(n){return ('0'+n).slice(-2);};return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes());}
-  var CH={v69:'Hangok a privát tárból, a Worker közvetítésével',v70:'Gemini automatikus modellváltás, mikrofon-segítség, Karmester Gemini napló',v71:'Verzió-követő, GitHub kulcs háttérben (admin), „minden szó" a Hallgatásban, mai nap haladásának törlése, mentés-emlékeztető kivéve',v72:'Hallgatás: alapból a letöltött Piper hang (magyar és angol is), nem a telefoné',v77:'Beszélgetés: adaptív (2 soros, lefelé növő) szövegdoboz, a beszélgetés nem görgethető kis ablakban, hanem az oldallal együtt nő; a mikrofon szöveg hamarabb jelenik meg (1,2 mp szünetnél)',v76:'Gemini állapotsor: az utolsó sikeres hívás ideje, admin hozzáférésnél a próba nem mond kulcsot, az éppen használt modell kiírva',v75:'Mikrofon: csendes felvétel (nincs pittyegés) minden funkciónál, ha van Google-kulcs vagy admin hozzáférés; a hang csak akkor megy a Geminihez, ha elküldöd vagy hosszabb csend után; sebesség a Karmester naplóban. Kulcs nélkül a böngésző felismerője marad',v74:'Gemini admin hozzáférés: élő állapotsor, a közös kulcs azonosítója, a Worker saját hibaüzenete, Worker CORS javítás (hangfeltöltés háttérkulccsal)',v73:'Gemini: a modelllistát magától lekéri, a rossz modelleket nem próbálja újra (csak ha egy jó sincs, akkor háttérben), a hibakódot kiírja'};
+  var CH={v69:'Hangok a privát tárból, a Worker közvetítésével',v70:'Gemini automatikus modellváltás, mikrofon-segítség, Karmester Gemini napló',v71:'Verzió-követő, GitHub kulcs háttérben (admin), „minden szó" a Hallgatásban, mai nap haladásának törlése, mentés-emlékeztető kivéve',v72:'Hallgatás: alapból a letöltött Piper hang (magyar és angol is), nem a telefoné',v78:'Hangos beszélgetés: a szövegdoboz beküldés után kiürül, és a következő mondatot várja (a beszélt szöveg csak a beszélgetés buborékban látszik)',v77:'Beszélgetés: adaptív (2 soros, lefelé növő) szövegdoboz, a beszélgetés nem görgethető kis ablakban, hanem az oldallal együtt nő; a mikrofon szöveg hamarabb jelenik meg (1,2 mp szünetnél)',v76:'Gemini állapotsor: az utolsó sikeres hívás ideje, admin hozzáférésnél a próba nem mond kulcsot, az éppen használt modell kiírva',v75:'Mikrofon: csendes felvétel (nincs pittyegés) minden funkciónál, ha van Google-kulcs vagy admin hozzáférés; a hang csak akkor megy a Geminihez, ha elküldöd vagy hosszabb csend után; sebesség a Karmester naplóban. Kulcs nélkül a böngésző felismerője marad',v74:'Gemini admin hozzáférés: élő állapotsor, a közös kulcs azonosítója, a Worker saját hibaüzenete, Worker CORS javítás (hangfeltöltés háttérkulccsal)',v73:'Gemini: a modelllistát magától lekéri, a rossz modelleket nem próbálja újra (csak ha egy jó sincs, akkor háttérben), a hibakódot kiírja'};
   function note(){var o=lsGet('szokartya-appv')||'';if(o!==APPV){add('app',(o?(o+' → '+APPV):('első indítás: '+APPV))+(CH[APPV]?': '+CH[APPV]:''));lsSet('szokartya-appv',APPV);}}
   async function wk(force){if(!isAdm())return '';var u='';try{u=pfUrl();}catch(e){}if(!u)return '';var last=parseInt(lsGet('szokartya-wkat')||'0',10);if(!force&&Date.now()-last<21600000)return '';
     try{var r=await fetch(u+'/status',{cache:'no-store'});if(!r.ok)return '';var j=await r.json(),n=String(j.kod||'');if(!n)return '';lsSet('szokartya-wkat',String(Date.now()));var o=lsGet('szokartya-wkod')||'';if(o!==n){add('worker',o?(o+' → '+n):('első mérés: '+n));lsSet('szokartya-wkod',n);}return n;}catch(e){return '';}}
@@ -5518,7 +5518,7 @@ async function pfOpen(key,u8){return JSON.parse(new TextDecoder().decode(await p
 async function pfDK(kek,meta){var raw=await pfAesDec(kek,pfB64d(meta.wk_pw));return {raw:raw,key:await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt'])};}
 async function pfRsaEnc(pubJwk,u8){var k=await crypto.subtle.importKey('jwk',pubJwk,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);return hsB64(new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},k,u8)));}
 async function pfEmEnc(em){try{var pb=await pfCall('/pub');if(pb&&pb.pub)return await pfRsaEnc(pb.pub,pfEnc(JSON.stringify({e:em})));}catch(e){}return '';}
-var APPV='v77';
+var APPV='v78';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
