@@ -3770,11 +3770,28 @@ function enBuild(){ENMAP={};var sw={},ss={};ENWL=[];ENSL=[];DATA.forEach(functio
 function enTexts(kinds){if(!ENMAP)enBuild();var out=[],seen={};kinds.forEach(function(k){(k==='w'?ENWL:ENSL).forEach(function(c){if(!seen[c]){seen[c]=1;out.push(c);}});});return out;}
 function enNeed(t){var vid=enVid();if(!vid)return null;if(!ENMAP)enBuild();var m=ENMAP[t];if(!m)return null;var need=[];
   if(m.w.length){if(enMode('w')==='o')return null;need=need.concat(m.w);}if(m.s.length){if(enMode('s')==='o')return null;need=need.concat(m.s);}return need.length?{vid:vid,need:need}:null;}
+/* --- hangdarabok egyetlen WAV-fájllá fűzése (egy lejátszás, egy hangfókusz, nincs hézag) --- */
+function wavPcm(buf){try{var dv=new DataView(buf),off=12,tag=1,sr=22050,ch=1,bits=16,dOff=-1,dLen=0;
+  if(buf.byteLength<44||dv.getUint32(0,false)!==0x52494646)return null;
+  while(off+8<=buf.byteLength){var id=String.fromCharCode(dv.getUint8(off),dv.getUint8(off+1),dv.getUint8(off+2),dv.getUint8(off+3)),sz=dv.getUint32(off+4,true);
+    if(id==='fmt '){tag=dv.getUint16(off+8,true);ch=dv.getUint16(off+10,true);sr=dv.getUint32(off+12,true);bits=dv.getUint16(off+22,true);}
+    if(id==='data'){dOff=off+8;dLen=Math.min(sz,buf.byteLength-dOff);break;}off+=8+sz+(sz&1);}
+  if(dOff<0||ch!==1)return null;var n,o;
+  if(tag===1&&bits===16){n=dLen>>1;o=new Int16Array(n);for(var i=0;i<n;i++)o[i]=dv.getInt16(dOff+2*i,true);}
+  else if(tag===7&&bits===8){n=dLen;o=new Int16Array(n);for(var j=0;j<n;j++){var u=~dv.getUint8(dOff+j)&255,sg=u&128,e=(u>>4)&7,m=u&15,x=(((m<<3)+0x84)<<e)-0x84;o[j]=sg?-x:x;}}
+  else return null;
+  return {sr:sr,s:o};}catch(e){return null;}}
+function wavJoin(bufs,gapMs){var P=bufs.map(wavPcm),i;if(!P.length||P.some(function(x){return !x;}))return null;var sr=P[0].sr,gap=Math.round(sr*(gapMs||0)/1000),parts=[],tot=0;
+  for(i=0;i<P.length;i++){var a=P[i].s;if(P[i].sr!==sr){var m=Math.max(1,Math.round(a.length*sr/P[i].sr)),r=new Int16Array(m);for(var k=0;k<m;k++){var xx=k*P[i].sr/sr,i0=Math.floor(xx),f=xx-i0,v0=a[i0]||0,v1=i0+1<a.length?a[i0+1]:v0;r[k]=Math.round(v0+(v1-v0)*f);}a=r;}parts.push(a);tot+=a.length+(i<P.length-1?gap:0);}
+  var out=new ArrayBuffer(44+tot*2),w=new DataView(out);function s4(o,t){for(var q=0;q<4;q++)w.setUint8(o+q,t.charCodeAt(q));}
+  s4(0,'RIFF');w.setUint32(4,36+tot*2,true);s4(8,'WAVE');s4(12,'fmt ');w.setUint32(16,16,true);w.setUint16(20,1,true);w.setUint16(22,1,true);w.setUint32(24,sr,true);w.setUint32(28,sr*2,true);w.setUint16(32,2,true);w.setUint16(34,16,true);s4(36,'data');w.setUint32(40,tot*2,true);
+  var pos=44;for(i=0;i<parts.length;i++){var pa=parts[i];for(var z=0;z<pa.length;z++){w.setInt16(pos,pa[z],true);pos+=2;}if(i<parts.length-1)pos+=gap*2;}
+  return out;}
 function enBuf(buf,rate){return new Promise(function(res){var u=URL.createObjectURL(new Blob([buf],{type:'audio/wav'})),a=new Audio(u),rt=rate>0?rate:vrate;try{a.defaultPlaybackRate=rt;a.playbackRate=rt;}catch(e){}
   function done(x){try{URL.revokeObjectURL(u);}catch(e){}window.__gr=null;res(x);}window.__ga=a;window.__gr=res;a.onended=function(){done(true);};a.onerror=function(){done(false);};a.play().catch(function(){done(false);});});}
 function enPlay(t,rate){var q=enNeed(t);if(!q)return Promise.resolve(false);gtStop();var tk=PPT;
   return Promise.all(q.need.map(function(c){return gtGetC('pp|'+q.vid+'|'+c);})).then(function(b){if(b.some(function(x){return !x;}))return false;
-    var p=Promise.resolve(true);b.forEach(function(buf){p=p.then(function(ok){if(!ok)return false;if(tk!==PPT)return true;return enBuf(buf,rate);});});return p;}).catch(function(){return false;});}
+    var j=b.length>1?wavJoin(b,120):null;if(j){if(tk!==PPT)return true;return enBuf(j,rate);}var p=Promise.resolve(true);b.forEach(function(buf){p=p.then(function(ok){if(!ok)return false;if(tk!==PPT)return true;return enBuf(buf,rate);});});return p;}).catch(function(){return false;});}
 function ppSetupEn(v,st,again){try{navigator.storage.persist();}catch(e){}st(again?'Sérült modell, újra letöltöm...':'A hangmotor betöltése...',-1);
   return ppCall({t:'stored'}).then(function(r){if(r.list.indexOf(v)>=0)return;st('Hang letöltése...',0);return ppCall({t:'download',voice:v},function(p){st('Hang letöltése: '+(p[1]?Math.round(100*p[0]/p[1])+'%':Math.round(p[0]/1048576)+' MB'),p[1]?Math.min(100,100*p[0]/p[1]):-1);});})
   .then(function(){st('Előkészítés...',-1);return ppCall({t:'predict',text:'Good morning.',voice:v});}).then(function(){ppMark(v,true);})
@@ -3877,7 +3894,11 @@ function ppGen(text,v){var k='pp|'+v+'|'+text;if(PPFL[k])return PPFL[k];
 var PPS=Promise.resolve(),PPBUSY=false;
 function ppSerial(f){var r=PPS.then(f,f);PPS=r.then(function(){},function(){});return r;}
 function ppPre(text){if(!text||!ppHave()||!isAdm())return;var v=ppVoice();cvChunks(text).forEach(function(c){ppGen(c,v).catch(function(){});});}
-function ppSayAll(text,rate,alive){var p=Promise.resolve(true);cvChunks(text).forEach(function(c){p=p.then(function(ok){if(!ok)return false;if(alive&&!alive())return true;return ppPlay(c,rate);});});return p;}
+function ppSayAll(text,rate,alive){var cs=cvChunks(text);
+  if(cs.length>1){var t0=PPT,v0=ppVoice();window.ppErr=null;
+    return Promise.all(cs.map(function(c){return ppGen(c,v0);})).then(function(bs){if(t0!==PPT||(alive&&!alive()))return true;var j=wavJoin(bs,120);if(!j)return ppSeq(cs,rate,alive);return enBuf(j,rate>0?rate:1);}).catch(function(e){window.ppErr=e||{};if(!(e&&e.miss))PPBAD=true;return false;});}
+  return ppSeq(cs,rate,alive);}
+function ppSeq(cs,rate,alive){var p=Promise.resolve(true);cs.forEach(function(c){p=p.then(function(ok){if(!ok)return false;if(alive&&!alive())return true;return ppPlay(c,rate);});});return p;}
 function ppPlay(text,rate){var t=PPT,v=ppVoice();window.ppErr=null;
   return ppGen(text,v).then(function(buf){if(t!==PPT)return true;return new Promise(function(res){
     var u=URL.createObjectURL(new Blob([buf],{type:'audio/wav'})),a=new Audio(u),r=rate>0?rate:1;
@@ -3931,7 +3952,7 @@ function huList(){try{return (speechSynthesis.getVoices()||[]).filter(function(v
 function huVoice(){try{var h=huList(),sv=lsGet('szokartya-hvoice'),m=h.filter(function(v){return v.voiceURI===sv;})[0];return m||h.filter(function(v){return !v.localService;})[0]||h[0]||null;}catch(e){return null;}}
 function cvChunks(t){t=String(t||'').replace(/\s+/g,' ').trim();if(!t)return [];var out=[],parts=t.match(/[^.!?;:]+[.!?;:]*\s*/g)||[t];var cur='';parts.forEach(function(p){if((cur+p).length>160&&cur){out.push(cur.trim());cur=p;}else cur+=p;});if(cur.trim())out.push(cur.trim());return out;}
 function cvSayOne(text,lang){var cv=cvGet();
-  if(lang==='hu'&&text&&ppActive())return ppPlay(text,vrate).then(function(ok){if(ok)return;var m=document.getElementById('qMsg');if(m)m.textContent=ppErrText();return cvSayPhone(text,lang);});
+  if(lang==='hu'&&text&&ppActive())return ppSayAll(text,vrate).then(function(ok){if(ok)return;var m=document.getElementById('qMsg');if(m)m.textContent=ppErrText();return cvSayPhone(text,lang);});
   if(lang==='hu'&&text&&gtActive())return gtPlay(text,gtVoice()).then(function(ok){if(ok)return;var m=document.getElementById('qMsg');if(m)m.textContent=gtErrText();return cvSayPhone(text,lang);});
   return cvSayPhone(text,lang);}
 function cvSayPhone(text,lang){
@@ -3949,7 +3970,7 @@ function cvSayAll(segs,cancelFirst,tok){
   if(!('speechSynthesis' in window)){var m=document.getElementById('cvMsg');return Promise.resolve();}
   if(cancelFirst){try{speechSynthesis.cancel();}catch(e){}}
   if(cancelFirst)gtStop();
-  var list=[];segs.forEach(function(sg){(sg.l==='hu'&&gtActive()?[sg.t]:cvChunks(sg.t)).forEach(function(c){list.push({t:c,l:sg.l});});});
+  var list=[];segs.forEach(function(sg){(sg.l==='hu'&&(gtActive()||ppActive())?[sg.t]:cvChunks(sg.t)).forEach(function(c){list.push({t:c,l:sg.l});});});
   var p=Promise.resolve();
   list.forEach(function(x){p=p.then(function(){if(tok!==undefined&&!cvAlive(tok))return;return cvSayOne(x.t,x.l);});});
   return p;}
@@ -4614,7 +4635,7 @@ function loadVoices(){
   var saved=lsGet(VKEY);
   curVoice=voices.filter(function(v){return v.voiceURI===saved&&(acc==='gb'?/^en[-_]GB/i:/^en[-_]US/i).test(v.lang);})[0]||voices[0]||null;
 }
-function speak(t){var q=enNeed(t);if(!q){speakPhone(t);return;}try{speechSynthesis.cancel();}catch(e){}
+function speak(t){var q=enNeed(t);if(!q){speakPhone(t);return;}try{if(speechSynthesis.speaking||speechSynthesis.pending)speechSynthesis.cancel();}catch(e){}
   enPlay(t).then(function(ok){if(!ok){vmsg('Az angol Piper hang még nincs a telefonon, ezért most a telefon hangja szól.');speakPhone(t);}});}
 function speakPhone(t){
   if(!('speechSynthesis' in window)){vmsg('Ez a böngésző nem tud felolvasni.');return;}
@@ -4628,7 +4649,7 @@ function speakPhone(t){
     u.onstart=function(){started=true;vmsg('Szól: '+(curVoice?curVoice.name:'alapértelmezett hang'));};
     u.onerror=function(e){started=true;vmsg('Hiba: '+(e&&e.error?e.error:'ismeretlen')+'. Ha nem szól, próbáld a kimentett HTML-fájlt Chrome-ban.');};
     vmsg('');
-    speechSynthesis.cancel();speechSynthesis.speak(u);
+    if(speechSynthesis.speaking||speechSynthesis.pending)speechSynthesis.cancel();speechSynthesis.speak(u);
     setTimeout(function(){if(!started)vmsg('Nem indult el a hang ('+voices.length+' angol hang található). A Claude nézet valószínűleg letiltja a felolvasást: próbáld a kimentett HTML-fájlt Chrome-ban.');},1800);
   }catch(e){vmsg('A felolvasás nem indult el.');}
 }
@@ -5244,7 +5265,7 @@ try{if(navigator.connection&&navigator.connection.addEventListener)navigator.con
   function add(k,m){try{var a=get();a.push({t:Date.now(),k:k,m:String(m).slice(0,200)});if(a.length>200)a=a.slice(-200);lsSet(K,JSON.stringify(a));}catch(e){}}
   window.vlog=add;
   function fmt(t){var d=new Date(t),z=function(n){return ('0'+n).slice(-2);};return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes());}
-  var CH={v83:'Minden Gemini-hibánál (hozzáférés elvétele, kulcs hiánya, napi keret, szolgáltatás-hiba) ugyanaz: pásztázó sáv, háttérben újrapróbálás, gombok (Megpróbálom most, Kulcs megadása, Leállítás), angol elnézéskérés és automatikus válasz; ez a Helyesírásnál, Beküldés nyelvtanra, Javítás kérésénél és a mikrofon átírásnál is működik; egységes magyar hibaüzenetek',v69:'Hangok a privát tárból, a Worker közvetítésével',v70:'Gemini automatikus modellváltás, mikrofon-segítség, Karmester Gemini napló',v71:'Verzió-követő, GitHub kulcs háttérben (admin), „minden szó" a Hallgatásban, mai nap haladásának törlése, mentés-emlékeztető kivéve',v72:'Hallgatás: alapból a letöltött Piper hang (magyar és angol is), nem a telefoné',v82:'Ha a Gemini hibát ad beszélgetés közben: pásztázó sáv, háttérben újrapróbálás, a tanár angolul elnézést kér és automatikusan válaszol; a mikrofon átírás is újrapróbál; gyorsabb modellváltás (15 mp); a Worker nem számolja a hibás hívásokat',v81:'Egészség-ellenőrzés: a háttérben megadott GitHub kulcsot már a Workeren át ellenőrzi (nem adott hamis 401-et)',v80:'Gemini hang (felolvasás): a hangmodelleket a Google listájából választja, a nem működőt kihagyja, átvált a működőre, és a Karmester naplóba írja',v79:'Hangparancsok: a beállításokból kikerült, a „Hallgatlak” alatt látszik (3 sor + legördülő), máshol nincs utasítás',v78:'Hangos beszélgetés: a szövegdoboz beküldés után kiürül, és a következő mondatot várja (a beszélt szöveg csak a beszélgetés buborékban látszik)',v77:'Beszélgetés: adaptív (2 soros, lefelé növő) szövegdoboz, a beszélgetés nem görgethető kis ablakban, hanem az oldallal együtt nő; a mikrofon szöveg hamarabb jelenik meg (1,2 mp szünetnél)',v76:'Gemini állapotsor: az utolsó sikeres hívás ideje, admin hozzáférésnél a próba nem mond kulcsot, az éppen használt modell kiírva',v75:'Mikrofon: csendes felvétel (nincs pittyegés) minden funkciónál, ha van Google-kulcs vagy admin hozzáférés; a hang csak akkor megy a Geminihez, ha elküldöd vagy hosszabb csend után; sebesség a Karmester naplóban. Kulcs nélkül a böngésző felismerője marad',v74:'Gemini admin hozzáférés: élő állapotsor, a közös kulcs azonosítója, a Worker saját hibaüzenete, Worker CORS javítás (hangfeltöltés háttérkulccsal)',v73:'Gemini: a modelllistát magától lekéri, a rossz modelleket nem próbálja újra (csak ha egy jó sincs, akkor háttérben), a hibakódot kiírja'};
+  var CH={v84:'Piper hang: a kifejezés és a példamondat darabjait egyetlen hangfájllá fűzi, egyben játssza le (nincs dadogás, a Spotify nem áll le a darabok között); a telefon hangjánál nincs felesleges leállítás',v83:'Minden Gemini-hibánál (hozzáférés elvétele, kulcs hiánya, napi keret, szolgáltatás-hiba) ugyanaz: pásztázó sáv, háttérben újrapróbálás, gombok (Megpróbálom most, Kulcs megadása, Leállítás), angol elnézéskérés és automatikus válasz; ez a Helyesírásnál, Beküldés nyelvtanra, Javítás kérésénél és a mikrofon átírásnál is működik; egységes magyar hibaüzenetek',v69:'Hangok a privát tárból, a Worker közvetítésével',v70:'Gemini automatikus modellváltás, mikrofon-segítség, Karmester Gemini napló',v71:'Verzió-követő, GitHub kulcs háttérben (admin), „minden szó" a Hallgatásban, mai nap haladásának törlése, mentés-emlékeztető kivéve',v72:'Hallgatás: alapból a letöltött Piper hang (magyar és angol is), nem a telefoné',v82:'Ha a Gemini hibát ad beszélgetés közben: pásztázó sáv, háttérben újrapróbálás, a tanár angolul elnézést kér és automatikusan válaszol; a mikrofon átírás is újrapróbál; gyorsabb modellváltás (15 mp); a Worker nem számolja a hibás hívásokat',v81:'Egészség-ellenőrzés: a háttérben megadott GitHub kulcsot már a Workeren át ellenőrzi (nem adott hamis 401-et)',v80:'Gemini hang (felolvasás): a hangmodelleket a Google listájából választja, a nem működőt kihagyja, átvált a működőre, és a Karmester naplóba írja',v79:'Hangparancsok: a beállításokból kikerült, a „Hallgatlak” alatt látszik (3 sor + legördülő), máshol nincs utasítás',v78:'Hangos beszélgetés: a szövegdoboz beküldés után kiürül, és a következő mondatot várja (a beszélt szöveg csak a beszélgetés buborékban látszik)',v77:'Beszélgetés: adaptív (2 soros, lefelé növő) szövegdoboz, a beszélgetés nem görgethető kis ablakban, hanem az oldallal együtt nő; a mikrofon szöveg hamarabb jelenik meg (1,2 mp szünetnél)',v76:'Gemini állapotsor: az utolsó sikeres hívás ideje, admin hozzáférésnél a próba nem mond kulcsot, az éppen használt modell kiírva',v75:'Mikrofon: csendes felvétel (nincs pittyegés) minden funkciónál, ha van Google-kulcs vagy admin hozzáférés; a hang csak akkor megy a Geminihez, ha elküldöd vagy hosszabb csend után; sebesség a Karmester naplóban. Kulcs nélkül a böngésző felismerője marad',v74:'Gemini admin hozzáférés: élő állapotsor, a közös kulcs azonosítója, a Worker saját hibaüzenete, Worker CORS javítás (hangfeltöltés háttérkulccsal)',v73:'Gemini: a modelllistát magától lekéri, a rossz modelleket nem próbálja újra (csak ha egy jó sincs, akkor háttérben), a hibakódot kiírja'};
   function note(){var o=lsGet('szokartya-appv')||'';if(o!==APPV){add('app',(o?(o+' → '+APPV):('első indítás: '+APPV))+(CH[APPV]?': '+CH[APPV]:''));lsSet('szokartya-appv',APPV);}}
   async function wk(force){if(!isAdm())return '';var u='';try{u=pfUrl();}catch(e){}if(!u)return '';var last=parseInt(lsGet('szokartya-wkat')||'0',10);if(!force&&Date.now()-last<21600000)return '';
     try{var r=await fetch(u+'/status',{cache:'no-store'});if(!r.ok)return '';var j=await r.json(),n=String(j.kod||'');if(!n)return '';lsSet('szokartya-wkat',String(Date.now()));var o=lsGet('szokartya-wkod')||'';if(o!==n){add('worker',o?(o+' → '+n):('első mérés: '+n));lsSet('szokartya-wkod',n);}return n;}catch(e){return '';}}
@@ -5577,7 +5598,7 @@ async function pfOpen(key,u8){return JSON.parse(new TextDecoder().decode(await p
 async function pfDK(kek,meta){var raw=await pfAesDec(kek,pfB64d(meta.wk_pw));return {raw:raw,key:await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt'])};}
 async function pfRsaEnc(pubJwk,u8){var k=await crypto.subtle.importKey('jwk',pubJwk,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);return hsB64(new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},k,u8)));}
 async function pfEmEnc(em){try{var pb=await pfCall('/pub');if(pb&&pb.pub)return await pfRsaEnc(pb.pub,pfEnc(JSON.stringify({e:em})));}catch(e){}return '';}
-var APPV='v83';
+var APPV='v84';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
