@@ -3276,7 +3276,109 @@ var PICS=[
  svg:'<circle class="w" cx="110" cy="42" r="36"/><circle class="e" cx="96" cy="34" r="6"/><circle class="e" cx="124" cy="34" r="6"/><circle class="k" cx="96" cy="37" r="2.5"/><circle class="k" cx="124" cy="37" r="2.5"/><ellipse class="k" cx="110" cy="62" rx="20" ry="7"/><path class="a" d="M98 64Q98 100 110 100Q122 100 122 64Z"/><path class="w" d="M96 118L110 92L124 118Z"/><path class="l" d="M110 92V78"/><rect class="s" x="110" y="76" width="42" height="18" rx="3"/><text x="131" y="89" text-anchor="middle" class="t2" style="font-size:12px">szó</text>'}
 ];
 DATA.forEach(function(d,i){if(PICS[i]){d.svg=PICS[i].svg;d.cap=PICS[i].cap;}});
-var CATS={fam:{n:'Család',c:'#c0262d'},env:{n:'Környezet',c:'#2f8f5b'},srv:{n:'Szolgáltatások',c:'#2a6fb0'},work:{n:'Munka',c:'#b8650f'},edu:{n:'Tanulás',c:'#7a4fb0'},idi:{n:'Kifejezések',c:'#18898f'},soc:{n:'Társadalom',c:'#b0447a'},trv:{n:'Utazás',c:'#54a654'},hou:{n:'Lakóhely',c:'#8eb021'},hea:{n:'Egészség',c:'#1a75b8'},eat:{n:'Étkezés',c:'#4bc4e0'}};
+/* v87: új témakör (Sport) és átnevezett kártyák (az azonosító megmarad, így a tanulási állapot is) */
+[{cat:'spo',hu:'<b>ritmikus sportgimnasztika</b>',front:'I think synchronised swimming and '+BL+' are rather forms of art than sport.',
+ en:'rhythmic gymnastics',back:'I think synchronised swimming and '+A('rhythmic gymnastics')+' are rather forms of art than sport.'},
+{cat:'spo',hu:'<b>(meg)büntet vkit vmiért</b>',front:'I think it is silly when a footballer is '+BL+' taking off his jersey after scoring a goal.',
+ en:'to penalize sb for sth',back:'I think it is silly when a footballer is '+A('penalized for')+' taking off his jersey after scoring a goal.'},
+{cat:'spo',hu:'<b>kimerítő</b>',front:'Running the marathon must be a '+BL+' experience, not to mention races like Ironman.',
+ en:'gruelling',back:'Running the marathon must be a '+A('gruelling')+' experience, not to mention races like Ironman.'},
+{cat:'spo',hu:'<b>selejtező</b>',front:'The '+BL+' for the Olympic games can be nailbiting events.',
+ en:'qualifying round',back:'The '+A('qualifying rounds')+' for the Olympic games can be nailbiting events.'},
+{cat:'spo',hu:'<b>kültéri/beltéri sport</b>',front:'I much prefer '+BL+' to indoor sports because of the fresh air and a feeling of freedom.',
+ en:'outdoor/indoor sport',back:'I much prefer '+A('outdoor sports')+' to indoor sports because of the fresh air and a feeling of freedom.'},
+{cat:'spo',hu:'<b>műkorcsolya</b>',front:'I don\'t watch sports on TV as a rule but I do enjoy watching '+BL+', especially ice dancing.',
+ en:'figure skating',back:'I don\'t watch sports on TV as a rule but I do enjoy watching '+A('figure skating')+', especially ice dancing.'},
+{cat:'spo',hu:'<b>játszik vki ellen</b>',front:'The Chicago Bulls '+BL+' the LA Lakers last night and the match was really exiting.',
+ en:'to play / play against sb',back:'The Chicago Bulls '+A('played')+' the LA Lakers last night and the match was really exiting.'},
+{cat:'spo',hu:'<b>rendkívül izgalmas, nagyon érdekfeszítő</b>',front:'Nowadays I often find Formula One quite boring, but yesterday\'s race was a '+BL+' event with so many drivers overtaking others.',
+ en:'nailbiting',back:'Nowadays I often find Formula One quite boring, but yesterday\'s race was a '+A('nailbiting')+' event with so many drivers overtaking others.'},
+{cat:'spo',hu:'<b>lebukik doppingvizsgálaton</b>',front:'The world champion was deprived of his gold medal because of '+BL+'.',
+ en:'to fail the dope test',back:'The world champion was deprived of his gold medal because of '+A('failing the dope test')+'.'},
+{cat:'spo',hu:'<b>vmilyen csapatban játszik</b>',front:'I am sad my favourite player doesn\'t '+BL+' my town\'s '+BL+' any more, but also proud he got a contract abroad.',
+ en:'to play for a team',back:'I am sad my favourite player doesn\'t '+A('play for')+' my town\'s '+A('team')+' any more, but also proud he got a contract abroad.'},
+{cat:'spo',hu:'<b>mez</b>',front:'Sport has become so commercialized that even the '+BL+' are crawling with the logos of sponsors.',
+ en:'jersey/strip',back:'Sport has become so commercialized that even the '+A('jerseys')+' are crawling with the logos of sponsors.'},
+{cat:'spo',hu:'<b>kitűnik/kiemelkedik vmiben</b>',front:'Hungarian athletes '+BL+' all kinds of water sports, like swimming, water polo, kayaking and canoeing.',
+ en:'to excel in/at sth',back:'Hungarian athletes '+A('excel in')+' all kinds of water sports, like swimming, water polo, kayaking and canoeing.'},
+{cat:'spo',hu:'<b>strandlabdázik</b>',front:'In summer we go to Lake Balaton, and there we swim and '+BL+' almost every day.',
+ en:'to play beach ball',back:'In summer we go to Lake Balaton, and there we swim and '+A('play beach ball')+' almost every day.'},
+{cat:'spo',hu:'<b>egymás után</b>',front:'Hungary won Olympic gold in water polo three times '+BL+'.',
+ en:'in a row',back:'Hungary won Olympic gold in water polo three times '+A('in a row')+'.'},
+{cat:'spo',hu:'<b>döntetlent játszik</b>',front:'In the company\'s house championship, our team '+BL+' one-one with accounts.',
+ en:'to draw',back:'In the company\'s house championship, our team '+A('drew')+' one-one with accounts.',irr:'draw, drew, drawn',note:'döntetlent játszik'},
+{cat:'spo',hu:'<b>öttusa</b>',front:BL+' is a very demanding sport since it requires so many skills and abilities in addition to stamina.',
+ en:'pentathlon',back:A('Pentathlon')+' is a very demanding sport since it requires so many skills and abilities in addition to stamina.'},
+{cat:'spo',hu:'<b>kapufát lő</b>',front:'I was really disappointed when my favourite footballer '+BL+' and we lost the game.',
+ en:'to hit the goalpost',back:'I was really disappointed when my favourite footballer '+A('hit the goalpost')+' and we lost the game.',irr:'hit, hit, hit'},
+{cat:'spo',hu:'<b>elliptikus tréner</b>',front:'I bought a '+BL+' because it keeps my whole body fit.',
+ en:'cross-trainer',back:'I bought a '+A('cross-trainer')+' because it keeps my whole body fit.'},
+{cat:'spo',hu:'<b>sífutás</b>',front:'If there was more snow, I\'d try '+BL+' because it moves so many muscles.',
+ en:'cross-country skiing',back:'If there was more snow, I\'d try '+A('cross-country skiing')+' because it moves so many muscles.'},
+{cat:'spo',hu:'<b>küzdősportok</b>',front:'I think that '+BL+', especially martial arts, can teach children a lot about discipline.',
+ en:'combat sports',back:'I think that '+A('combat sports')+', especially martial arts, can teach children a lot about discipline.'},
+{cat:'spo',hu:'<b>mellúszás/gyorsúszás</b>',front:'I can do '+BL+' and backstroke but I haven\'t mastered butterfly or '+BL+' yet.',
+ en:'breaststroke / the crawl',back:'I can do '+A('breaststroke')+' and backstroke but I haven\'t mastered butterfly or '+A('the crawl')+' yet.'},
+{cat:'spo',hu:'<b>mezei sífutás</b>',front:'I chose '+BL+' because it is not as boring as running on tracks and puts little stress on the joints.',
+ en:'cross-country running',back:'I chose '+A('cross-country running')+' because it is not as boring as running on tracks and puts little stress on the joints.'},
+{cat:'spo',hu:'<b>edző</b>',front:'In my opinion, not all good players make good '+BL+'.',
+ en:'coach',back:'In my opinion, not all good players make good '+A('coaches')+'.'},
+{cat:'spo',hu:'<b>szabályt sért</b>',front:'It really upsets me when a Formula One driver is not penalized for '+BL+'.',
+ en:'to break the rules',back:'It really upsets me when a Formula One driver is not penalized for '+A('breaking the rules')+'.',irr:'break, broke, broken'},
+{cat:'spo',hu:'<b>versenyző</b>',front:'I admire the '+BL+' at big sports events. They must have worked hard to get that far.',
+ en:'competitor',back:'I admire the '+A('competitors')+' at big sports events. They must have worked hard to get that far.'},
+{cat:'spo',hu:'<b>buzdít vkit</b>',front:'The spectators rose to '+BL+' the marathon runners '+BL+' when they entered the stadium.',
+ en:'to cheer sb on',back:'The spectators rose to '+A('cheer')+' the marathon runners '+A('on')+' when they entered the stadium.'},
+{cat:'spo',hu:'<b>megdönti a világrekordot</b>',front:'I\'m amazed how often swimmers '+BL+' at the Olympic Games.',
+ en:'to beat the world record',back:'I\'m amazed how often swimmers '+A('beat world records')+' at the Olympic Games.',irr:'beat, beat, beaten'},
+{cat:'spo',hu:'<b>közösségi sportesemény</b>',front:'I think more '+BL+', like the Vivicittá, should be organised to get more people interested in doing sports.',
+ en:'community sports event',back:'I think more '+A('community sports events')+', like the Vivicittá, should be organised to get more people interested in doing sports.'},
+{cat:'spo',hu:'<b>bajnokság</b>',front:'I don\'t really like it when a penalty shoot-out decides a '+BL+'.',
+ en:'championship',back:'I don\'t really like it when a penalty shoot-out decides a '+A('championship')+'.'},
+{cat:'spo',hu:'<b>legyőz, megver vkit</b>',front:'Our team '+BL+' its biggest rival four times in a row.',
+ en:'to beat sb',back:'Our team '+A('has beaten')+' its biggest rival four times in a row.',irr:'beat, beat, beaten',note:'ver'},
+{cat:'spo',hu:'<b>stafétabot/váltó</b>',front:'It must be devastating to drop the '+BL+' when running a '+BL+'.',
+ en:'baton/relay',back:'It must be devastating to drop the '+A('baton')+' when running a '+A('relay')+'.'},
+{cat:'spo',hu:'<b>görkorcsolya (egysoros)</b>',front:'My favourite sport is skating but the ice rink in our town closes for summer, so then I skate in my '+BL+' instead.',
+ en:'rollerblade',back:'My favourite sport is skating but the ice rink in our town closes for summer, so then I skate in my '+A('rollerblades')+' instead.'},
+{cat:'spo',hu:'<b>szurkoló</b>',front:'I am an avid '+BL+' of our town\'s handball team and never miss a match.',
+ en:'supporter',back:'I am an avid '+A('supporter')+' of our town\'s handball team and never miss a match.'},
+{cat:'spo',hu:'<b>hajlékony</b>',front:'I do yoga exercises to keep my body '+BL+' and fit.',
+ en:'supple',back:'I do yoga exercises to keep my body '+A('supple')+' and fit.'},
+{cat:'spo',hu:'<b>vízilabda</b>',front:'I always look forward to watching '+BL+' at the Olympics since the Hungarian team is a constant favourite.',
+ en:'water polo',back:'I always look forward to watching '+A('water polo')+' at the Olympics since the Hungarian team is a constant favourite.'},
+{cat:'spo',hu:'<b>cserejátékos</b>',front:'We were surprised when a '+BL+' scored two goals at the end of the match.',
+ en:'substitute',back:'We were surprised when a '+A('substitute')+' scored two goals at the end of the match.'},
+{cat:'spo',hu:'<b>hódeszkázás</b>',front:'In winter we go skiing to the mountains and next year I\'ll try '+BL+' as well.',
+ en:'snowboarding',back:'In winter we go skiing to the mountains and next year I\'ll try '+A('snowboarding')+' as well.'},
+{cat:'spo',hu:'<b>helyszín</b>',front:'The Football World Cup is often played at '+BL+' quite far from each other.',
+ en:'venue',back:'The Football World Cup is often played at '+A('venues')+' quite far from each other.'},
+{cat:'spo',hu:'<b>állóképesség</b>',front:'You need lots of '+BL+' to endure a race in tropical weather conditions.',
+ en:'stamina',back:'You need lots of '+A('stamina')+' to endure a race in tropical weather conditions.'},
+{cat:'spo',hu:'<b>szabadesés ejtőernyővel</b>',front:'I\'d never dare try extreme sports like '+BL+' or bungee jumping.',
+ en:'skydiving',back:'I\'d never dare try extreme sports like '+A('skydiving')+' or bungee jumping.'},
+{cat:'spo',hu:'<b>totó</b>',front:'It is a pity that the possibility to win money on '+BL+' has led to cheating in many countries.',
+ en:'the pools',back:'It is a pity that the possibility to win money on '+A('the pools')+' has led to cheating in many countries.'},
+{cat:'spo',hu:'<b>sportszerű</b>',front:'It is not very '+BL+' to injure other players to win a match.',
+ en:'sportsmanlike',back:'It is not very '+A('sportsmanlike')+' to injure other players to win a match.'},
+{cat:'spo',hu:'<b>gördeszkázás</b>',front:'I think '+BL+' should be done at skate parks and not on the streets.',
+ en:'skateboarding',back:'I think '+A('skateboarding')+' should be done at skate parks and not on the streets.'},
+{cat:'spo',hu:'<b>csapat/konstruktőr (F1)</b>',front:'I think Ferrari must be the most successful '+BL+' of all time.',
+ en:'team/constructor',back:'I think Ferrari must be the most successful '+A('team')+' of all time.'},
+{cat:'spo',hu:'<b>sportcsarnok</b>',front:'The new '+BL+' has a variety of amenities for both the spectators and the athletes.',
+ en:'sports hall',back:'The new '+A('sports hall')+' has a variety of amenities for both the spectators and the athletes.'},
+{cat:'spo',hu:'<b>kapura lő</b>',front:'It is infuriating when a footballer '+BL+' the ball straight at the goalkeeper instead of passing.',
+ en:'to shoot',back:'It is infuriating when a footballer '+A('shoots')+' the ball straight at the goalkeeper instead of passing.',irr:'shoot, shot, shot',note:'lő'},
+{cat:'spo',hu:'<b>csapatszellem</b>',front:'Playing team sports is one of the best ways of developing '+BL+' and learning how to cooperate.',
+ en:'team spirit',back:'Playing team sports is one of the best ways of developing '+A('team spirit')+' and learning how to cooperate.'},
+{cat:'spo',hu:'<b>támogatói szerződés</b>',front:'Sportsmen can get a lot of money from '+BL+'.',
+ en:'sponsorship deal',back:'Sportsmen can get a lot of money from '+A('sponsorship deals')+'.'},
+{cat:'spo',hu:'<b>büntetőt kivéd</b>',front:'The goalkeeper '+BL+' the second-half '+BL+' and we won the match two-one.',
+ en:'to save a penalty',back:'The goalkeeper '+A('saved')+' the second-half '+A('penalty')+' and we won the match two-one.'}].forEach(function(o){DATA.push(o);});
+[{k:'to inherit sth from sb',id:'to-inherit-sth-from-sb',en:'to inherit sth from sy',front:'One of my cousins '+BL+' a convenience store '+BL+' a relative, and can\'t decide whether to give up his job and run it or sell it.',back:'One of my cousins '+A('inherited')+' a convenience store '+A('from')+' a relative, and can\'t decide whether to give up his job and run it or sell it.'},
+{k:'naming ceremony',id:'naming-ceremony',en:'name giving ceremony',front:'In western European countries, '+BL+' are getting more and more popular instead of christenings.',back:'In western European countries, '+A('name giving ceremonies')+' are getting more and more popular instead of christenings.'},
+{k:'to marinate steak',id:'to-marinate-steak',en:'to marinade steak',front:'On the day before a grill party, my husband always '+BL+' the '+BL+', so they are really tasty and melt in your mouth.',back:'On the day before a grill party, my husband always '+A('marinades')+' the '+A('steaks')+', so they are really tasty and melt in your mouth.'}].forEach(function(p){DATA.forEach(function(d){if(d.en===p.k){d.id=p.id;d.en=p.en;d.front=p.front;d.back=p.back;}});});
+var CATS={fam:{n:'Család',c:'#c0262d'},env:{n:'Környezet',c:'#2f8f5b'},srv:{n:'Szolgáltatások',c:'#2a6fb0'},work:{n:'Munka',c:'#b8650f'},edu:{n:'Tanulás',c:'#7a4fb0'},idi:{n:'Kifejezések',c:'#18898f'},spo:{n:'Sport',c:'#5d69b1'},soc:{n:'Társadalom',c:'#b0447a'},trv:{n:'Utazás',c:'#54a654'},hou:{n:'Lakóhely',c:'#8eb021'},hea:{n:'Egészség',c:'#1a75b8'},eat:{n:'Étkezés',c:'#4bc4e0'}};
 var CAT_ORDER=['fam','env','env','env','env','srv','srv','srv','srv','work','edu','idi'];
 DATA.forEach(function(d,i){d.cat=d.cat||CAT_ORDER[i]||'idi';});
 function band(d){var c=CATS[d.cat],s=st[d.id]&&st[d.id].s;return '<div class="band" style="background:'+c.c+'"><span>'+c.n+'</span><button type="button" class="star" aria-label="Csillagozás" aria-pressed="'+(s?'true':'false')+'">'+(s?'\u2605':'\u2606')+'</button></div>';}
@@ -3301,7 +3403,7 @@ function mapSvg(d){
 }
 var KEY='szokartya-v2',OLD='szokartya-v1',st={},DAY=864e5,MIN=6e4;
 function slug(t){return t.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
-DATA.forEach(function(d){d.id=slug(d.en);});
+DATA.forEach(function(d){d.id=d.id||slug(d.en);});
 function rd(k){try{return JSON.parse(localStorage.getItem(k)||'null');}catch(e){return null;}}
 st=rd(KEY);
 if(!st){st={};var old=rd(OLD);if(old){DATA.forEach(function(d,i){if(old[i]){st[d.id]=old[i];st[d.id].t=old[i].seen?Date.now():0;}});}}
@@ -5285,7 +5387,7 @@ try{if(navigator.connection&&navigator.connection.addEventListener)navigator.con
   function add(k,m){try{var a=get();a.push({t:Date.now(),k:k,m:String(m).slice(0,200)});if(a.length>200)a=a.slice(-200);lsSet(K,JSON.stringify(a));}catch(e){}}
   window.vlog=add;
   function fmt(t){var d=new Date(t),z=function(n){return ('0'+n).slice(-2);};return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes());}
-  var CH={v86:'A Piper és Gemini hang Web Audióval szól, így a háttérzene (Spotify) tovább szól, és nem áll le; a hang erőssége állítható; a felolvasás-egységek beállítása megszűnt (Hang beállítása, Részletek)',v84:'Piper hang: a kifejezés és a példamondat darabjait egyetlen hangfájllá fűzi, egyben játssza le (nincs dadogás, a Spotify nem áll le a darabok között); a telefon hangjánál nincs felesleges leállítás',v83:'Minden Gemini-hibánál (hozzáférés elvétele, kulcs hiánya, napi keret, szolgáltatás-hiba) ugyanaz: pásztázó sáv, háttérben újrapróbálás, gombok (Megpróbálom most, Kulcs megadása, Leállítás), angol elnézéskérés és automatikus válasz; ez a Helyesírásnál, Beküldés nyelvtanra, Javítás kérésénél és a mikrofon átírásnál is működik; egységes magyar hibaüzenetek',v69:'Hangok a privát tárból, a Worker közvetítésével',v70:'Gemini automatikus modellváltás, mikrofon-segítség, Karmester Gemini napló',v71:'Verzió-követő, GitHub kulcs háttérben (admin), „minden szó" a Hallgatásban, mai nap haladásának törlése, mentés-emlékeztető kivéve',v72:'Hallgatás: alapból a letöltött Piper hang (magyar és angol is), nem a telefoné',v82:'Ha a Gemini hibát ad beszélgetés közben: pásztázó sáv, háttérben újrapróbálás, a tanár angolul elnézést kér és automatikusan válaszol; a mikrofon átírás is újrapróbál; gyorsabb modellváltás (15 mp); a Worker nem számolja a hibás hívásokat',v81:'Egészség-ellenőrzés: a háttérben megadott GitHub kulcsot már a Workeren át ellenőrzi (nem adott hamis 401-et)',v80:'Gemini hang (felolvasás): a hangmodelleket a Google listájából választja, a nem működőt kihagyja, átvált a működőre, és a Karmester naplóba írja',v79:'Hangparancsok: a beállításokból kikerült, a „Hallgatlak” alatt látszik (3 sor + legördülő), máshol nincs utasítás',v78:'Hangos beszélgetés: a szövegdoboz beküldés után kiürül, és a következő mondatot várja (a beszélt szöveg csak a beszélgetés buborékban látszik)',v77:'Beszélgetés: adaptív (2 soros, lefelé növő) szövegdoboz, a beszélgetés nem görgethető kis ablakban, hanem az oldallal együtt nő; a mikrofon szöveg hamarabb jelenik meg (1,2 mp szünetnél)',v76:'Gemini állapotsor: az utolsó sikeres hívás ideje, admin hozzáférésnél a próba nem mond kulcsot, az éppen használt modell kiírva',v75:'Mikrofon: csendes felvétel (nincs pittyegés) minden funkciónál, ha van Google-kulcs vagy admin hozzáférés; a hang csak akkor megy a Geminihez, ha elküldöd vagy hosszabb csend után; sebesség a Karmester naplóban. Kulcs nélkül a böngésző felismerője marad',v74:'Gemini admin hozzáférés: élő állapotsor, a közös kulcs azonosítója, a Worker saját hibaüzenete, Worker CORS javítás (hangfeltöltés háttérkulccsal)',v73:'Gemini: a modelllistát magától lekéri, a rossz modelleket nem próbálja újra (csak ha egy jó sincs, akkor háttérben), a hibakódot kiírja'};
+  var CH={v87:'Új témakör: Sport (49 kártya, memóriatrükk még nincs hozzájuk); három kártya átnevezve (to inherit sth from sy, name giving ceremony, to marinade steak), a tanulási állapotuk megmarad',v86:'A Piper és Gemini hang Web Audióval szól, így a háttérzene (Spotify) tovább szól, és nem áll le; a hang erőssége állítható; a felolvasás-egységek beállítása megszűnt (Hang beállítása, Részletek)',v84:'Piper hang: a kifejezés és a példamondat darabjait egyetlen hangfájllá fűzi, egyben játssza le (nincs dadogás, a Spotify nem áll le a darabok között); a telefon hangjánál nincs felesleges leállítás',v83:'Minden Gemini-hibánál (hozzáférés elvétele, kulcs hiánya, napi keret, szolgáltatás-hiba) ugyanaz: pásztázó sáv, háttérben újrapróbálás, gombok (Megpróbálom most, Kulcs megadása, Leállítás), angol elnézéskérés és automatikus válasz; ez a Helyesírásnál, Beküldés nyelvtanra, Javítás kérésénél és a mikrofon átírásnál is működik; egységes magyar hibaüzenetek',v69:'Hangok a privát tárból, a Worker közvetítésével',v70:'Gemini automatikus modellváltás, mikrofon-segítség, Karmester Gemini napló',v71:'Verzió-követő, GitHub kulcs háttérben (admin), „minden szó" a Hallgatásban, mai nap haladásának törlése, mentés-emlékeztető kivéve',v72:'Hallgatás: alapból a letöltött Piper hang (magyar és angol is), nem a telefoné',v82:'Ha a Gemini hibát ad beszélgetés közben: pásztázó sáv, háttérben újrapróbálás, a tanár angolul elnézést kér és automatikusan válaszol; a mikrofon átírás is újrapróbál; gyorsabb modellváltás (15 mp); a Worker nem számolja a hibás hívásokat',v81:'Egészség-ellenőrzés: a háttérben megadott GitHub kulcsot már a Workeren át ellenőrzi (nem adott hamis 401-et)',v80:'Gemini hang (felolvasás): a hangmodelleket a Google listájából választja, a nem működőt kihagyja, átvált a működőre, és a Karmester naplóba írja',v79:'Hangparancsok: a beállításokból kikerült, a „Hallgatlak” alatt látszik (3 sor + legördülő), máshol nincs utasítás',v78:'Hangos beszélgetés: a szövegdoboz beküldés után kiürül, és a következő mondatot várja (a beszélt szöveg csak a beszélgetés buborékban látszik)',v77:'Beszélgetés: adaptív (2 soros, lefelé növő) szövegdoboz, a beszélgetés nem görgethető kis ablakban, hanem az oldallal együtt nő; a mikrofon szöveg hamarabb jelenik meg (1,2 mp szünetnél)',v76:'Gemini állapotsor: az utolsó sikeres hívás ideje, admin hozzáférésnél a próba nem mond kulcsot, az éppen használt modell kiírva',v75:'Mikrofon: csendes felvétel (nincs pittyegés) minden funkciónál, ha van Google-kulcs vagy admin hozzáférés; a hang csak akkor megy a Geminihez, ha elküldöd vagy hosszabb csend után; sebesség a Karmester naplóban. Kulcs nélkül a böngésző felismerője marad',v74:'Gemini admin hozzáférés: élő állapotsor, a közös kulcs azonosítója, a Worker saját hibaüzenete, Worker CORS javítás (hangfeltöltés háttérkulccsal)',v73:'Gemini: a modelllistát magától lekéri, a rossz modelleket nem próbálja újra (csak ha egy jó sincs, akkor háttérben), a hibakódot kiírja'};
   function note(){var o=lsGet('szokartya-appv')||'';if(o!==APPV){add('app',(o?(o+' → '+APPV):('első indítás: '+APPV))+(CH[APPV]?': '+CH[APPV]:''));lsSet('szokartya-appv',APPV);}}
   async function wk(force){if(!isAdm())return '';var u='';try{u=pfUrl();}catch(e){}if(!u)return '';var last=parseInt(lsGet('szokartya-wkat')||'0',10);if(!force&&Date.now()-last<21600000)return '';
     try{var r=await fetch(u+'/status',{cache:'no-store'});if(!r.ok)return '';var j=await r.json(),n=String(j.kod||'');if(!n)return '';lsSet('szokartya-wkat',String(Date.now()));var o=lsGet('szokartya-wkod')||'';if(o!==n){add('worker',o?(o+' → '+n):('első mérés: '+n));lsSet('szokartya-wkod',n);}return n;}catch(e){return '';}}
@@ -5619,7 +5721,7 @@ async function pfOpen(key,u8){return JSON.parse(new TextDecoder().decode(await p
 async function pfDK(kek,meta){var raw=await pfAesDec(kek,pfB64d(meta.wk_pw));return {raw:raw,key:await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt'])};}
 async function pfRsaEnc(pubJwk,u8){var k=await crypto.subtle.importKey('jwk',pubJwk,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);return hsB64(new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},k,u8)));}
 async function pfEmEnc(em){try{var pb=await pfCall('/pub');if(pb&&pb.pub)return await pfRsaEnc(pb.pub,pfEnc(JSON.stringify({e:em})));}catch(e){}return '';}
-var APPV='v86';
+var APPV='v87';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
