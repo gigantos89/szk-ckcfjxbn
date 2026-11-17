@@ -4026,7 +4026,7 @@ function ppMark(v,on){var a=ppDlSet().filter(function(x){return x!==v;});if(on)a
 function ppActive(){return hgGet()==='p'&&cvGet().hv==='hu'&&ppHave()&&!PPBAD;}
 function ppLs(){return (lsGet(PPHL)||'p')==='p'&&ppHave()&&!PPBAD;}
 function ppErrText(){var e=window.ppErr;return 'A letöltött magyar hang nem indult el'+(e&&e.message?' ('+String(e.message).slice(0,90)+')':'')+', ezért a telefon hangja szól.';}
-var PGTEST=false;
+var PGTEST=false,PGSTEP=7000;
 function ppGen(text,v){if(PGTEST)return (PPPAR>1?ppCall({t:'predict',text:text,voice:v}):ppSerial(function(){return ppCall({t:'predict',text:text,voice:v});})).then(function(r){return r.buf;});var k='pp|'+v+'|'+text;if(PPFL[k])return PPFL[k];
   var p=gtGetC(k).then(function(c){if(c)return c;if(!isAdm()){var me=new Error('nincs a hangtárban');me.miss=1;throw me;}return (PPPAR>1?ppCall({t:'predict',text:text,voice:v}):ppSerial(function(){return ppCall({t:'predict',text:text,voice:v});})).then(function(r){return gtPutC(k,r.buf).then(function(){return r.buf;});});});
   PPFL[k]=p;var d=function(){delete PPFL[k];};p.then(d,d);return p;}
@@ -5447,10 +5447,10 @@ async function pgPlan(){var keys=new Set(await hAllKeys()),texts=pgTexts(),vs=pg
   evs.forEach(function(v){etx.forEach(function(t){if(!keys.has('pp|'+v+'|'+t)){todo.push([v,t]);chars+=t.length;}});});
   var have=0;keys.forEach(function(k){if(k.indexOf('pp|')===0)have++;});try{lsSet('szokartya-pn',String(have));}catch(e){}
   return {todo:todo,total:texts.length*vs.length+etx.length*evs.length,chars:chars,voices:vs.concat(evs)};}
-async function pgRun(plan,tick){PG.run=true;PG.stop=false;PG.pause=false;var n=plan.todo.length,fail=0,t0=Date.now(),done=0,last=null,skipped=0,vf={},bad={},next=0,fin=0,giveup=false,par=Math.max(1,ppParN()),auto=ppParMode()==='a',LV=(function(){var a=[];for(var q=1;q<=par;q++)a.push(q);return a;})(),li0=auto?0:par-1,cur=LV[li0]||1,wN=0,wT=Date.now(),prevR=0,dir=0,locked=false,lockT=0,ceil=par,skipW=1,bat=null,_lt=0,_tk=tick;PG.peak=cur;PG.rate=0;tick=function(i,n2,ms){var nw=Date.now();if(nw-_lt>=1000||i>=n2){_lt=nw;PG.peak=Math.max(PG.peak||1,cur);PG.rate=i>2?Math.round(i*60000/Math.max(1,ms)):0;try{var lv=document.getElementById('pgLive');if(lv){lv.hidden=false;lv.textContent='Most: '+cur+' hangmotor (kb. '+(cur*0.6).toFixed(1)+' GB RAM) · Csúcs: '+PG.peak+' hangmotor (kb. '+(PG.peak*0.6).toFixed(1)+' GB) · Határ: '+par+' · Sebesség: '+(PG.rate?PG.rate+' hang/perc':'mérés...');}}catch(e){}_tk(i,n2,ms);}};PPLIM=cur;PG.cur=cur;PG.max=par;wake();try{if(navigator.getBattery)navigator.getBattery().then(function(b){bat=b;});}catch(e){}
+async function pgRun(plan,tick){PG.run=true;PG.stop=false;PG.pause=false;var n=plan.todo.length,fail=0,t0=Date.now(),done=0,last=null,skipped=0,vf={},bad={},next=0,fin=0,giveup=false,par=Math.max(1,ppParN()),auto=ppParMode()==='a',LV=(function(){var a=[];for(var q=1;q<=par;q++)a.push(q);return a;})(),li0=auto?0:par-1,cur=LV[li0]||1,wN=0,wT=Date.now(),prevR=0,dir=0,locked=false,lockT=0,ceil=par,skipW=Date.now()+4000,bat=null,_lt=0,_tk=tick;PG.peak=cur;PG.rate=0;tick=function(i,n2,ms){var nw=Date.now();if(nw-_lt>=1000||i>=n2){_lt=nw;PG.peak=Math.max(PG.peak||1,cur);PG.rate=i>2?Math.round(i*60000/Math.max(1,ms)):0;try{var lv=document.getElementById('pgLive');if(lv){lv.hidden=false;lv.textContent='Most: '+cur+' hangmotor (kb. '+(cur*0.6).toFixed(1)+' GB RAM) · Csúcs: '+PG.peak+' hangmotor (kb. '+(PG.peak*0.6).toFixed(1)+' GB) · Határ: '+par+' · Sebesség: '+(PG.rate?PG.rate+' hang/perc':'mérés...');}}catch(e){}_tk(i,n2,ms);}};PPLIM=cur;PG.cur=cur;PG.max=par;wake();try{if(navigator.getBattery)navigator.getBattery().then(function(b){bat=b;});}catch(e){}
   lsSet('szokartya-parlive',String(cur));try{var dv=ppDev();klog('hang','generálás indul: '+n+' hang; telefon: '+dv.hw+' mag, '+dv.mem+' GB; '+(auto?'automata, alulról felfelé, legfeljebb '+par+' szál, indulás '+cur+' szállal':par+' szál'));}catch(e){}
   function lim(){var c=cur;if(auto&&bat&&!bat.charging&&bat.level<0.2)c=Math.min(c,2);return Math.max(1,Math.min(c,PPPAR));}
-  function setCur(i,why){if(i<0||i>=LV.length||LV[i]===cur)return;li0=i;cur=LV[i];PPLIM=cur;PG.cur=cur;skipW=1;lsSet('szokartya-parlive',String(cur));try{klog('hang',cur+' szál ('+why+')');}catch(e){}}
+  function setCur(i,why){if(i<0||i>=LV.length||LV[i]===cur)return;li0=i;cur=LV[i];PPLIM=cur;PG.cur=cur;skipW=Date.now()+4000;wN=0;wT=Date.now();lsSet('szokartya-parlive',String(cur));try{klog('hang',cur+' szál ('+why+')');}catch(e){}}
   function adjust(rate){var now=Date.now();
     if(!prevR){prevR=rate;if(cur<par&&li0+1<ceil&&!locked){dir=1;setCur(li0+1,'gyorsítás, '+Math.round(rate)+' hang/perc');}return;}
     if(dir>0){dir=0;if(rate>=prevR*1.08){prevR=rate;if(cur<par&&li0+1<ceil){dir=1;setCur(li0+1,'gyorsabb lett: '+Math.round(rate)+' hang/perc');}else{locked=true;lockT=now;}}else{locked=true;lockT=now;prevR=rate;setCur(li0-1,'nincs nyereség, visszaveszek: '+Math.round(rate)+' hang/perc');}}
@@ -5465,14 +5465,14 @@ async function pgRun(plan,tick){PG.run=true;PG.stop=false;PG.pause=false;var n=p
   try{navigator.storage.persist();}catch(e){}lsSet('szokartya-pgrun','1');
   PPPAR=PPWK?par:1;
   function sl(ms){return new Promise(function(r){setTimeout(r,ms);});}
-  async function lane(li){if(li>0)await sl(li*5000);
+  async function lane(li){if(li>0)await sl(li*1500);
     while(!PG.stop&&!giveup){
       while(!PG.stop&&li>=lim()&&next<n)await sl(500);
       while(PG.pause&&!PG.stop)await sl(400);
       if(PG.stop)break;
       var i=next++;if(i>=n)break;var v=plan.todo[i][0];
       if(bad[v]){skipped++;fin++;tick(fin,n,Date.now()-t0);continue;}
-      try{await ppGen(plan.todo[i][1],v);done++;fail=0;vf[v]=0;if(PGSYNC&&done%10===0)PGSYNC();if(auto&&++wN>=8){var nw=Date.now();if(skipW>0)skipW--;else adjust(wN*60000/Math.max(1,nw-wT));wN=0;wT=nw;}}
+      try{await ppGen(plan.todo[i][1],v);done++;fail=0;vf[v]=0;if(PGSYNC&&done%10===0)PGSYNC();if(auto){var nw=Date.now();if(nw<skipW){wN=0;wT=nw;}else if(++wN>=3&&nw-wT>=PGSTEP){adjust(wN*60000/Math.max(1,nw-wT));wN=0;wT=nw;}}}
       catch(e){fail++;last=e;skipped++;if(fail<=3)try{klog('hang','hiba: '+String(e&&e.message||e).slice(0,100));}catch(x){}vf[v]=(vf[v]||0)+1;if(vf[v]>=5)bad[v]=1;if(fail>=30){giveup=true;}if(PPPAR<=1){try{ppReset();}catch(x){}}}
       fin++;tick(fin,n,Date.now()-t0);}}
   var lanes=[];for(var k=0;k<PPPAR;k++)lanes.push(lane(k));
@@ -5673,7 +5673,7 @@ async function hLoad(fl,over,prog){var dec=new TextDecoder(),have=over?null:new 
     if(PG.run||PPBUSY||!isAdm())return;
     var vs=pgVoices();if(!vs.length){msg.textContent='Teszthez kell egy letöltött Piper hang: Hang beállítása, Magyar hang, letöltött (Piper).';return;}
     var base=pgTexts();if(!base.length){msg.textContent='Nincs mintaszöveg a teszthez.';return;}
-    var N=120,pl={todo:[],total:N,chars:0,voices:[vs[0]]};for(var q=0;q<N;q++)pl.todo.push([vs[0],base[q%base.length]]);
+    var N=240,pl={todo:[],total:N,chars:0,voices:[vs[0]]};for(var q=0;q<N;q++)pl.todo.push([vs[0],base[q%base.length]]);
     PGTEST=true;PGSYNC=null;go.disabled=tb.disabled=true;pa.disabled=sp.disabled=false;bar.hidden=false;bar.value=0;
     var t0=Date.now(),peak=1,r;
     try{klog('hang','TESZT indul: '+N+' mintamondat, nem ment a tárba');}catch(e){}
@@ -5767,7 +5767,7 @@ async function pfOpen(key,u8){return JSON.parse(new TextDecoder().decode(await p
 async function pfDK(kek,meta){var raw=await pfAesDec(kek,pfB64d(meta.wk_pw));return {raw:raw,key:await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt'])};}
 async function pfRsaEnc(pubJwk,u8){var k=await crypto.subtle.importKey('jwk',pubJwk,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);return hsB64(new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},k,u8)));}
 async function pfEmEnc(em){try{var pb=await pfCall('/pub');if(pb&&pb.pub)return await pfRsaEnc(pb.pub,pfEnc(JSON.stringify({e:em})));}catch(e){}return '';}
-var APPV='v90';
+var APPV='v91';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
