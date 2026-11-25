@@ -404,6 +404,7 @@ body:has(.rw) #kBars{display:none!important}
     <details class="backup" id="trBox" hidden><summary>Szavak fordítása (példamondatok, admin)</summary>
     <p>A Gemini kártyánként egyszer elkészíti a példamondat szavainak és kifejezéseinek mondatbeli magyar jelentését. A kész táblázatot a Hangtárba menti, a többi felhasználó onnan tölti le. Csak admin generálhat. A táblázatot CSV-ben letöltheted (Excelben megnyitható), javíthatod, és visszatöltheted; a kézzel javított sorokat az újragenerálás nem írja felül.</p>
     <div class="vrow"><select id="trLim" aria-label="Generálási limit"><option value="10">Egy futásban: 10 kártya</option><option value="25">Egy futásban: 25 kártya</option><option value="50">Egy futásban: 50 kártya</option><option value="100">Egy futásban: 100 kártya</option><option value="200">Egy futásban: 200 kártya</option><option value="0">Egy futásban: az összes hiányzó</option></select></div>
+    <div class="vrow"><select id="trAuto" aria-label="Automatikus indítás"><option value="1">Automatikus indítás adminként: bekapcsolva (belépéskor magától elindul)</option><option value="0">Automatikus indítás: kikapcsolva (csak a Generálás gombbal)</option></select></div>
     <p class="msg" id="trStat"></p>
     <div class="vrow"><button class="reset" id="trGo" type="button">Generálás</button><button class="reset" id="trStop" type="button" disabled>Leállítás</button></div>
     <progress id="trBar" max="100" value="0" hidden style="width:100%"></progress>
@@ -5748,7 +5749,12 @@ async function hLoad(fl,over,prog){var dec=new TextDecoder(),have=over?null:new 
   var box=document.getElementById('trBox');if(!box)return;
   var lim=document.getElementById('trLim'),go=document.getElementById('trGo'),sp=document.getElementById('trStop'),bar=document.getElementById('trBar'),msg=document.getElementById('trMsg'),st=document.getElementById('trStat'),xl=document.getElementById('trXls'),im=document.getElementById('trImp'),imi=document.getElementById('trImpIn'),up=document.getElementById('trUp'),dl=document.getElementById('trDl');
   var G={run:false,ctl:null};
-  function trUi(){box.hidden=!isAdm();}window.trUi=trUi;trUi();
+  var tau=document.getElementById('trAuto');if(tau){tau.value=lsGet('szokartya-trauto')==='0'?'0':'1';tau.addEventListener('change',function(){lsSet('szokartya-trauto',tau.value);});}
+  function trSched(){if(window.__trSch||lsGet('szokartya-trauto')==='0')return;window.__trSch=1;setTimeout(function(){trAuto(0);},15000);}
+  function trAuto(tries){if(lsGet('szokartya-trauto')==='0'||!isAdm()||G.run)return;
+    if((PG.run||PPBUSY)&&tries<30){setTimeout(function(){trAuto(tries+1);},60000);return;}
+    if(!gGet().key||!cands().list.length)return;run(true);}
+  function trUi(){box.hidden=!isAdm();if(isAdm())trSched();}window.trUi=trUi;trUi();
   var _ar=applyRole;applyRole=function(){var r=_ar.apply(this,arguments);try{trUi();}catch(e){}return r;};
   lim.value=lsGet('szokartya-trlim')||'50';if(!lim.value)lim.value='50';
   lim.addEventListener('change',function(){lsSet('szokartya-trlim',lim.value);});
@@ -5764,11 +5770,12 @@ async function hLoad(fl,over,prog){var dec=new TextDecoder(),have=over?null:new 
       out.push([idx,String(x.l||'').trim().slice(0,80),h.slice(0,120),String(x.w||'').trim().slice(0,120),String(x.t||'word').slice(0,10),0]);}
     for(var i=0;i<N;i++)if(!seen[i])return null;out.sort(function(a,b){return a[0][0]-b[0][0];});return out;}
   function busy(b){go.disabled=b;sp.disabled=!b;xl.disabled=im.disabled=up.disabled=dl.disabled=b;}
-  async function run(){
-    if(G.run||!isAdm())return;
+  async function run(auto){
+    if(G.run||!isAdm())return;auto=auto===true;
     var c=cands(),n=+lim.value,list=n>0?c.list.slice(0,n):c.list;
     if(!list.length){msg.textContent='Minden kártya kész, nincs mit generálni.';return;}
     if(!gGet().key){msg.textContent='A generáláshoz Gemini kulcs kell (Beállítások, Gemini).';return;}
+    if(auto){try{toast5('Szófordítás indul a háttérben: '+list.length+' kártya');}catch(e){}}
     TR=TR||{v:1,t:0,c:{}};G.run=true;G.ctl={cancel:0};busy(true);bar.hidden=false;bar.value=0;wake();
     var done=0,fail=0,t0=Date.now(),stopped=false,err='';
     try{klog('fordítás','generálás indul: '+list.length+' kártya');}catch(e){}
@@ -5786,8 +5793,9 @@ async function hLoad(fl,over,prog){var dec=new TextDecoder(),have=over?null:new 
     G.run=false;busy(false);sp.disabled=true;bar.hidden=true;stat();
     msg.textContent=(stopped&&err?'Megállt: '+err+' ':G.ctl.cancel?'Leállítva. ':'Kész. ')+done+' kártya elkészült'+(fail?', '+fail+' kihagyva (érvénytelen válasz)':'')+'.'+tx;
     try{klog('fordítás','vége: '+done+' kész, '+fail+' kihagyva'+(err?'; '+err:''));}catch(e){}
+    if(auto&&done){try{toast5('Szófordítás kész: '+done+' kártya'+(u8&&!/hiba/.test(tx)?', feltöltve':''));}catch(e){}}
     try{wtLate();}catch(e){}}
-  go.addEventListener('click',run);
+  go.addEventListener('click',function(){run(false);});
   sp.addEventListener('click',function(){if(G.ctl)G.ctl.cancel=1;});
   function csvEsc(v){v=String(v==null?'':v);return /[;"\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
   var HDR=['kártya_id','angol kifejezés','mondat','szóindexek','szó a mondatban','szótári alak','mondatbeli jelentés','szó szerinti','típus','státusz','mondat_hash'];
@@ -5902,7 +5910,7 @@ async function pfOpen(key,u8){return JSON.parse(new TextDecoder().decode(await p
 async function pfDK(kek,meta){var raw=await pfAesDec(kek,pfB64d(meta.wk_pw));return {raw:raw,key:await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt'])};}
 async function pfRsaEnc(pubJwk,u8){var k=await crypto.subtle.importKey('jwk',pubJwk,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);return hsB64(new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},k,u8)));}
 async function pfEmEnc(em){try{var pb=await pfCall('/pub');if(pb&&pb.pub)return await pfRsaEnc(pb.pub,pfEnc(JSON.stringify({e:em})));}catch(e){}return '';}
-var APPV='v93';
+var APPV='v94';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
