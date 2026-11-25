@@ -40,6 +40,8 @@ h1{font-size:1.2rem;margin:0}
 .blank{display:inline-block;min-width:3.2em;border-bottom:2px dotted var(--muted);margin:0 .1em}
 .hint{align-self:flex-end;color:var(--muted);font-size:1rem;margin-top:auto}
 .ans{font-weight:700;color:var(--red)}
+.wtk{display:inline-block;vertical-align:top;cursor:pointer}.wtk::after{content:attr(data-t);display:block;height:0;overflow:hidden;visibility:hidden;font-weight:700}.wtk.wtsel{font-weight:700}.wtk.wtsel .wtc{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
+.wbar{height:2.8em;margin:.45rem 0;text-align:center;line-height:1.4;overflow:hidden}.wbar .w1,.wbar .w2{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wbar .w2{font-size:.85rem;color:var(--muted)}
 .note{background:var(--note-bg);border-radius:6px;padding:10px 12px;font-size:.95rem;line-height:1.45}
 .note small{display:block;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-size:.72rem;margin-bottom:2px}
 .map{width:100%}
@@ -269,6 +271,7 @@ body:has(.rw) #kBars{display:none!important}
     <div class="vrow"><select id="rateSel" aria-label="Sebesség"><option value="0.9">Sebesség: normál</option><option value="0.7">Sebesség: lassú</option></select></div>
     <div class="vrow"><select id="autoSel" aria-label="Mikor olvasson fel"><option value="0">Csak gombnyomásra</option><option value="1">Magától, amikor megfordul a kártya</option></select></div>
     <div class="vrow"><select id="huCSel" aria-label="Magyar kifejezés felolvasása"><option value="b">Magyar kifejezés a tanulásnál: gombnyomásra szól</option><option value="a">Magyar kifejezés a tanulásnál: magától felolvassa</option><option value="0">Magyar kifejezés a tanulásnál: nem szól</option></select></div>
+    <div class="vrow"><select id="wtSel" aria-label="Szavak koppintása a példamondatban"><option value="1">Szavak koppintása a példamondatban: bekapcsolva (fordítás a szóra koppintva)</option><option value="0">Szavak koppintása a példamondatban: kikapcsolva</option></select></div>
     <div class="vrow"><select id="whatSel" aria-label="Mit olvasson fel"><option value="w">Csak a szó / kifejezés</option><option value="s">Kifejezés + példamondat</option></select></div>
     <p class="msg" id="voiceMsg" role="status"></p>
   
@@ -398,6 +401,16 @@ body:has(.rw) #kBars{display:none!important}
     <p class="msg" id="xMsg" role="status"></p>
   </details>
     <div class="vrow"><input class="hsin" type="text" id="pfUrl" aria-label="Profil szerver" placeholder="Profil szerver címe (haladó, üresen hagyható)" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+    <details class="backup" id="trBox" hidden><summary>Szavak fordítása (példamondatok, admin)</summary>
+    <p>A Gemini kártyánként egyszer elkészíti a példamondat szavainak és kifejezéseinek mondatbeli magyar jelentését. A kész táblázatot a Hangtárba menti, a többi felhasználó onnan tölti le. Csak admin generálhat. A táblázatot CSV-ben letöltheted (Excelben megnyitható), javíthatod, és visszatöltheted; a kézzel javított sorokat az újragenerálás nem írja felül.</p>
+    <div class="vrow"><select id="trLim" aria-label="Generálási limit"><option value="10">Egy futásban: 10 kártya</option><option value="25">Egy futásban: 25 kártya</option><option value="50">Egy futásban: 50 kártya</option><option value="100">Egy futásban: 100 kártya</option><option value="200">Egy futásban: 200 kártya</option><option value="0">Egy futásban: az összes hiányzó</option></select></div>
+    <p class="msg" id="trStat"></p>
+    <div class="vrow"><button class="reset" id="trGo" type="button">Generálás</button><button class="reset" id="trStop" type="button" disabled>Leállítás</button></div>
+    <progress id="trBar" max="100" value="0" hidden style="width:100%"></progress>
+    <p class="msg" id="trMsg" role="status"></p>
+    <div class="vrow"><button class="reset" id="trXls" type="button">Táblázat letöltése (CSV)</button><button class="reset" id="trImp" type="button">Táblázat betöltése (CSV)</button><input type="file" id="trImpIn" accept=".csv,.txt,text/csv" hidden></div>
+    <div class="vrow"><button class="reset" id="trUp" type="button">Feltöltés a Hangtárba</button><button class="reset" id="trDl" type="button">Letöltés a Hangtárból</button></div>
+  </details>
     <details class="backup" id="pgBox"><summary>Hangok előre elkészítése</summary>
     <p>Elkészíti és eltárolja a telefonon a magyar szavak és a beszélgetés magyar mondatainak hangját az összes kártyához, hogy lejátszáskor ne kelljen várni. Előbb töltsd le a Piper hangot (Hang beállítása). Közben tartsd nyitva az appot, érdemes töltőre tenni a telefont. Ha a Hangtárban el van mentve a GitHub kulcs, a kész hangokat 10 hangonként automatikusan feltölti a Hangtárba, induláskor pedig automatikusan letölti a már feltöltötteket, így megszakadás után onnan folytatódik.</p>
     <div class="vrow"><select id="pgWho" aria-label="Mely hangokkal"><option value="s">Mely hangokkal: a kiválasztott hanggal</option><option value="a">Mely hangokkal: az összes letöltött hanggal</option></select></div>
@@ -3540,7 +3553,7 @@ function pick(){
 function stats(){
   var now=Date.now(),n=0,du=0,dn=0;
   var I0=dueInfo(null);du=I0.el.length+(I0.soon>=0?1:0);DATA.forEach(function(d,i){var c=SI(i);if(c.ivl>=1)dn++;});
-  n=SET.limit?(newToday()+'/'+SET.limit+(SET.xd===dkey(now)&&SET.x?'+'+SET.x:'')):String(newToday());
+  n=SET.limit?(newDone()+'/'+SET.limit+(SET.xd===dkey(now)&&SET.x?'+'+SET.x:'')):String(newDone());
   document.getElementById('sNew').textContent=n;document.getElementById('sDue').textContent=du;document.getElementById('sDone').textContent=dn;
   buildModeSel();if(window.fillCat)fillCat();
 }
@@ -4535,6 +4548,47 @@ function showView(v){
   if(v==='study'){var nm=document.getElementById('modeName'),s=document.getElementById('modeSel');buildModeSel();var op=s.options[s.selectedIndex];nm.textContent=op?op.textContent.replace(/\s*\(\d+\)$/,''):'';}
   if(v==='q'){renderQ();}else if(v==='listen'){renderL();}else if(v==='free'){renderF();}else render();try{window.scrollTo(0,0);}catch(e){}
 }
+/* ===== v93: koppintható példamondat + előre generált szófordítás ===== */
+var WTON=lsGet('szokartya-wt')!=='0',TR=null,WT={ok:0,sel:-1,map:[],e:null,cores:[]};
+var WTSRC='([^\\s\\p{L}\\p{N}]*)([\\p{L}\\p{N}]+(?:[\'’\\-][\\p{L}\\p{N}]+)*)([^\\s\\p{L}\\p{N}]*)';
+function wtRe(){return new RegExp(WTSRC,'gu');}
+function wtToks(t){var a=[],m,re=wtRe();while((m=re.exec(t)))a.push(m[2]);return a;}
+function wtHash(d){return hsHash(plain(d.back||''));}
+function wtPhraseOf(cores,idx){var s='',p=-2;idx.forEach(function(i){s+=(p===-2?'':(i===p+1?' ':' … '))+cores[i];p=i;});return s;}
+function wtWrap(p){var n=0,tw=document.createTreeWalker(p,NodeFilter.SHOW_TEXT),nodes=[],x;while((x=tw.nextNode()))nodes.push(x);
+  nodes.forEach(function(nd){var t=nd.nodeValue,re=wtRe(),m,last=0,fr=document.createDocumentFragment(),any=false;
+    while((m=re.exec(t))){any=true;if(m.index>last)fr.appendChild(document.createTextNode(t.slice(last,m.index)));
+      var s=document.createElement('span');s.className='wtk';s.setAttribute('data-i',String(n++));s.setAttribute('data-t',m[0]);
+      if(m[1])s.appendChild(document.createTextNode(m[1]));var c=document.createElement('span');c.className='wtc';c.textContent=m[2];s.appendChild(c);if(m[3])s.appendChild(document.createTextNode(m[3]));
+      fr.appendChild(s);last=m.index+m[0].length;}
+    if(!any)return;if(last<t.length)fr.appendChild(document.createTextNode(t.slice(last)));nd.parentNode.replaceChild(fr,nd);});
+  return n;}
+function wtInit(d,dir){WT={ok:0,sel:-1,map:[],e:null,cores:[]};if(!WTON||!TR||!TR.c||!d)return;var e=TR.c[d.id];if(!e||e.h!==wtHash(d))return;
+  var pt=plain(d.back||''),cores=wtToks(pt),N=cores.length,map=[];if(!N)return;
+  e.u.forEach(function(u,k){u[0].forEach(function(i){map[i]=k;});});for(var i=0;i<N;i++)if(map[i]==null)return;
+  var ps=[stage.querySelector('.face.back .sent')];if(dir==='en')ps.push(stage.querySelector('.face.front .sent'));var done=0;
+  ps.forEach(function(p){if(!p||p.querySelector('.wtk'))return;var h0=p.innerHTML,n=wtWrap(p);if(n!==N){p.innerHTML=h0;return;}var b=document.createElement('div');b.className='wbar';b.setAttribute('aria-live','polite');p.parentNode.insertBefore(b,p);done++;});
+  if(done){WT={ok:1,sel:-1,map:map,e:e,cores:cores};fit();}}
+function wtClear(){WT.sel=-1;stage.querySelectorAll('.wtk.wtsel').forEach(function(x){x.classList.remove('wtsel');});stage.querySelectorAll('.wbar').forEach(function(b){b.innerHTML='';});}
+function wtTap(el){if(!WT.ok)return;var i=+el.getAttribute('data-i'),k=WT.map[i];if(k==null)return;
+  var face=stage.querySelector(flipped?'.face.back':'.face.front');if(!face)return;var was=WT.sel===k;wtClear();if(was){fit();return;}
+  WT.sel=k;var u=WT.e.u[k];face.querySelectorAll('.wtk').forEach(function(x){if(u[0].indexOf(+x.getAttribute('data-i'))>=0)x.classList.add('wtsel');});
+  var b=face.querySelector('.wbar');if(b){var ph=wtPhraseOf(WT.cores,u[0]),lm=u[1]&&u[1].toLowerCase()!==ph.toLowerCase()?esc(u[1])+' · ':'';
+    b.innerHTML='<span class="w1"><b>'+esc(ph)+'</b> → '+esc(u[2])+'</span><span class="w2">'+lm+(u[3]?'szó szerint: '+esc(u[3]):'')+'</span>';}
+  fit();}
+function wtLate(){try{if(typeof cur==='number'&&cur>=0&&document.getElementById('drag')&&!WT.ok&&!document.querySelector('#drag .wtk'))wtInit(DATA[cur],effDir());}catch(e){}}
+async function trPack(o){var u=new TextEncoder().encode(JSON.stringify(o));try{if(window.CompressionStream){var b=new Uint8Array(await new Response(new Blob([u]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer()),r=new Uint8Array(b.length+1);r[0]=1;r.set(b,1);return r;}}catch(e){}var r2=new Uint8Array(u.length+1);r2[0]=0;r2.set(u,1);return r2;}
+async function trUnpack(buf){var u=new Uint8Array(buf);if(u.length<2)return null;var body=u.subarray(1);if(u[0]===1)body=new Uint8Array(await new Response(new Blob([body]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());return JSON.parse(new TextDecoder().decode(body));}
+function trAb(u8){return u8.buffer.slice(u8.byteOffset,u8.byteOffset+u8.byteLength);}
+async function trLoad(){try{var b=await gtGetC('tr|v1');if(b){var o=await trUnpack(b);if(o&&o.c)TR=o;}}catch(e){}}
+async function trSaveLocal(){TR.t=Date.now();var u8=await trPack(TR);await gtPutC('tr|v1',trAb(u8));return u8;}
+async function trUpload(u8){if(!hsHasKey())return 'A Hangtárba feltöltéshez add meg a GitHub kulcsot.';
+  async function getSha(){var r=await hsApi('b_ford.bin?ref=main&_='+Date.now(),{cache:'no-store'});if(r.ok)return (await r.json()).sha;if(r.status===404)return null;throw new Error('GitHub '+r.status);}
+  var sha=await getSha();
+  for(var at=0;;at++){try{await hsPut('b_ford.bin',u8,sha,'szófordítások');return '';}catch(e){if(!/\b(409|422)\b/.test(String(e&&e.message))||at>=3)throw e;await new Promise(function(r){setTimeout(r,700*(at+1));});sha=await getSha();}}}
+async function trFetch(force){if(!WTON)return 0;var k=dkey(Date.now());if(!force&&lsGet('szokartya-trd')===k)return 0;
+  var buf=await hsFetch('b_ford.bin',true);lsSet('szokartya-trd',k);var o=await trUnpack(buf);if(!o||!o.c)return 0;if(TR&&TR.t&&o.t&&TR.t>=o.t)return 0;
+  TR=o;await gtPutC('tr|v1',trAb(new Uint8Array(buf)));wtLate();return Object.keys(o.c).length;}
 function render(){
   if(VIEW==='q'||VIEW==='listen'){return;}
   if(VIEW==='home'){stats();buildHome();return;}
@@ -4564,7 +4618,7 @@ function render(){
   '<div class="face back">'+band(d)+'<div class="body"><p class="term"><b>'+d.en+'</b><button type="button" class="say" aria-label="Kiejtés meghallgatása">'+SAYSVG+'</button></p>'+(dir!=='hu'?'<p class="hu2">'+d.hu+(HUC!=='0'?'<button type="button" class="say sayhu" aria-label="Magyar kifejezés meghallgatása">'+SAYSVG+'</button>':'')+'</p>':'')+'<div id="res"></div><p class="sent">'+d.back+'</p>'+
   (d.irr?'<div class="note"><small>Rendhagyó alakok</small>'+d.irr+'</div>':'')+(d.note?'<div class="note"><small>Egyéni információ</small>'+esc(d.note).replace(/\n/g,'<br>')+'</div>':'')+
   picHtml(d)+tricksHtml(d)+(d.items&&d.items.length?'<div class="map">'+mapSvg(d)+'</div>':'')+'</div></div></div></div></div>';
-  setRates();bindDrag();fit();
+  setRates();bindDrag();fit();wtInit(d,dir);
   stage.querySelectorAll('.say').forEach(function(b){if(!('speechSynthesis' in window)){b.remove();return;}b.addEventListener('click',function(){if(b.classList.contains('sayhu')){cardSayHu();return;}speak(b.classList.contains('sayf')?sayText(DATA[cur]):sayTarget(DATA[cur]));});});
   stage.querySelectorAll('.star').forEach(function(b){b.addEventListener('click',function(){
     var c=S(DATA[cur].id);c.s=c.s?0:1;c.t=Date.now();save();
@@ -4582,7 +4636,7 @@ function fit(){
 window.addEventListener('resize',fit);
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fit);
 function flip(){
-  if(cur<0||busy)return;flipped=!flipped;
+  if(cur<0||busy)return;flipped=!flipped;try{wtClear();}catch(e){}
   document.getElementById('card').classList.toggle('flipped',flipped);fit();window.RTP=flipped?1:0;clearTimeout(window.RTT);if(flipped)window.RTT=setTimeout(function(){window.RTP=0;setRates();},480);setRates();
   if(flipped){var ci=cur,huA=HUC==='a'&&effDir()!=='hu';
     if(AUTO&&'speechSynthesis' in window&&typeof speak==='function')speak(sayTarget(DATA[cur]),huA?function(){if(cur===ci&&flipped)cardSayHu();}:null);
@@ -4691,8 +4745,8 @@ function rate(r){
   setTimeout(function(){render();toTop();checkReward();setTimeout(function(){maybeAskQ(kc);},600);},200);
 }
 function bindDrag(){
-  var el=document.getElementById('drag'),sx=0,dx=0,down=false,moved=false;
-  el.addEventListener('pointerdown',function(e){if(e.target.closest&&e.target.closest(flipped?'.say,.star':'.say,.star,.typ'))return;down=true;moved=false;sx=e.clientX;dx=0;el.classList.add('free');try{el.setPointerCapture(e.pointerId);}catch(x){}});
+  var el=document.getElementById('drag'),sx=0,dx=0,down=false,moved=false,tapTok=null;
+  el.addEventListener('pointerdown',function(e){if(e.target.closest&&e.target.closest(flipped?'.say,.star':'.say,.star,.typ'))return;down=true;moved=false;sx=e.clientX;dx=0;tapTok=(WT.ok&&e.target.closest)?e.target.closest('.wtk'):null;el.classList.add('free');try{el.setPointerCapture(e.pointerId);}catch(x){}});
   el.addEventListener('pointermove',function(e){
     if(!down)return;dx=e.clientX-sx;
     if(Math.abs(dx)>8)moved=true;
@@ -4700,7 +4754,7 @@ function bindDrag(){
   });
   function end(){
     if(!down)return;down=false;el.classList.remove('free');
-    if(!moved){el.style.transform='';flip();return;}
+    if(!moved){el.style.transform='';if(tapTok&&WT.ok){var tk=tapTok;tapTok=null;wtTap(tk);return;}flip();return;}
     if(Math.abs(dx)>90){
       if(flipped){rate(dx>0?2:0);return;}
       el.style.transform='';flip();return;
@@ -5689,6 +5743,87 @@ async function hLoad(fl,over,prog){var dec=new TextDecoder(),have=over?null:new 
   dl.addEventListener('click',async function(){if(PG.run)return;if(!armed||Date.now()-armed>4000){armed=Date.now();msg.textContent='Biztosan törlöd az összes elkészített Piper hangot? Nyomd meg még egyszer.';return;}armed=0;var n=await pgClearAll(false);try{lsSet('szokartya-pn','0');}catch(e){}msg.textContent=n+' hang törölve, a hely felszabadult.';});
 })();
 (function(){
+  var ws=document.getElementById('wtSel');if(ws){ws.value=WTON?'1':'0';ws.addEventListener('change',function(){WTON=ws.value==='1';lsSet('szokartya-wt',WTON?'1':'0');if(!WTON){try{wtClear();}catch(e){}}});}
+  trLoad().then(function(){wtLate();try{stat();}catch(e){}setTimeout(function(){trFetch(false).catch(function(){});},7000);});
+  var box=document.getElementById('trBox');if(!box)return;
+  var lim=document.getElementById('trLim'),go=document.getElementById('trGo'),sp=document.getElementById('trStop'),bar=document.getElementById('trBar'),msg=document.getElementById('trMsg'),st=document.getElementById('trStat'),xl=document.getElementById('trXls'),im=document.getElementById('trImp'),imi=document.getElementById('trImpIn'),up=document.getElementById('trUp'),dl=document.getElementById('trDl');
+  var G={run:false,ctl:null};
+  function trUi(){box.hidden=!isAdm();}window.trUi=trUi;trUi();
+  var _ar=applyRole;applyRole=function(){var r=_ar.apply(this,arguments);try{trUi();}catch(e){}return r;};
+  lim.value=lsGet('szokartya-trlim')||'50';if(!lim.value)lim.value='50';
+  lim.addEventListener('change',function(){lsSet('szokartya-trlim',lim.value);});
+  function cands(){var out=[],tot=0,ok=0,old=0;DATA.forEach(function(d){if(!wtToks(plain(d.back||'')).length)return;tot++;var e=TR&&TR.c&&TR.c[d.id];if(e&&e.h===wtHash(d)){ok++;return;}if(e)old++;out.push(d);});return {list:out,tot:tot,ok:ok,old:old};}
+  function stat(){var c=cands();st.textContent='Kész: '+c.ok+' / '+c.tot+' kártya'+(c.old?' ('+c.old+' elavult, újragenerálható)':'')+'. Hátra: '+c.list.length+'.';}
+  window.trStat=stat;stat();
+  function mkPrompt(d,toks){return {sys:'You help Hungarian learners of English. You get an English sentence split into numbered words. Group the words into meaningful units: single words or multi-word expressions (phrasal verbs, idioms, fixed phrases, collocations such as "deal with", "as a rule", "turn off", "look forward to"). The parts of one unit may be non-adjacent (e.g. "turn the light off" -> turn + off). EVERY word index must appear in exactly one unit. For each unit return: i = array of word indexes in ascending order; l = dictionary form in English (e.g. "deal with"); h = the meaning of the unit IN THIS SENTENCE in Hungarian, short and natural (1-6 words, with the suffix or object marker a learner needs, e.g. "megbirkózik valamivel"); w = the literal word-for-word Hungarian translation (short); t = one of "word","phrase","idiom","phrasal","function" (function = article, preposition, auxiliary or pronoun standing alone). Use the card expression and its Hungarian meaning as context: the unit that contains the card expression must be translated consistently with that meaning. Return ONLY JSON: {"u":[{"i":[0],"l":"...","h":"...","w":"...","t":"word"}]}',
+    user:JSON.stringify({sentence:plain(d.back),words:toks.map(function(w,i){return i+':'+w;}),card_expression:plain(d.en||''),card_meaning_hu:plain(d.hu||'')})};}
+  function valid(o,N){if(!o||!Array.isArray(o.u))return null;var seen=[],out=[];
+    for(var k=0;k<o.u.length;k++){var x=o.u[k];if(!x||!Array.isArray(x.i))continue;
+      var idx=x.i.map(Number).filter(function(i){return Number.isInteger(i)&&i>=0&&i<N&&!seen[i];});if(!idx.length)continue;
+      idx.sort(function(a,b){return a-b;});var h=String(x.h==null?'':x.h).trim();if(!h)return null;idx.forEach(function(i){seen[i]=1;});
+      out.push([idx,String(x.l||'').trim().slice(0,80),h.slice(0,120),String(x.w||'').trim().slice(0,120),String(x.t||'word').slice(0,10),0]);}
+    for(var i=0;i<N;i++)if(!seen[i])return null;out.sort(function(a,b){return a[0][0]-b[0][0];});return out;}
+  function busy(b){go.disabled=b;sp.disabled=!b;xl.disabled=im.disabled=up.disabled=dl.disabled=b;}
+  async function run(){
+    if(G.run||!isAdm())return;
+    var c=cands(),n=+lim.value,list=n>0?c.list.slice(0,n):c.list;
+    if(!list.length){msg.textContent='Minden kártya kész, nincs mit generálni.';return;}
+    if(!gGet().key){msg.textContent='A generáláshoz Gemini kulcs kell (Beállítások, Gemini).';return;}
+    TR=TR||{v:1,t:0,c:{}};G.run=true;G.ctl={cancel:0};busy(true);bar.hidden=false;bar.value=0;wake();
+    var done=0,fail=0,t0=Date.now(),stopped=false,err='';
+    try{klog('fordítás','generálás indul: '+list.length+' kártya');}catch(e){}
+    for(var i=0;i<list.length&&!G.ctl.cancel&&!stopped;i++){var d=list[i],toks=wtToks(plain(d.back)),res=null;
+      for(var at=0;at<2&&!res;at++){
+        try{var j=await gPatient(function(){return gCall(gGet(),mkPrompt(d,toks));},{ctl:G.ctl,alive:function(){return G.run;},onWait:function(e,cat){msg.textContent='Várakozás a Geminire ('+done+' / '+list.length+'): '+gHuman(e).slice(0,140);}});res=valid(j,toks.length);}
+        catch(e){if(!(e&&e.code==='cancel'))err=gHuman(e);stopped=true;break;}}
+      if(res){TR.c[d.id]={h:wtHash(d),u:res};done++;}else if(!stopped){fail++;try{klog('fordítás','érvénytelen válasz: '+d.id);}catch(e){}}
+      bar.value=100*(i+1)/list.length;var el=Date.now()-t0,eta=Math.round(el/(i+1)*(list.length-i-1)/60000);
+      msg.textContent='Generálás: '+(i+1)+' / '+list.length+(fail?' · kihagyva: '+fail:'')+(i>2?' · még kb. '+eta+' perc':'');
+      if(done&&done%10===0){try{await trSaveLocal();}catch(e){}}}
+    var u8=null,tx='';
+    try{if(done){u8=await trSaveLocal();}}catch(e){tx=' Helyi mentési hiba: '+String(e&&e.message||e).slice(0,80);}
+    if(u8){try{var ue=await trUpload(u8);tx+=ue?' '+ue:' A Hangtárba feltöltve.';}catch(e){tx+=' Feltöltési hiba: '+String(e&&e.message||e).slice(0,100)+' (a helyi táblázat megvan, a Feltöltés gombbal újra próbálhatod).';}}
+    G.run=false;busy(false);sp.disabled=true;bar.hidden=true;stat();
+    msg.textContent=(stopped&&err?'Megállt: '+err+' ':G.ctl.cancel?'Leállítva. ':'Kész. ')+done+' kártya elkészült'+(fail?', '+fail+' kihagyva (érvénytelen válasz)':'')+'.'+tx;
+    try{klog('fordítás','vége: '+done+' kész, '+fail+' kihagyva'+(err?'; '+err:''));}catch(e){}
+    try{wtLate();}catch(e){}}
+  go.addEventListener('click',run);
+  sp.addEventListener('click',function(){if(G.ctl)G.ctl.cancel=1;});
+  function csvEsc(v){v=String(v==null?'':v);return /[;"\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+  var HDR=['kártya_id','angol kifejezés','mondat','szóindexek','szó a mondatban','szótári alak','mondatbeli jelentés','szó szerinti','típus','státusz','mondat_hash'];
+  xl.addEventListener('click',function(){if(!isAdm()||!TR||!TR.c){msg.textContent='Még nincs mit letölteni.';return;}
+    var rows=[HDR.join(';')],n=0;DATA.forEach(function(d){var e=TR.c[d.id];if(!e||e.h!==wtHash(d))return;var cores=wtToks(plain(d.back));n++;
+      e.u.forEach(function(u){rows.push([d.id,plain(d.en),plain(d.back),u[0].join(' '),wtPhraseOf(cores,u[0]),u[1],u[2],u[3],u[4],u[5]?'kézi':'gen',e.h].map(csvEsc).join(';'));});});
+    var bl=new Blob(['﻿'+rows.join('\r\n')],{type:'text/csv;charset=utf-8'}),a=document.createElement('a'),dd=new Date();
+    a.href=URL.createObjectURL(bl);a.download='szoforditasok_'+dd.getFullYear()+'-'+('0'+(dd.getMonth()+1)).slice(-2)+'-'+('0'+dd.getDate()).slice(-2)+'.csv';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},4000);
+    msg.textContent='Letöltve: '+n+' kártya, '+(rows.length-1)+' sor. A szóindexek a mondat szavainak sorszámai (0-tól). Javításnál a státuszt írd át "kézi"-re (ha csak a jelentést javítod, magától is kézi lesz).';});
+  function parseCsv(t){t=t.replace(/^﻿/,'');var fl=t.split(/\r?\n/)[0]||'',dm=(fl.split(';').length>=fl.split('\t').length&&fl.split(';').length>=fl.split(',').length)?';':(fl.split('\t').length>=fl.split(',').length?'\t':',');
+    var out=[],row=[],f='',q=false;for(var i=0;i<t.length;i++){var ch=t[i];
+      if(q){if(ch==='"'){if(t[i+1]==='"'){f+='"';i++;}else q=false;}else f+=ch;}
+      else if(ch==='"')q=true;else if(ch===dm){row.push(f);f='';}else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&t[i+1]==='\n')i++;row.push(f);f='';if(row.length>1||row[0]!=='')out.push(row);row=[];}else f+=ch;}
+    if(f!==''||row.length){row.push(f);out.push(row);}return out;}
+  im.addEventListener('click',function(){if(!isAdm()||G.run)return;imi.click();});
+  imi.addEventListener('change',function(){var fl=this.files&&this.files[0];this.value='';if(!fl||!isAdm())return;var r=new FileReader();r.onload=async function(){
+    try{var rows=parseCsv(String(r.result||''));if(rows.length&&/^k.rtya_id$/i.test(String(rows[0][0]).trim()))rows.shift();
+      var by={};rows.forEach(function(c){if(c.length<10)return;var id=String(c[0]).trim();(by[id]=by[id]||[]).push(c);});
+      var byId={};DATA.forEach(function(d){byId[d.id]=d;});TR=TR||{v:1,t:0,c:{}};var ok=0,old=0,bad=0,man=0;
+      Object.keys(by).forEach(function(id){var d=byId[id];if(!d){bad++;return;}var h=wtHash(d),N=wtToks(plain(d.back)).length,ex=TR.c[id],exm={};
+        if(ex)ex.u.forEach(function(u){exm[u[0].join(' ')]=u;});
+        var seen=[],us=[],hv=true;
+        by[id].forEach(function(c){if(String(c[10]||'').trim()!==h)hv=false;var idx=String(c[3]).split(/[ ,]+/).filter(Boolean).map(Number);if(!idx.length||idx.some(function(i){return !Number.isInteger(i)||i<0||i>=N||seen[i];}))return;idx.forEach(function(i){seen[i]=1;});
+          var u=[idx,String(c[5]).trim(),String(c[6]).trim(),String(c[7]).trim(),String(c[8]||'word').trim()||'word',/^k.zi$/i.test(String(c[9]).trim())?1:0],o=exm[idx.join(' ')];
+          if(o&&!u[5]&&(o[1]!==u[1]||o[2]!==u[2]||o[3]!==u[3]))u[5]=1;if(!o&&ex&&!u[5])u[5]=1;if(u[5])man++;us.push(u);});
+        if(!hv){old++;return;}for(var i=0;i<N;i++)if(!seen[i]){bad++;return;}if(us.some(function(u){return !u[2];})){bad++;return;}
+        us.sort(function(a,b){return a[0][0]-b[0][0];});TR.c[id]={h:h,u:us};ok++;});
+      var u8=await trSaveLocal();stat();wtLate();
+      msg.textContent='Betöltve: '+ok+' kártya'+(old?', elavult (a mondat azóta változott): '+old:'')+(bad?', hibás vagy hiányos: '+bad:'')+', kézi sorok: '+man+'. A Hangtárba a Feltöltés gombbal teheted fel.';
+    }catch(e){msg.textContent='A táblázat betöltése nem sikerült: '+String(e&&e.message||e).slice(0,100);}};r.readAsText(fl,'utf-8');});
+  up.addEventListener('click',async function(){if(!isAdm()||G.run)return;if(!TR||!TR.c){msg.textContent='Még nincs mit feltölteni.';return;}busy(true);msg.textContent='Feltöltés...';
+    try{var u8=await trSaveLocal(),e=await trUpload(u8);msg.textContent=e||'A Hangtárba feltöltve ('+Object.keys(TR.c).length+' kártya, '+Math.round(u8.length/1024)+' KB).';}catch(e){msg.textContent='Feltöltési hiba: '+String(e&&e.message||e).slice(0,120);}busy(false);sp.disabled=true;});
+  dl.addEventListener('click',async function(){if(G.run)return;busy(true);msg.textContent='Letöltés...';
+    try{var n=await trFetch(true);stat();msg.textContent=n?'Letöltve: '+n+' kártya.':'Nincs újabb táblázat a Hangtárban (a helyi ugyanaz vagy újabb).';}catch(e){msg.textContent='Letöltési hiba: '+String(e&&e.message||e).slice(0,120);}busy(false);sp.disabled=true;});
+})();
+(function(){
   var b1=document.getElementById('ppAllBtn');if(b1)b1.addEventListener('click',function(){if(PPBUSY){var m=document.getElementById('ppMsg');if(m)m.textContent='A letöltés már fut.';return;}ppStartAll();var m2=document.getElementById('ppMsg');if(m2)m2.textContent='A letöltés a háttérben fut, lent látod a haladást.';});
   var sv=document.getElementById('hSave');if(!sv)return;
   var ld=document.getElementById('hLoadBtn'),inp=document.getElementById('hLoadIn'),md=document.getElementById('hMode'),mo=document.getElementById('hModels'),bar=document.getElementById('hBar'),msg=document.getElementById('hMsg'),run=false;
@@ -5767,7 +5902,7 @@ async function pfOpen(key,u8){return JSON.parse(new TextDecoder().decode(await p
 async function pfDK(kek,meta){var raw=await pfAesDec(kek,pfB64d(meta.wk_pw));return {raw:raw,key:await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt'])};}
 async function pfRsaEnc(pubJwk,u8){var k=await crypto.subtle.importKey('jwk',pubJwk,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);return hsB64(new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},k,u8)));}
 async function pfEmEnc(em){try{var pb=await pfCall('/pub');if(pb&&pb.pub)return await pfRsaEnc(pb.pub,pfEnc(JSON.stringify({e:em})));}catch(e){}return '';}
-var APPV='v91';
+var APPV='v93';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
