@@ -402,7 +402,7 @@ body:has(.rw) #kBars{display:none!important}
     <details class="backup" id="trBox" hidden><summary>Szavak fordítása (példamondatok, admin)</summary>
     <p>A Gemini kártyánként egyszer elkészíti a példamondat szavainak és kifejezéseinek mondatbeli magyar jelentését. A kész táblázatot a Hangtárba menti, a többi felhasználó onnan tölti le. Csak admin generálhat. A táblázatot CSV-ben letöltheted (Excelben megnyitható), javíthatod, és visszatöltheted; a kézzel javított sorokat az újragenerálás nem írja felül.</p>
     <div class="vrow"><select id="trLim" aria-label="Generálási limit"><option value="10">Egy futásban: 10 kártya</option><option value="25">Egy futásban: 25 kártya</option><option value="50">Egy futásban: 50 kártya</option><option value="100">Egy futásban: 100 kártya</option><option value="200">Egy futásban: 200 kártya</option><option value="0">Egy futásban: az összes hiányzó</option></select></div>
-    <div class="vrow"><select id="trAuto" aria-label="Automatikus indítás"><option value="1">Automatikus indítás adminként: bekapcsolva (belépéskor magától elindul)</option><option value="0">Automatikus indítás: kikapcsolva (csak a Generálás gombbal)</option></select></div>
+    <div class="vrow"><select id="trAuto" aria-label="Automatikus indítás"><option value="1">Automatikus indítás adminként: bekapcsolva (a hangok után a Karmester indítja)</option><option value="0">Automatikus indítás: kikapcsolva (csak a Generálás gombbal)</option></select></div>
     <p class="msg" id="trStat"></p>
     <div class="vrow"><button class="reset" id="trGo" type="button">Generálás</button><button class="reset" id="trStop" type="button" disabled>Leállítás</button></div>
     <progress id="trBar" max="100" value="0" hidden style="width:100%"></progress>
@@ -3409,6 +3409,223 @@ function picHtml(d){return d.svg?'<figure class="pic"><svg viewBox="0 0 220 140"
 var KEY='szokartya-v2',OLD='szokartya-v1',st={},DAY=864e5,MIN=6e4;
 function slug(t){return t.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
 DATA.forEach(function(d){d.id=d.id||slug(d.en);});
+/* v97: Sport kártyák memóriatrükkjei és képei */
+(function(){
+var SPXT={
+'rhythmic-gymnastics':[`<b>rhythmic</b> ≈ <b>ritmikus</b>, ugyanaz a szó: a tornász a zene ritmusára pörgeti a szalagot (<b>tikk-takk</b>).`,
+ `A <b>rhythm</b> helyesírását így tanuld: <b>R</b>hythm <b>H</b>elps <b>Y</b>our <b>T</b>wo <b>H</b>ips <b>M</b>ove.`,
+ `<b>rhythmic ≈ RITMIKUS.</b> A tornász a ritmusra köröz a szalaggal.`],
+'to-penalize-sb-for-sth':[`<b>penalize</b> ≈ <b>PÉNZ-ALIZ</b>: a büntetés sokszor pénzbe kerül, a sárga lap pedig a büntetés jele.`,
+ `A <b>penalty</b> (büntetés, büntető) és a <b>penalize</b> egy tőről fakad. A <b>for</b> után az ok jön: penalized <b>for</b> taking off his jersey.`,
+ `<b>penalize ≈ PÉNZ-ALIZ.</b> A játékvezető sárga lapot mutat a játékosnak: büntetés jár.`],
+'gruelling':[`<b>gruelling</b> ≈ <b>GURUL-LING</b>: a maraton végén már csak gurulni tudnál, annyira kimerítő.`,
+ `A <b>gruel</b> híg zabkása: régen büntetésként ezt kapta, akit „elintéztek". Innen jön a kimerítő jelentés.`,
+ `<b>gruelling ≈ GURUL-LING.</b> A futó a végén már csak gurulna: izzad, liheg, kimerült.`],
+'qualifying-round':[`<b>qualifying</b> ≈ <b>kvalifikál</b>: a magyar „kvalifikálja magát" szó. A selejtezőn kell kvalifikálnod.`,
+ `A <b>round</b> kör, forduló: a qualifying round az első kör, amelyből csak a legjobbak jutnak tovább. A <b>qualify</b> a <b>quality</b> (minőség) rokona.`,
+ `<b>qualifying ≈ KVALIFIKÁL.</b> A kapun csak a legjobbak futnak át a következő körbe.`],
+'outdoor-indoor-sport':[`<b>outdoor</b> = <b>OUT</b> + <b>DOOR</b>: az ajtón kívül. <b>indoor</b> = <b>IN</b> + <b>DOOR</b>: az ajtón belül.`,
+ `Az <b>outdoors</b> főnév is: <b>in the open air</b> = a szabad levegőn. Az <b>indoors</b> határozószó: <b>go indoors</b> = bemegy.`,
+ `<b>outdoor / indoor = AJTÓN KÍVÜL / BELÜL.</b> Az ajtó egyik oldalán a napsütés és a fa, a másikon a labda.`],
+'figure-skating':[`<b>figure</b> ≈ <b>figura</b>: a korcsolyázó figurákat rajzol a jégre. A <b>skating</b> ≈ <b>szkéjting</b>.`,
+ `Régen a versenyzőknek tényleg kötelező figurákat (nyolcas, kör) kellett a jégre rajzolniuk: innen a név. Az <b>ice dancing</b> a jégtánc.`,
+ `<b>figure ≈ FIGURA.</b> A korcsolyás nyolcast rajzol a jégre.`],
+'to-play-play-against-sb':[`<b>against</b> ≈ <b>ellen</b>. A <b>Bulls</b> (bikák) szarvval támad a <b>Lakers</b> ellen: két csapat szemben áll.`,
+ `<b>play for</b> = vmelyik csapatban játszik, <b>play against</b> = vki ellen játszik. Elöljáró nélkül is mondható: <b>play sb</b>.`,
+ `<b>against = ELLEN.</b> Két játékos szemben áll, közöttük a labda.`],
+'nailbiting':[`<b>nail</b> = köröm (nem szög!), <b>bite</b> = harap: körömrágós, mert izgalmadban a körmödet rágod.`,
+ `Hasonló kép: <b>cliffhanger</b> = a szikla szélén lógó, szintén izgalmas, feszült jelenet.`,
+ `<b>nailbiting = KÖRÖMRÁGÓS.</b> A néző a körmét rágja, a tévében két autó fej fej mellett halad.`],
+'to-fail-the-dope-test':[`<b>dope</b> ≈ <b>DOPP</b>: ugyanaz, mint a magyar doppingol. A <b>fail</b> lebukik, megbukik.`,
+ `A <b>fail</b> = megbukik (a <b>fall</b> = esik): ha megbuksz a teszten, elveszíted az érmedet. Ellentéte: <b>pass the test</b>.`,
+ `<b>dope ≈ DOPP.</b> A pohárban lila minta, az aranyérmet át kell húzni: lebukott.`],
+'to-play-for-a-team':[`<b>for</b> ≈ <b>fór</b>: a játékos a csapatnak adja a „fórt", vagyis <b>a csapatért</b> játszik, a címer mellett.`,
+ `<b>play for</b> = vmelyik csapatban játszik, <b>play against</b> = vki ellen, <b>play with</b> = vkivel együtt játszik.`,
+ `<b>for = ÉRT, RÉSZÉRE.</b> A játékos a csapat címerét viseli, és a csapatért küzd.`],
+'jersey-strip':[`<b>jersey</b> ≈ <b>dzsörzé</b>: a magyarban is dzsörzé a kötött trikóanyag. A mez is ilyen anyagból van.`,
+ `A <b>strip</b> csík, brit angolban a mez: a csapat „csíkja", a színei. Az amerikai angol szava a <b>jersey</b>.`,
+ `<b>jersey ≈ DZSÖRZÉ.</b> A mez tele van a szponzorok színes logóival.`],
+'to-excel-in-at-sth':[`<b>excel</b> ≈ <b>EXCEL</b>: az Excel táblázat kitűnően számol, a magyar vízilabdás kitűnik a vízben.`,
+ `Az <b>excellent</b> (kitűnő) ugyanabból a tőből jön. A <b>excel in</b> és az <b>excel at</b> egyaránt helyes: <b>excel in/at swimming</b>.`,
+ `<b>excel ≈ EXCEL.</b> Az Excel első helyén egy aranyérem áll a dobogón.`],
+'to-play-beach-ball':[`<b>beach</b> ≈ <b>BÍÍCS</b>: a strandon visít a gyerek, amikor elkapja a labdát.`,
+ `A <b>play</b> mellé nem kell elöljáró: <b>play beach ball</b>, <b>play tennis</b>. Vigyázz a kiejtésre: a <b>beach</b> hosszú „íí", nem rövid.`,
+ `<b>beach ≈ BÍÍCS.</b> A strandlabda a homok és a víz között repül.`],
+'in-a-row':[`<b>row</b> ≈ <b>RÓ</b>: a vízilabdás egymás után <b>ró</b> a köröket, sorban gyűjti az aranyakat.`,
+ `<b>three times in a row</b> = háromszor egymás után. A <b>row</b> kiejtve „rou" = sor. (A „rau" = veszekedés, de itt nem ezt használjuk.)`,
+ `<b>in a row = EGYMÁS UTÁN.</b> Három aranyérem sorban a polcon.`],
+'to-draw':[`<b>draw</b> = rajzol: döntetlennél egyenlőségjelet rajzolsz a táblára: 1 = 1.`,
+ `Rendhagyó ige: <b>draw – drew – drawn</b>. A <b>draw</b> főnév is: a match ended in a <b>draw</b> = döntetlen lett.`,
+ `<b>draw = RAJZOL.</b> A táblán egy piros egyenlőségjel áll: 1–1, döntetlen.`],
+'pentathlon':[`<b>penta</b> = öt, mint a <b>pentagon</b> (ötszög). A pentathlon öt számból áll.`,
+ `Az öt szám: vívás, úszás, lovaglás, lövészet és futás. A <b>-athlon</b> versenyt jelent: <b>triathlon</b> = három, <b>decathlon</b> = tíz.`,
+ `<b>penta = ÖT.</b> Az ötszög öt csúcsán öt szám áll.`],
+'to-hit-the-goalpost':[`<b>goalpost</b> = <b>goal</b> (gól) + <b>post</b> (oszlop): a gól oszlopa, vagyis a kapufa.`,
+ `Rendhagyó ige: <b>hit – hit – hit</b> (mindhárom alak ugyanaz). A <b>post</b> oszlop, például a <b>lamppost</b> = lámpaoszlop.`,
+ `<b>goalpost = GÓL + OSZLOP.</b> A labda a kapufáról pattan vissza, nem megy be.`],
+'cross-trainer':[`<b>cross</b> ≈ kereszt: a gép keresztben mozgatja a kezedet és a lábadat. A <b>trainer</b> ≈ <b>tréner</b>.`,
+ `A <b>cross-trainer</b> itt gép. Az edző szava inkább a <b>coach</b> vagy a <b>trainer</b> (személy).`,
+ `<b>cross-trainer ≈ KROSSZ-TRÉNER.</b> A kar és a láb keresztben dolgozik, az egész test edzésben van.`],
+'cross-country-skiing':[`<b>cross-country</b> = átvágja a <b>country</b>-t (vidéket): a síelő keresztülfut a tájon.`,
+ `<b>cross</b> = át, keresztez; <b>country</b> = vidék. <b>Cross-country skiing</b> = sífutás, nem lejtőn lecsúszás (az <b>alpine skiing</b>).`,
+ `<b>cross-country = ÁT A VIDÉKEN.</b> A sífutó havas tájon, fenyők között siklik.`],
+'combat-sports':[`<b>combat</b> ≈ <b>KOMBAT</b>: a Mortal Kombat játékból ismered: harc, küzdelem.`,
+ `A <b>combat</b> = harc (szervezett, fegyveres vagy sportos), a <b>fight</b> = verekedés. <b>Combat sports</b> = küzdősportok: boksz, judo, birkózás.`,
+ `<b>combat ≈ KOMBAT.</b> Két küzdő szemben áll, kesztyűben.`],
+'breaststroke-the-crawl':[`<b>breast</b> ≈ <b>mell</b> (mellkas) + <b>stroke</b> = csapás: a mellúszó mellkassal töri a vizet. A <b>crawl</b> kúszás: a gyorsúszó kúszik a vízben.`,
+ `Az úszásnemek: <b>breaststroke</b> (mell), <b>backstroke</b> (hát), <b>butterfly</b> (pillangó), <b>the crawl</b> (gyors).`,
+ `<b>breast = MELL.</b> A mellúszó előre nyúl, és a mellével hasítja a vizet.`],
+'cross-country-running':[`<b>cross</b> ≈ <b>KROSSZ</b>: a motokrossz és a terepfutás is terepen megy, nem a pályán.`,
+ `A <b>track</b> pálya (kemény talaj), a <b>cross-country</b> terep. A puha talaj miatt kevésbé terheli az ízületeket (<b>joints</b>).`,
+ `<b>cross ≈ KROSSZ.</b> A futó a mezőn, fák között szalad, nem a pályán.`],
+'coach':[`<b>coach</b> ≈ <b>KOCSI</b>: a szó magyar eredetű, Kocs városáról kapta a nevét. Az edző elvisz a célig, mint a kocsi.`,
+ `A <b>coach</b> edző, de távolsági busz is (a bus mellett): ahogy a kocsi, ő is elvisz valahová.`,
+ `<b>coach ≈ KOCSI.</b> A lovas kocsi elviszi az utasokat, az edző a csapatot.`],
+'to-break-the-rules':[`<b>rules</b> ≈ <b>RÚLER</b>: a szabály olyan, mint a vonalzó (<b>ruler</b>). Aki megszegi, kettétöri.`,
+ `Rendhagyó ige: <b>break – broke – broken</b>. Szintén: <b>break a record</b> = rekordot dönt, <b>break a promise</b> = megszegi az ígéretét.`,
+ `<b>rules ≈ RÚLER.</b> A vonalzó (szabály) kettétörött: megszegték.`],
+'competitor':[`<b>competitor</b> ≈ <b>KOMPETITOR</b> ≈ kompetitív: aki versenyez, az versengő.`,
+ `A <b>compete</b> = versenyez, a <b>competition</b> = verseny. A <b>-or</b> személyt jelöl: <b>competitor</b>, <b>visitor</b>, <b>spectator</b>.`,
+ `<b>competitor ≈ KOMPETITOR.</b> A versenyzők a rajtvonalnál állnak.`],
+'to-cheer-sb-on':[`<b>cheer</b> ≈ <b>CSÍR</b>: a szurkolók „csíííz!"-t kiabálnak, a futó pedig előre lendül.`,
+ `Az <b>on</b> előre hajtja a futót, mint a <b>go on</b>. A <b>cheers</b> = egészségedre, koccintáskor is mondják.`,
+ `<b>cheer ≈ CSÍR.</b> A nézők karral integetnek, a maratonista belefut a stadionba.`],
+'to-beat-the-world-record':[`<b>beat</b> = <b>ütés</b>, <b>ritmus</b> (a dob <b>beat</b>-je): a pontosan ütő óra tizedmásodpercekkel ver rekordot.`,
+ `Rendhagyó ige: <b>beat – beat – beaten</b>. Rekordot <b>break</b> és <b>beat</b> is lehet: <b>beat/break the record</b>.`,
+ `<b>beat = ÜT, VER.</b> A stopper megállt, és a WR felirat azt mutatja, hogy rekord született.`],
+'community-sports-event':[`<b>community</b> ≈ <b>KOMMUN</b>: a kommunában mindenki együtt él, a közösségi eseményen mindenki együtt fut.`,
+ `Vigyázz: az <b>event</b> = esemény, de az <b>eventually</b> = végül (nem „eseményesen"). A <b>Vivicittá</b> városi futóverseny.`,
+ `<b>community ≈ KOMMUN.</b> Egy egész közösség fut együtt a zászlók alatt.`],
+'championship':[`<b>champion</b> ≈ <b>CSEMPI-ÓN</b>: a bajnok a csempés medence szélén áll, nyakában az arany.`,
+ `<b>champion</b> = bajnok + <b>-ship</b> (állapot): <b>championship</b> = bajnokság. Hasonló: <b>friendship</b>, <b>leadership</b>.`,
+ `<b>championship ≈ CSEMPI-ÓN-SHIP.</b> A díszes kupa a bajnok jutalma.`],
+'to-beat-sb':[`<b>beat</b> ≈ <b>BÍT(ANG)</b>: aki bitang jó, az mindenkit megver.`,
+ `Rendhagyó ige: <b>beat – beat – beaten</b>. Nem keverendő: meccset <b>win</b> (nyer), csapatot <b>beat</b> (legyőz).`,
+ `<b>beat ≈ BÍT(ANG).</b> Négyszer egymás után 4–0 lett az eredmény.`],
+'baton-relay':[`<b>baton</b> ≈ <b>BÁTOR BOT</b>: csak a bátor futó adja át időben a botot. A <b>relay</b> ≈ <b>relé</b>: a relé továbbítja az áramot, a váltó a botot.`,
+ `Ugyanaz a gyök: <b>relay</b> = váltás, továbbad. A <b>relay race</b> = váltófutás, a <b>baton</b> a stafétabot.`,
+ `<b>baton ≈ BÁTOR BOT.</b> A bátor futó átadja a botot a másiknak, mint a relé az áramot.`],
+'rollerblade':[`<b>roller</b> ≈ <b>roller</b> (a magyarban is gördül), a <b>blade</b> = penge: a kerekek sorban futnak, mint a penge.`,
+ `A <b>blade</b> penge: a görkori kerekei egy vonalban vannak (<b>in-line skates</b>), mint egy penge. A <b>rollerblades</b> egysoros görkorcsolya.`,
+ `<b>blade = PENGE.</b> A négy kerék egy sorban fut a csizma alatt.`],
+'supporter':[`<b>supporter</b> ≈ <b>SZUPPORT</b>: aki támogat (<b>support</b>), vagyis a szurkoló a csapat támasza.`,
+ `A <b>support</b> = támogat, az <b>-er</b> személyt jelöl. A <b>supporter</b> főleg brit angol, az amerikai szava a <b>fan</b>.`,
+ `<b>supporter ≈ SZUPPORT.</b> A szurkoló zászlót lenget, és támogatja a csapatot.`],
+'supple':[`<b>supple</b> ≈ <b>SZAPPAN-PUHA</b>: a jógázó teste olyan hajlékony, mint a szappanhab: simán hajlik.`,
+ `A <b>supple</b> hajlékony testre és bőrre is mondható. A <b>soft</b> = puha, a <b>flexible</b> = általában hajlékony.`,
+ `<b>supple ≈ SZAPPAN-PUHA.</b> A jógázó háta szépen meghajlik, mint egy híd.`],
+'water-polo':[`<b>polo</b> ≈ <b>PÓLÓ</b>: a vízbe ugrott játékos pólója vizes lesz. A <b>water</b> ≈ <b>vátör</b> = víz.`,
+ `A <b>polo</b> eredetileg lóháton játszott labdajáték. A <b>water polo</b> vízben játszott változata: „vízi póló", magyarul vízilabda.`,
+ `<b>water polo ≈ VÍZ + PÓLÓ.</b> A játékos a vízből dobja a labdát a kapura.`],
+'substitute':[`<b>substitute</b> ≈ <b>SZUBSZTITÚCIÓ</b>: a kémiai helyettesítés. A csere is helyettesít.`,
+ `<b>sub-</b> = alá, <b>-stitute</b> = állít: akit a kezdő helyébe (alá) állítanak. A <b>sub</b> rövid alak is: <b>he came on as a sub</b>.`,
+ `<b>substitute ≈ SZUBSZTITÚCIÓ.</b> A cserejátékos számát mutatja a tábla.`],
+'snowboarding':[`<b>snowboard</b> ≈ <b>SZNÓ-BORD</b>: a <b>snow</b> hó, a <b>board</b> ≈ <b>bord</b>-aszerű deszka: hódeszka.`,
+ `A <b>board</b> deszka vagy tábla: <b>blackboard</b> = tábla, <b>skateboard</b> = gördeszka. Az <b>-ing</b> az igéből főnevet csinál.`,
+ `<b>snowboard = HÓ + DESZKA.</b> A hódeszkás lecsúszik a lejtőn, a háttérben hegyek.`],
+'venue':[`<b>venue</b> ≈ <b>VENNI</b>: oda mész, ahová jegyet veszel (venni): a helyszín.`,
+ `A <b>venue</b> a latin <i>venire</i> (jönni) szóból ered: ahová az emberek jönnek (<b>veni, vidi, vici</b>).`,
+ `<b>venue ≈ VENNI.</b> A pin jelzi a helyszínt, ahová a nézők jegyet vesznek.`],
+'stamina':[`<b>stamina</b> ≈ <b>SZTA-MINA</b>: Mina sosem áll meg, mert van elég állóképessége.`,
+ `A <b>stamina</b> a latin <i>stamen</i> (fonál) többesszáma: a sors fonala hosszú volt, így van elég kitartásod.`,
+ `<b>stamina ≈ SZTA-MINA.</b> A teli elem mutatja: van elég állóképesség a hosszú versenyhez.`],
+'skydiving':[`<b>sky</b> ≈ <b>SZKÁJ</b> = ég, <b>diving</b> = merülés: égi búvárkodás, ugrás az égből.`,
+ `A <b>dive</b> = merül, fejest ugrik. A <b>skydiving</b> ejtőernyős szabadesés, a <b>bungee jumping</b> pedig gumikötéles ugrás.`,
+ `<b>skydiving = ÉG + MERÜL.</b> Az ejtőernyős a felhők között ereszkedik.`],
+'the-pools':[`<b>pool</b> ≈ <b>PÚL</b>: a totón a tétek közös kasszába (medencébe) folynak, mint a vízbe.`,
+ `A <b>pool</b> medence és közös kassza is: <b>the pools</b> = totó, tippelős nyereményjáték. <b>Football pools</b> = futballtotó.`,
+ `<b>pools ≈ PÚL.</b> A szelvény az 1–X–2 tippekkel, mellette a pénzérmék a közös kasszába hullanak.`],
+'sportsmanlike':[`<b>sportsmanlike</b> = <b>sport</b> + <b>man</b> + <b>like</b>: sportemberhez hasonló, vagyis sportszerű.`,
+ `A <b>-like</b> képző = -szerű: <b>childlike</b>, <b>businesslike</b>. A <b>fair play</b> hasonló jelentésű.`,
+ `<b>sportsmanlike = SPORTEMBER-SZERŰ.</b> Két játékos kezet fog meccs után.`],
+'skateboarding':[`<b>skate</b> ≈ <b>SZKÉJT</b> = gurul, <b>board</b> = deszka: kerekes deszka, vagyis gördeszka.`,
+ `A <b>skate park</b> = gördeszkapálya. A <b>skateboarding</b> rokona a <b>snowboarding</b>: az is a <b>board</b> szóval végződik.`,
+ `<b>skateboard = GURUL + DESZKA.</b> A gördeszkás rámpán ugrik.`],
+'team-constructor':[`<b>constructor</b> ≈ <b>KONSTRUKTŐR</b>: aki az autót megkonstruálja, megépíti. A Forma–1-ben a csapat az autó konstruktőre.`,
+ `A <b>construct</b> = épít (<b>structure</b> = szerkezet). A <b>team</b> a csapat, a <b>constructor</b> az a csapat, amely maga építi az autót.`,
+ `<b>constructor ≈ KONSTRUKTŐR.</b> A csapat a saját piros versenyautóját építi.`],
+'sports-hall':[`<b>hall</b> ≈ <b>HALL</b>: a magyarban is a hall a nagy előcsarnok. A <b>sports hall</b> = sportcsarnok.`,
+ `A <b>hall</b> = csarnok, előszoba. A mondatban: <b>amenities</b> = kényelmi szolgáltatások (öltöző, büfé), <b>spectators</b> = nézők.`,
+ `<b>hall ≈ HALL.</b> A csarnokban kosárpalánk és labda vár a játékosokra.`],
+'to-shoot':[`<b>shoot</b> ≈ <b>SÚT</b>: a futballban is „sútolnak". A <b>shoot</b> = rúg, lő kapura.`,
+ `Rendhagyó ige: <b>shoot – shot – shot</b>. A <b>shot</b> = lövés. <b>Shoot at the goal</b> = kapura lő.`,
+ `<b>shoot ≈ SÚT.</b> A játékos a kapus felé rúgja a labdát.`],
+'team-spirit':[`<b>spirit</b> ≈ <b>SPIRITUSZ</b>: a csapat spiritusza (lelke) az összetartás, ami lángra lobbantja a csapatot.`,
+ `A <b>spirit</b> szellem, lélek, de a <b>spirits</b> szeszes ital is. A <b>team spirit</b> = csapatszellem.`,
+ `<b>spirit ≈ SPIRITUSZ.</b> A csapat körben összefogja a kezét, és lángol az összetartás.`],
+'sponsorship-deal':[`<b>sponsor</b> ≈ <b>SZPONZOR</b> (a magyarban is), <b>deal</b> ≈ <b>DÍL</b>: a díler üzletet köt, a szponzor is üzletet köt.`,
+ `A <b>-ship</b> képző: <b>sponsorship</b> = szponzorálás. A <b>deal</b> = üzlet, megállapodás: <b>a good deal</b> = jó üzlet.`,
+ `<b>deal ≈ DÍL.</b> Kézfogás a szerződés fölött, mellette a dollárjel.`],
+'to-save-a-penalty':[`<b>save</b> ≈ <b>SZÉJV</b> ≈ szív: a kapus a szívét is kiteszi, hogy megmentse a büntetőt.`,
+ `A <b>save</b> = ment, véd, de el is tesz: <b>save money</b> = pénzt spórol. A kapus <b>save</b>-je = védés.`,
+ `<b>save = MENT.</b> A kapus vetődik, és megfogja a büntetőt.`]
+};
+
+var SG='<path class="l" d="M0 128H220"/>';
+function SP(x,y,r){return '<circle class="sk" cx="'+x+'" cy="'+y+'" r="'+(r||9)+'"/>';}
+function SM(x,y,o){o=o||{};var la=o.la||[-14,16],ra=o.ra||[14,16],ll=o.ll||[-12,34],rl=o.rl||[12,34],by=y+9,hy=y+44,sy=y+20;
+ return SP(x,y)+'<path class="l" d="M'+x+' '+by+'V'+hy+'M'+x+' '+sy+'L'+(x+la[0])+' '+(sy+la[1])+'M'+x+' '+sy+'L'+(x+ra[0])+' '+(sy+ra[1])+'M'+x+' '+hy+'L'+(x+ll[0])+' '+(hy+ll[1])+'M'+x+' '+hy+'L'+(x+rl[0])+' '+(hy+rl[1])+'"/>';}
+function SAT(x,y,s,inner){return '<g transform="translate('+x+' '+y+') scale('+s+')">'+inner+'</g>';}
+function SB(x,y,r){r=r||8;return '<circle class="w" cx="'+x+'" cy="'+y+'" r="'+r+'"/><circle class="k" cx="'+x+'" cy="'+y+'" r="'+(r/3).toFixed(1)+'"/>';}
+function ST(x,y,t,sz,cl){return '<text x="'+x+'" y="'+y+'" text-anchor="middle" class="t2" style="fill:var(--fg);letter-spacing:0;'+(sz?'font-size:'+sz+'px':'')+'">'+t+'</text>';}
+function SGOAL(x,y,w,h){var o='<path class="e" d="';for(var i=1;i<5;i++)o+='M'+(x+w*i/5)+' '+y+'V'+(y+h);for(i=1;i<4;i++)o+='M'+x+' '+(y+h*i/4)+'H'+(x+w);return o+'"/><path class="l" d="M'+x+' '+(y+h)+'V'+y+'H'+(x+w)+'V'+(y+h)+'" style="stroke-width:4"/>';}
+function SMEDAL(x,y,r,t){return '<path class="a" d="M'+(x-10)+' '+(y-r-14)+'L'+x+' '+(y-r+2)+'L'+(x+10)+' '+(y-r-14)+'Z"/><circle class="y" cx="'+x+'" cy="'+y+'" r="'+r+'"/>'+ST(x,y+7,t||'1',r*1.1);}
+function SCLOUD(x,y){return '<ellipse class="e" cx="'+x+'" cy="'+y+'" rx="22" ry="9"/><ellipse class="e" cx="'+(x+14)+'" cy="'+(y-6)+'" rx="14" ry="9"/>';}
+function STREE(x,y,s){s=s||1;return SAT(x,y,s,'<rect class="br" x="-3" y="-4" width="6" height="22"/><path class="gf" d="M0 -40L16 -8H-16Z"/><path class="gf" d="M0 -26L19 6H-19Z"/>');}
+var SPXS={
+'rhythmic-gymnastics':SG+SM(90,48,{la:[-20,-20],ra:[22,-24],ll:[-16,34],rl:[18,30]})+'<path class="strw" d="M112 24C130 -2 160 8 150 28C142 46 118 40 126 24C134 12 170 22 176 44"/>'+ST(186,40,'♪',26)+ST(30,60,'♫',20,'t2'),
+'to-penalize-sb-for-sth':SG+SM(60,50,{ra:[26,-30],la:[-14,18]})+'<rect class="y" x="78" y="12" width="16" height="24" rx="2"/>'+SM(160,50,{la:[-14,-24],ra:[14,-24]})+'<path class="a" d="M148 66L160 62L172 66L176 88H144Z"/>'+'<path class="no" d="M104 60H128" style="stroke-width:0"/>',
+'gruelling':SG+SM(90,50,{la:[-20,6],ra:[20,-6],ll:[-22,28],rl:[24,24]})+'<ellipse class="d" cx="112" cy="40" rx="3" ry="5"/><ellipse class="d" cx="70" cy="34" rx="3" ry="5"/><ellipse class="d" cx="116" cy="56" rx="3" ry="5"/><circle class="y" cx="182" cy="28" r="14"/><path class="l" d="M182 6V0M204 28H214M198 12L206 4"/><path class="dash l" d="M20 120H70" style="stroke-dasharray:6 6"/>',
+'qualifying-round':SG+'<rect class="w" x="150" y="36" width="8" height="92"/><rect class="w" x="190" y="36" width="8" height="92"/><rect class="s" x="150" y="28" width="48" height="16"/>'+ST(174,41,'Q',16)+'<path class="g" d="M26 110H140"/><path class="g" d="M126 98L142 110L126 122"/>'+SM(50,50,{ll:[-20,30],rl:[22,26],la:[-18,4],ra:[16,-8]})+SM(95,56,{ll:[-20,30],rl:[22,26],la:[-18,4],ra:[16,-8]})+'',
+'outdoor-indoor-sport':SG+'<rect class="w" x="94" y="30" width="32" height="98" rx="3"/><circle class="k" cx="118" cy="82" r="3"/><circle class="y" cx="46" cy="46" r="13"/>'+STREE(52,104,.9)+ST(47,20,'OUT',13,'t2')+SB(170,104,16)+ST(170,60,'IN',13,'t2')+'<path class="l" d="M140 90H200V128" style="display:none"/>',
+'figure-skating':'<ellipse class="s" cx="110" cy="118" rx="98" ry="14"/><path class="l dash" d="M52 118C72 100 94 136 110 118S150 100 170 118" style="stroke-dasharray:6 5"/>'+SM(110,34,{la:[-26,-4],ra:[26,-4],ll:[-20,30],rl:[14,36]}),
+'to-play-play-against-sb':SG+SM(46,50,{ra:[20,-8]})+SM(174,50,{la:[-20,-8]})+SB(110,112,9)+ST(110,50,'VS',24)+'<path class="g" d="M72 100H98M148 100H122"/>',
+'nailbiting':'<circle class="sk" cx="56" cy="66" r="24"/><circle class="k" cx="48" cy="60" r="3"/><circle class="k" cx="64" cy="60" r="3"/><circle class="sk" cx="60" cy="82" r="8"/><path class="l" d="M56 88L60 82M66 86L62 80"/><rect class="w" x="102" y="30" width="108" height="72" rx="6"/><path class="l" d="M102 66H210" style="stroke-dasharray:6 6"/><rect class="a" x="140" y="44" width="34" height="12" rx="4"/><rect class="d" x="142" y="74" width="34" height="12" rx="4"/><path class="l" d="M140 116H170M156 102V116"/>',
+'to-fail-the-dope-test':SG+'<path class="w" d="M30 26H80L74 100Q55 114 36 100Z"/><path class="a" d="M33 64H77L74 98Q55 110 36 98Z"/><path class="l" d="M30 26H80"/>'+SMEDAL(150,70,22,'1')+'<path class="no" d="M118 38L186 106M186 38L118 106"/>',
+'to-play-for-a-team':SG+SM(80,50)+'<path class="a" d="M66 66L80 60L94 66L98 92H62Z"/><circle class="y" cx="80" cy="78" r="6"/><rect class="w" x="136" y="30" width="64" height="86" rx="4"/><path class="l" d="M146 46H190M146 58H190M146 70H176"/><path class="g" d="M148 98L158 106L180 86"/>'+ST(168,28,'✈',16,'t2'),
+'jersey-strip':'<path class="a" d="M72 30L96 20Q110 36 124 20L148 30L172 54L152 64L146 56V116H74V56L68 64L48 54Z"/><rect class="y" x="86" y="62" width="48" height="12" rx="2"/><rect class="d" x="92" y="82" width="36" height="12" rx="2"/><rect class="w" x="100" y="100" width="20" height="8"/>',
+'to-excel-in-at-sth':SG+'<rect class="w" x="40" y="94" width="44" height="34"/><rect class="w" x="88" y="74" width="44" height="54"/><rect class="w" x="136" y="102" width="44" height="26"/>'+ST(62,120,'2',18)+ST(110,108,'1',24)+ST(158,122,'3',16)+SMEDAL(110,42,18,'1'),
+'to-play-beach-ball':'<rect class="y" x="0" y="108" width="220" height="20"/><rect class="d" x="0" y="90" width="220" height="18"/><path class="l" d="M0 98Q14 90 28 98T56 98T84 98T112 98T140 98T168 98T196 98T224 98" style="stroke-dasharray:0"/><circle class="y" cx="186" cy="26" r="13"/><circle class="w" cx="110" cy="54" r="26"/><path class="a" d="M110 28A26 26 0 0 1 134 44L110 54Z"/><path class="d" d="M134 64A26 26 0 0 1 110 80L110 54Z"/><path class="y" d="M86 64A26 26 0 0 1 86 44L110 54Z"/><circle class="w" cx="110" cy="54" r="4"/><path class="l dash" d="M60 90Q80 40 90 50" style="stroke-dasharray:5 5"/>',
+'in-a-row':SG+'<path class="l" d="M20 104H200"/>'+SMEDAL(50,78,22,'1')+SMEDAL(110,78,22,'1')+SMEDAL(170,78,22,'1')+'<path class="g" d="M40 120H180M170 112L184 120L170 128" style="display:none"/>',
+'to-draw':'<rect class="s" x="24" y="20" width="172" height="82" rx="6"/>'+ST(66,86,'1',54)+ST(154,86,'1',54)+'<path class="no" d="M92 56H128M92 76H128"/><path class="l" d="M60 102V128M160 102V128"/>',
+'pentathlon':'<path class="s" d="M110 22L154 54L137 104H83L66 54Z"/><circle class="w" cx="110" cy="22" r="12"/><circle class="w" cx="154" cy="54" r="12"/><circle class="w" cx="137" cy="104" r="12"/><circle class="w" cx="83" cy="104" r="12"/><circle class="w" cx="66" cy="54" r="12"/>'+ST(110,28,'1',14)+ST(154,60,'2',14)+ST(137,110,'3',14)+ST(83,110,'4',14)+ST(66,60,'5',14)+ST(110,72,'5',34,'t'),
+'to-hit-the-goalpost':SG+SGOAL(20,34,60,94)+'<path class="l" d="M82 34V128" style="stroke-width:5"/>'+SB(96,52,8)+'<path class="l" d="M84 40L90 32M88 52H80M86 62L80 68"/><path class="a" d="M100 50Q130 30 148 40" style="display:none"/>'+SM(160,50,{rl:[26,-8],ll:[-6,34],la:[-16,12],ra:[14,10]}),
+'cross-trainer':SG+'<rect class="s" x="46" y="112" width="130" height="12" rx="3"/><circle class="w" cx="70" cy="96" r="16"/><path class="l" d="M158 112V30L134 22" style="stroke-width:5"/><path class="l" d="M70 96L98 112M70 96L96 70"/>'+SM(106,28,{la:[24,-2],ra:[26,2],ll:[-10,34],rl:[24,26]}),
+'cross-country-skiing':'<path class="s" d="M0 100L60 36L110 90L150 56L220 108V128H0Z"/>'+STREE(34,106,.7)+STREE(188,108,.7)+SM(100,46,{la:[-20,16],ra:[22,10],ll:[-14,30],rl:[20,32]})+'<path class="l" d="M60 124H140M84 70L66 124M120 66L142 124" style="stroke-width:3"/>'+'<path class="dash l" d="M10 126H210" style="stroke-dasharray:4 6;display:none"/>',
+'combat-sports':SG+SM(70,50,{la:[-8,18],ra:[26,-6]})+SM(150,50,{ra:[8,18],la:[-26,-6]})+'<circle class="a" cx="96" cy="64" r="9"/><circle class="a" cx="124" cy="64" r="9"/>'+ST(110,30,'✦',22,'t'),
+'breaststroke-the-crawl':'<rect class="d" x="0" y="70" width="220" height="58"/><path class="l" d="M0 80Q14 72 28 80T56 80T84 80T112 80T140 80T168 80T196 80T224 80" style="stroke:#fff"/>'+SP(106,72)+'<path class="l" d="M106 70L58 54M106 70L154 54" style="stroke-width:4"/><path class="l" d="M0 98Q14 90 28 98T56 98T84 98T112 98T140 98T168 98T196 98T224 98" style="stroke:#fff"/>',
+'cross-country-running':'<path class="s" d="M0 104Q60 60 120 96T220 88V128H0Z"/>'+STREE(30,106,.7)+STREE(194,100,.7)+SM(104,46,{la:[-16,10],ra:[20,-8],ll:[-22,30],rl:[26,24]})+'<path class="l dash" d="M20 124H200" style="stroke-dasharray:6 6"/>',
+'coach':SG+'<rect class="br" x="50" y="50" width="80" height="44" rx="8"/><path class="s" d="M60 50V36H120V50"/><rect class="w" x="70" y="58" width="22" height="20"/><rect class="w" x="98" y="58" width="22" height="20"/><circle class="w" cx="74" cy="104" r="16"/><circle class="w" cx="120" cy="104" r="16"/><path class="l" d="M74 88V120M58 104H90M120 88V120M104 104H136"/><path class="l" d="M130 70H154"/>'+SM(180,50,{ra:[-26,-6],la:[8,20]})+'<path class="y" d="M168 30h8" style="display:none"/>',
+'to-break-the-rules':SG+'<path class="y" d="M16 52H104L96 63L108 74H16Z"/><path class="y" d="M118 74L110 63L122 52H204V74Z"/><path class="l" d="M32 52V62M48 52V60M64 52V62M80 52V60M138 74V64M154 74V62M170 74V64M186 74V62"/><path class="no" d="M100 90L120 116" style="display:none"/>',
+'competitor':SG+'<path class="a" d="M156 20V128" style="stroke:var(--red);stroke-width:4;stroke-dasharray:6 5"/>'+SM(40,52,{ll:[-12,32],rl:[16,30],la:[-12,12],ra:[18,22]})+SM(84,52,{ll:[-12,32],rl:[16,30],la:[-12,12],ra:[18,22]})+SM(128,52,{ll:[-12,32],rl:[16,30],la:[-12,12],ra:[18,22]})+ST(40,86,'1',12,'t2')+ST(84,86,'2',12,'t2')+ST(128,86,'3',12,'t2'),
+'to-cheer-sb-on':SG+SM(34,60,{la:[-14,-26],ra:[14,-26],ll:[-10,24],rl:[10,24]})+SM(74,60,{la:[-14,-26],ra:[14,-26],ll:[-10,24],rl:[10,24]})+SM(114,60,{la:[-14,-26],ra:[14,-26],ll:[-10,24],rl:[10,24]})+SM(176,50,{ll:[-22,30],rl:[24,26],la:[-16,8],ra:[18,-8]})+ST(60,26,'!',28)+ST(100,22,'!',22),
+'to-beat-the-world-record':'<circle class="w" cx="110" cy="78" r="38"/><rect class="s" x="98" y="26" width="24" height="12"/><path class="l" d="M110 78L128 56M110 44V50M110 106V112M76 78H82M138 78H144"/>'+ST(110,100,'WR',16)+'<path class="y" d="M176 30L180 40L192 40L182 47L186 58L176 51L166 58L170 47L160 40L172 40Z"/><path class="l" d="M60 40L52 34M160 40L168 34" style="stroke-width:2"/>',
+'community-sports-event':SG+'<path class="l" d="M10 22Q110 44 210 22"/><path class="a" d="M30 28L40 28L35 38Z"/><path class="y" d="M62 33L72 33L67 43Z"/><path class="d" d="M94 35L104 35L99 45Z"/><path class="gf" d="M126 35L136 35L131 45Z"/><path class="a" d="M158 33L168 33L163 43Z"/><path class="y" d="M188 28L198 28L193 38Z"/>'+[24,56,88,120,152,184].map(function(x,i){return SAT(x,70,.55,SM(0,0,{ll:[-14,30],rl:[16,26],la:[-12,8],ra:[14,-6]}));}).join(''),
+'championship':SG+'<path class="y" d="M80 24H140V58Q140 86 110 90Q80 86 80 58Z"/><path class="l" d="M80 34Q56 34 60 52Q64 66 82 66M140 34Q164 34 160 52Q156 66 138 66"/><rect class="y" x="104" y="90" width="12" height="18"/><rect class="br" x="84" y="108" width="52" height="16" rx="3"/><path class="y" d="M110 36L114 46L124 46L116 52L119 62L110 56L101 62L104 52L96 46L106 46Z" style="fill:#fff"/>',
+'to-beat-sb':SG+'<rect class="s" x="62" y="4" width="96" height="32" rx="5"/>'+ST(84,30,'4',26)+ST(110,28,':',22)+ST(136,30,'0',26)+SM(60,48,{la:[-18,-22],ra:[18,-22]})+SM(160,48,{la:[-8,22],ra:[8,22],ll:[-8,32],rl:[10,30]})+'<path class="l" d="M148 72L158 76"style="display:none"/>',
+'baton-relay':SG+SM(80,50,{ll:[-22,30],rl:[24,26],la:[-18,10],ra:[26,12]})+SM(140,50,{ll:[-20,30],rl:[22,28],la:[-26,12],ra:[18,8]})+'<path class="strw" d="M102 68H122"/>'+'<path class="l" d="M88 100L72 108M150 100L168 108" style="display:none"/>',
+'rollerblade':SG+'<path class="w" d="M58 24H92V70L134 82V102H56Z"/><path class="l" d="M60 102H134"/><path class="l" d="M64 40H88"/>'+[68,88,108,128].map(function(x){return '<circle class="k" cx="'+x+'" cy="114" r="9"/><circle class="w" cx="'+x+'" cy="114" r="3"/>';}).join('')+'<path class="l" d="M58 104V110M130 104V110M70 104V108M126 104V108"/><path class="a" d="M150 96H200" style="display:none"/>',
+'supporter':'<path class="s" d="M0 128V96H60V80H120V64H180V48H220V128Z"/>'+SM(100,34,{la:[-20,-14],ra:[22,-30],ll:[-10,34],rl:[10,34]})+'<path class="l" d="M122 24V-6" style="display:none"/><path class="strw" d="M126 24V4"/><path class="a" d="M126 6H152L146 14L152 22H126Z"/>'+'<path class="y" d="M92 60Q100 66 108 60" style="display:none"/>',
+'supple':SG+'<path class="l" d="M60 108Q110 -4 160 108" style="stroke-width:6"/>'+SP(52,100)+'<path class="l" d="M62 108H50M160 108H174"/><path class="d" d="M80 40L90 30M130 22L140 30" style="display:none"/>',
+'water-polo':'<rect class="d" x="0" y="70" width="220" height="58"/><path class="l" d="M0 80Q14 72 28 80T56 80T84 80T112 80T140 80T168 80T196 80T224 80" style="stroke:#fff"/><path class="l" d="M150 70V30H206V70" style="stroke-width:4"/><path class="e" d="M164 30V70M178 30V70M192 30V70M150 44H206M150 58H206"/>'+SP(70,76)+'<path class="a" d="M61 74A9 9 0 0 1 79 74Z"/><path class="l" d="M72 82L92 50" style="stroke-width:4"/><circle class="y" cx="100" cy="42" r="8"/><path class="l" d="M110 66Q118 52 122 40" style="stroke-dasharray:4 4"/>',
+'substitute':SG+SM(52,50,{la:[-16,-22],ra:[18,-26]})+'<rect class="w" x="104" y="24" width="86" height="56" rx="6"/>'+ST(130,58,'9',22)+ST(166,58,'10',22)+'<path class="a" d="M142 40L150 34L158 40M142 66L150 72L158 66" style="stroke:none"/><path class="no" d="M150 36V48M150 62V50" style="stroke-width:5"/>',
+'snowboarding':'<path class="s" d="M0 116L100 72L220 40V128H0Z"/><path class="s" d="M20 56L46 24L72 56Z"/>'+SAT(132,16,.62,SM(0,0,{la:[-24,6],ra:[24,-6],ll:[-16,34],rl:[14,34]}))+'<path class="tool" d="M108 70L152 58" style="stroke-width:7;stroke:var(--red)"/>',
+'venue':'<ellipse class="w" cx="110" cy="96" rx="92" ry="30"/><ellipse class="gf" cx="110" cy="96" rx="62" ry="16"/><path class="l" d="M110 80V112M70 96H150"/><path class="a" d="M110 6C98 6 90 15 90 26C90 42 110 62 110 62C110 62 130 42 130 26C130 15 122 6 110 6Z"/><circle class="w" cx="110" cy="26" r="7"/>',
+'stamina':'<rect class="w" x="36" y="36" width="128" height="62" rx="8"/><rect class="w" x="164" y="54" width="12" height="26" rx="3"/><rect class="gf" x="46" y="46" width="26" height="42"/><rect class="gf" x="76" y="46" width="26" height="42"/><rect class="gf" x="106" y="46" width="26" height="42"/><rect class="gf" x="136" y="46" width="22" height="42"/>'+'<path class="y" d="M100 14L88 40H102L94 62L120 30H106Z" style="display:none"/>'+ST(100,122,'100%',14,'t2')+'<path class="l" d="M186 70L204 70" style="display:none"/>',
+'skydiving':SCLOUD(40,34)+SCLOUD(176,100)+SCLOUD(30,108)+'<path class="a" d="M52 60Q110 -22 168 60Z"/><path class="l" d="M52 60L100 92M110 60V92M168 60L120 92"/>'+SAT(110,84,.5,SM(0,0,{la:[-16,-22],ra:[16,-22],ll:[-12,30],rl:[12,30]})),
+'the-pools':SG+'<rect class="w" x="24" y="14" width="76" height="106" rx="4"/><path class="l" d="M34 34H90M34 52H90M34 70H90M34 88H90"/>'+ST(48,30,'1',14)+ST(62,30,'X',14)+ST(76,30,'2',14)+'<path class="g" d="M44 44L52 52L66 38" style="display:none"/><ellipse class="y" cx="156" cy="112" rx="22" ry="8"/><ellipse class="y" cx="156" cy="102" rx="22" ry="8"/><ellipse class="y" cx="156" cy="92" rx="22" ry="8"/><ellipse class="y" cx="156" cy="82" rx="22" ry="8"/><circle class="y" cx="140" cy="40" r="9"/><circle class="y" cx="172" cy="56" r="9"/><path class="l" d="M140 50V68M172 66V72" style="stroke-dasharray:4 4"/>',
+'sportsmanlike':SG+SM(66,50,{ra:[40,2],la:[-14,18]})+SM(154,50,{la:[-40,2],ra:[14,18]})+'<path class="a" d="M110 20C102 8 90 18 110 36C130 18 118 8 110 20Z"/>'+'<circle class="y" cx="110" cy="72" r="6"/>',
+'skateboarding':SG+'<path class="s" d="M0 128Q0 70 60 70H110V128Z" style="display:none"/><path class="s" d="M130 128Q130 80 200 60V128Z"/>'+SAT(83,28,.7,SM(0,0,{la:[-22,8],ra:[22,-6],ll:[-14,34],rl:[16,30]}))+'<path class="tool" d="M54 84H112" style="stroke-width:6"/><circle class="k" cx="62" cy="92" r="5"/><circle class="k" cx="104" cy="92" r="5"/><path class="l dash" d="M120 90Q150 40 180 60" style="stroke-dasharray:5 5"/>',
+'team-constructor':SG+'<path class="a" d="M26 100H190V88L166 80L150 58H100L80 80L40 86Z"/><path class="w" d="M108 62H146L160 80H98Z"/><circle class="k" cx="62" cy="106" r="16"/><circle class="w" cx="62" cy="106" r="6"/><circle class="k" cx="152" cy="106" r="16"/><circle class="w" cx="152" cy="106" r="6"/><path class="l" d="M176 84H204M178 100H200"/>'+ST(130,76,'F1',14,'t'),
+'sports-hall':SG+'<path class="s" d="M14 128V72Q110 -8 206 72V128Z"/><rect class="w" x="96" y="46" width="28" height="22"/><path class="l" d="M110 68V74"/><path class="a" d="M100 74H120L118 90H102Z" style="display:none"/><path class="e" d="M102 74L106 88M110 74V88M118 74L114 88"/><path class="l" d="M98 74H122"/>'+SB(60,114,10)+'<path class="l" d="M30 108H190" style="display:none"/>',
+'to-shoot':SG+SM(44,50,{rl:[30,-8],ll:[-6,34],la:[-18,10],ra:[16,10]})+SB(100,104,8)+'<path class="l dash" d="M108 100Q130 70 150 80" style="stroke-dasharray:5 5"/>'+SGOAL(150,40,62,88)+SM(184,50,{la:[-16,-18],ra:[16,-18],ll:[-10,34],rl:[10,34]}),
+'team-spirit':'<path class="a" d="M110 20C96 40 90 50 110 62C130 50 124 40 110 20Z"/><circle class="y" cx="110" cy="48" r="0"/>'+[[110,24],[148,50],[134,96],[86,96],[72,50]].map(function(p){var q=[110,70];return '<path class="l" d="M'+p[0]+' '+(p[1]+10)+'L'+(p[0]+(q[0]-p[0])*.5)+' '+(p[1]+10+(q[1]-p[1]-10)*.5)+'" style="display:none"/>'+SP(p[0],p[1]+22,8)+'<path class="l" d="M'+p[0]+' '+(p[1]+30)+'L'+(110+(p[0]-110)*.35)+' '+(70+(p[1]-70)*.35+4)+'"/>';}).join('')+'<circle class="y" cx="110" cy="76" r="8"/>',
+'sponsorship-deal':SG+'<rect class="w" x="68" y="18" width="84" height="38" rx="4"/><path class="l" d="M78 30H120M78 40H140"/>'+ST(138,34,'$',18)+SM(52,52,{ra:[44,6],la:[-12,18]})+SM(168,52,{la:[-44,6],ra:[12,18]})+'<circle class="y" cx="110" cy="78" r="7"/>',
+'to-save-a-penalty':SGOAL(100,30,110,98)+SP(128,60)+'<path class="l" d="M136 68L160 96M134 66L108 50M136 70L112 66M160 96L178 120M160 96L188 108"/>'+SB(100,44,8)+'<circle class="k" cx="40" cy="120" r="3"/><path class="l dash" d="M44 112Q56 80 92 52" style="stroke-dasharray:4 4"/>'
+};
+
+DATA.forEach(function(d){var x=SPXT[d.id],v=SPXS[d.id];if(x&&v&&!d.svg){d.t1=x[0];d.t2=x[1];d.cap=x[2];d.svg=v;}});
+})();
 function rd(k){try{return JSON.parse(localStorage.getItem(k)||'null');}catch(e){return null;}}
 st=rd(KEY);
 if(!st){st={};var old=rd(OLD);if(old){DATA.forEach(function(d,i){if(old[i]){st[d.id]=old[i];st[d.id].t=old[i].seen?Date.now():0;}});}}
@@ -5422,7 +5639,7 @@ function kHealthShow(){var it=HL.items||[];var bad=it.filter(function(x){return 
 setInterval(function(){if(!document.hidden)kHealthRun('időzítő');},6*3600000);
 document.addEventListener('visibilitychange',function(){if(!document.hidden&&Date.now()-(HL.t||0)>1800000){HL.t=Date.now();setTimeout(function(){kHealthRun('előjött');},1500);}});
 async function kRun(why){
-  if(KRUN||PG.run||PPBUSY)return;KRUN=true;KLAST=Date.now();
+  if(KRUN||PG.run||PPBUSY||window.__trRun)return;KRUN=true;KLAST=Date.now();
   try{
     klog('karmester','futás: '+why);kWeekly();
     setTimeout(function(){kHealthRun(why);},4000);
@@ -5433,7 +5650,7 @@ async function kRun(why){
     if(isAdm()&&!lsGet(PPDEC)&&!ppAllHave()&&!window.__ppfirst){window.__ppfirst=1;if(r.ok){klog('hangmodell','első indítás: a hangmodellek letöltése wifin');ppStartAll();return;}kModal('ppf','Hangmodellek letöltése','A magyar mondatok és a Szabad beszélgetés hangjához le kell tölteni a Piper hangmodelleket (kb. 190 MB). A kész hangfájlokat a GitHubról töltöm le. Jelenlegi kapcsolat: '+r.cur+'. Wifin érdemes letölteni.',[{t:'Letöltés most',fn:ppOfferGo},{t:'Wifin majd magától',fn:function(){}},{t:'Nem kérem',fn:function(){lsSet(PPDEC,'skip');}}]);}
     await kHang(r,await mp);
   }catch(e){klog('hiba',String(e&&e.message||e).slice(0,120));}
-  finally{KRUN=false;klog('karmester','kész');}}
+  finally{KRUN=false;klog('karmester','kész');try{if(window.trChain)setTimeout(function(){window.trChain(why,0);},2500);}catch(e){}}}
 setTimeout(function(){try{kInit();}catch(e){}kRun('indítás');},1200);
 document.addEventListener('visibilitychange',function(){if(document.hidden)return;try{kWeekly();}catch(e){}if(!KRUN&&Date.now()-KLAST>1800000)setTimeout(function(){kRun('az app előjött');},800);});
 window.addEventListener('pagehide',function(){lsSet('szokartya-parlive','');});
@@ -5728,7 +5945,7 @@ async function hLoad(fl,over,prog){var dec=new TextDecoder(),have=over?null:new 
     PGTEST=false;idle();tb.disabled=false;
     var sec=Math.round((Date.now()-t0)/1000);
     msg.textContent=(r.failed?'TESZT megállt: '+String(r.err&&r.err.message||r.err).slice(0,100):(r.stopped?'TESZT leállítva.':'TESZT kész: '+r.done+' mondat, '+sec+' mp, átlag '+Math.round(r.done*60/Math.max(1,sec))+' hang/perc.'))+' Legmagasabb fokozat: '+peak+' / '+PG.max+'. Részletek: Karmester napló (hang). Semmi nem került a tárba.';});
-  window.pgResume=async function(){if(PG.run||PPBUSY||!isAdm())return;plan=null;AUTO=true;var pl=await prepare();plan=null;if(!pl||!pl.todo.length){AUTO=false;ppChipHide();msg.textContent=pl?'Minden hang kész.':msg.textContent;return;}try{toast5('Hangok készítése indul a háttérben: '+pl.todo.length+' hang');}catch(e){}await runPlan(pl);};
+  window.pgResume=async function(){if(PG.run||PPBUSY||window.__trRun||!isAdm())return;plan=null;AUTO=true;var pl=await prepare();plan=null;if(!pl||!pl.todo.length){AUTO=false;ppChipHide();msg.textContent=pl?'Minden hang kész.':msg.textContent;return;}try{toast5('Hangok készítése indul a háttérben: '+pl.todo.length+' hang');}catch(e){}await runPlan(pl);};
   pa.addEventListener('click',function(){if(!PG.run)return;PG.pause=!PG.pause;pa.textContent=PG.pause?'Folytatás':'Szünet';});
   sp.addEventListener('click',function(){PG.stop=true;PG.pause=false;});
   cl.addEventListener('click',async function(){if(PG.run)return;var n=await pgClearAll(true);msg.textContent=n?n+' nem használt hang törölve.':'Nincs nem használt hang.';pgPlan().catch(function(){});});
@@ -5741,11 +5958,15 @@ async function hLoad(fl,over,prog){var dec=new TextDecoder(),have=over?null:new 
   var lim=document.getElementById('trLim'),go=document.getElementById('trGo'),sp=document.getElementById('trStop'),bar=document.getElementById('trBar'),msg=document.getElementById('trMsg'),st=document.getElementById('trStat'),xl=document.getElementById('trXls'),im=document.getElementById('trImp'),imi=document.getElementById('trImpIn'),up=document.getElementById('trUp'),dl=document.getElementById('trDl');
   var G={run:false,ctl:null};
   var tau=document.getElementById('trAuto');if(tau){tau.value=lsGet('szokartya-trauto')==='0'?'0':'1';tau.addEventListener('change',function(){lsSet('szokartya-trauto',tau.value);});}
-  function trSched(){if(window.__trSch||lsGet('szokartya-trauto')==='0')return;window.__trSch=1;setTimeout(function(){trAuto(0);},15000);}
-  function trAuto(tries){if(lsGet('szokartya-trauto')==='0'||!isAdm()||G.run)return;
-    if((PG.run||PPBUSY)&&tries<30){setTimeout(function(){trAuto(tries+1);},60000);return;}
-    if(!gGet().key||!cands().list.length)return;run(true);}
-  function trUi(){box.hidden=!isAdm();if(isAdm())trSched();}window.trUi=trUi;trUi();
+  /* A Karmester sorrendje: előbb a Piper hangok, utána a szófordítás; sosem egyszerre. */
+  window.trChain=function(why,tries){
+    if(lsGet('szokartya-trauto')==='0'||!isAdm()||G.run||KRUN)return;
+    if(PG.run||PPBUSY){if(tries<40)setTimeout(function(){window.trChain(why,tries+1);},45000);return;}
+    if(navigator.onLine===false||!gGet().key)return;
+    if(Date.now()-(window.__trLast||0)<1800000)return;
+    if(!cands().list.length)return;
+    window.__trLast=Date.now();try{klog('karmester','szófordítás indul (a hangok után)');}catch(e){}run(true);};
+  function trUi(){box.hidden=!isAdm();}window.trUi=trUi;trUi();
   var _ar=applyRole;applyRole=function(){var r=_ar.apply(this,arguments);try{trUi();}catch(e){}return r;};
   lim.value=lsGet('szokartya-trlim')||'50';if(!lim.value)lim.value='50';
   lim.addEventListener('change',function(){lsSet('szokartya-trlim',lim.value);});
@@ -5763,11 +5984,12 @@ async function hLoad(fl,over,prog){var dec=new TextDecoder(),have=over?null:new 
   function busy(b){go.disabled=b;sp.disabled=!b;xl.disabled=im.disabled=up.disabled=dl.disabled=b;}
   async function run(auto){
     if(G.run||!isAdm())return;auto=auto===true;
+    if(!auto&&(KRUN||PG.run||PPBUSY)){msg.textContent='Most hangok készülnek, a fordítás utánuk indul. Próbáld újra később, vagy hagyd, hogy a Karmester elindítsa.';return;}
     var c=cands(),n=+lim.value,list=n>0?c.list.slice(0,n):c.list;
     if(!list.length){msg.textContent='Minden kártya kész, nincs mit generálni.';return;}
     if(!gGet().key){msg.textContent='A generáláshoz Gemini kulcs kell (Beállítások, Gemini).';return;}
     if(auto){try{toast5('Szófordítás indul a háttérben: '+list.length+' kártya');}catch(e){}}
-    TR=TR||{v:1,t:0,c:{}};G.run=true;G.ctl={cancel:0};busy(true);bar.hidden=false;bar.value=0;wake();
+    TR=TR||{v:1,t:0,c:{}};G.run=true;window.__trRun=true;G.ctl={cancel:0};busy(true);bar.hidden=false;bar.value=0;wake();
     var done=0,fail=0,t0=Date.now(),stopped=false,err='';
     try{klog('fordítás','generálás indul: '+list.length+' kártya');}catch(e){}
     for(var i=0;i<list.length&&!G.ctl.cancel&&!stopped;i++){var d=list[i],toks=wtToks(plain(d.back)),res=null;
@@ -5781,10 +6003,11 @@ async function hLoad(fl,over,prog){var dec=new TextDecoder(),have=over?null:new 
     var u8=null,tx='';
     try{if(done){u8=await trSaveLocal();}}catch(e){tx=' Helyi mentési hiba: '+String(e&&e.message||e).slice(0,80);}
     if(u8){try{var ue=await trUpload(u8);tx+=ue?' '+ue:' A Hangtárba feltöltve.';}catch(e){tx+=' Feltöltési hiba: '+String(e&&e.message||e).slice(0,100)+' (a helyi táblázat megvan, a Feltöltés gombbal újra próbálhatod).';}}
-    G.run=false;busy(false);sp.disabled=true;bar.hidden=true;stat();
+    G.run=false;window.__trRun=false;busy(false);sp.disabled=true;bar.hidden=true;stat();
     msg.textContent=(stopped&&err?'Megállt: '+err+' ':G.ctl.cancel?'Leállítva. ':'Kész. ')+done+' kártya elkészült'+(fail?', '+fail+' kihagyva (érvénytelen válasz)':'')+'.'+tx;
     try{klog('fordítás','vége: '+done+' kész, '+fail+' kihagyva'+(err?'; '+err:''));}catch(e){}
-    if(auto&&done){try{toast5('Szófordítás kész: '+done+' kártya'+(u8&&!/hiba/.test(tx)?', feltöltve':''));}catch(e){}}
+    if(auto&&(done||fail)){try{var rest=cands().list.length,txt='Szófordítás kész: '+done+' kártya'+(u8&&!/hiba/.test(tx)?', feltöltve a Hangtárba':'')+(fail?'. Kihagyva: '+fail+' (érvénytelen válasz)':'')+'. '+(rest?'Még '+rest+' kártya vár a következő futásra.':'Minden kártya fordítása kész.');if(!kModal('trdone','Kész',txt,[{t:'Rendben',fn:function(){}}]))toast5(txt);}catch(e){}}
+    try{setTimeout(function(){kRun('a szófordítás után');},4000);}catch(e){}
     try{wtLate();}catch(e){}}
   go.addEventListener('click',function(){run(false);});
   sp.addEventListener('click',function(){if(G.ctl)G.ctl.cancel=1;});
@@ -5901,7 +6124,7 @@ async function pfOpen(key,u8){return JSON.parse(new TextDecoder().decode(await p
 async function pfDK(kek,meta){var raw=await pfAesDec(kek,pfB64d(meta.wk_pw));return {raw:raw,key:await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt'])};}
 async function pfRsaEnc(pubJwk,u8){var k=await crypto.subtle.importKey('jwk',pubJwk,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);return hsB64(new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},k,u8)));}
 async function pfEmEnc(em){try{var pb=await pfCall('/pub');if(pb&&pb.pub)return await pfRsaEnc(pb.pub,pfEnc(JSON.stringify({e:em})));}catch(e){}return '';}
-var APPV='v96';
+var APPV='v97';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
