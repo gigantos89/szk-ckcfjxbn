@@ -263,7 +263,7 @@ body:has(.rw) #kBars{display:none!important}
     <p>Válaszd ki, ki tanítson: a tanár úr férfi hangon szól angolul brit kiejtéssel és magyarul is, a tanárnő női hangon. A beszélgetés tanára is ehhez igazodik.</p>
     <div class="vrow"><select id="tcSel" aria-label="Tanár"><option value="m">Tanár: férfi (tanár úr)</option><option value="f">Tanár: női (tanárnő)</option></select><button class="reset" id="tcTest" type="button">Próba</button></div>
     <p class="msg" id="tcMsg" role="status"></p>
-    <div class="vrow"><select id="gnSel" aria-label="Hang erőssége"><option value="1">Hangerő a telefon hangjához képest: 100%</option><option value="1.25">Hangerő a telefon hangjához képest: 125%</option><option value="1.5">Hangerő a telefon hangjához képest: 150%</option></select><button class="reset" id="gnTest" type="button">Próba</button></div>
+    <div class="vrow"><select id="gnSel" aria-label="Hang erőssége"><option value="1">Hangerő a telefon hangjához képest: 100%</option><option value="1.25">Hangerő a telefon hangjához képest: 125%</option><option value="1.5">Hangerő a telefon hangjához képest: 150%</option><option value="1.75">Hangerő a telefon hangjához képest: 175%</option><option value="2">Hangerő a telefon hangjához képest: 200%</option></select><button class="reset" id="gnTest" type="button">Próba</button></div>
     <div class="vrow"><select id="rateSel" aria-label="Sebesség"><option value="0.9">Sebesség: normál</option><option value="0.7">Sebesség: lassú</option></select></div>
     <div class="vrow"><select id="autoSel" aria-label="Mikor olvasson fel"><option value="0">Csak gombnyomásra</option><option value="1">Magától, amikor megfordul a kártya</option></select></div>
     <div class="vrow"><select id="huCSel" aria-label="Magyar kifejezés felolvasása"><option value="b">Magyar kifejezés a tanulásnál: gombnyomásra szól</option><option value="a">Magyar kifejezés a tanulásnál: magától felolvassa</option><option value="0">Magyar kifejezés a tanulásnál: nem szól</option></select></div>
@@ -4113,8 +4113,8 @@ function enNeed(t){var vid=enVid();if(!vid)return null;if(!ENMAP)enBuild();var m
 /* --- lejátszás Web Audióval: a Chrome nem kér hangfókuszt, így a háttérzene (Spotify) tovább szól --- */
 var BGK='szokartya-bgm',VGK='szokartya-vgn',WAC=null;
 function bgOn(){return lsGet(BGK)!=='0'&&!!(window.AudioContext||window.webkitAudioContext);}
-function vGain(){var g=parseFloat(lsGet(VGK));g=g>=1&&g<=3?Math.min(g,1.5):1.5;return Math.pow(g,1.661);}
-function vPct(){var g=parseFloat(lsGet(VGK));return g>=1&&g<=3?Math.min(g,1.5):1.5;}
+function vGain(){var g=parseFloat(lsGet(VGK));g=g>=1&&g<=3?Math.min(g,2):1.5;return Math.pow(g,1.661);}
+function vPct(){var g=parseFloat(lsGet(VGK));return g>=1&&g<=3?Math.min(g,2):1.5;}
 function waCtx(){if(WAC)return WAC;var AC=window.AudioContext||window.webkitAudioContext;WAC=new AC();var gn=WAC.createGain();gn.gain.value=vGain();var cp=WAC.createDynamicsCompressor();cp.threshold.value=-3;cp.knee.value=0;cp.ratio.value=20;cp.attack.value=0.003;cp.release.value=0.1;gn.connect(cp);cp.connect(WAC.destination);WAC._g=gn;return WAC;}
 function wavPcm(buf){try{var dv=new DataView(buf),off=12,tag=1,sr=22050,ch=1,bits=16,dOff=-1,dLen=0;
   if(buf.byteLength<44||dv.getUint32(0,false)!==0x52494646)return null;
@@ -5844,7 +5844,7 @@ async function hsDelEn(st){if(!isAdm())throw new Error('törölni csak az admin 
   function sh(){if(ph)ph.style.display=enVoiceSel()==='ph'?'':'none';}
   ev.value=enVoiceSel();ew.value=enMode('w');es.value=enMode('s');sh();
   ev.addEventListener('change',function(){lsSet(ENV,ev.value);sh();if(ev.value!=='ph'){try{kRun('angol hang választva');}catch(e){}}});
-  (function(){var gt=document.getElementById('gnTest');if(gt)gt.addEventListener('click',function(){var t=document.getElementById('tcTest'),m=document.getElementById('tcMsg');window.__lp=null;if(t)t.click();setTimeout(function(){var l=window.__lp;if(m)m.textContent=l==='wa'?'':l==='audio'?'Ez a hang a szokásos lejátszóval szólt, ezért a hangerő nem emelhető 100% fölé. Kapcsold be a háttérzene opciót a Részletekben.':'Ez a hang a telefon beépített hangja (nincs letöltött Piper hang), ennek erejét a böngésző nem engedi 100% fölé. A Piper hangoknál működik a 125% és 150%.';},1500);});var bs=document.getElementById('bgSel'),gs=document.getElementById('gnSel');if(bs){bs.value=lsGet(BGK)==='0'?'0':'1';bs.addEventListener('change',function(){lsSet(BGK,bs.value);});}if(gs){var gv=vPct();gs.value=gv<1.125?'1':gv<1.375?'1.25':'1.5';gs.addEventListener('change',function(){lsSet(VGK,gs.value);try{if(WAC&&WAC._g)WAC._g.gain.value=vGain();}catch(e){}});}})();
+  (function(){var gt=document.getElementById('gnTest');if(gt)gt.addEventListener('click',function(){var t=document.getElementById('tcTest'),m=document.getElementById('tcMsg');window.__lp=null;if(t)t.click();setTimeout(function(){var l=window.__lp;if(m)m.textContent=l==='wa'?'':l==='audio'?'Ez a hang a szokásos lejátszóval szólt, ezért a hangerő nem emelhető 100% fölé. Kapcsold be a háttérzene opciót a Részletekben.':'Ez a hang a telefon beépített hangja (nincs letöltött Piper hang), ennek erejét a böngésző nem engedi 100% fölé. A Piper hangoknál működik a 125% és 150%.';},1500);});var bs=document.getElementById('bgSel'),gs=document.getElementById('gnSel');if(bs){bs.value=lsGet(BGK)==='0'?'0':'1';bs.addEventListener('change',function(){lsSet(BGK,bs.value);});}if(gs){var gv=vPct();gs.value=gv<1.125?'1':gv<1.375?'1.25':gv<1.625?'1.5':gv<1.875?'1.75':'2';gs.addEventListener('change',function(){lsSet(VGK,gs.value);try{if(WAC&&WAC._g)WAC._g.gain.value=vGain();}catch(e){}});}})();
   ew.addEventListener('change',function(){lsSet(ENW,ew.value);try{kRun('angol beállítás');}catch(e){}});
   es.addEventListener('change',function(){lsSet(ENS,es.value);try{kRun('angol beállítás');}catch(e){}});
   document.getElementById('enVTest').addEventListener('click',function(){var t=sayText(DATA[0]);if(!enNeed(t)){speak('Good morning. This is a pronunciation test.');return;}
@@ -6126,7 +6126,7 @@ async function pfOpen(key,u8){return JSON.parse(new TextDecoder().decode(await p
 async function pfDK(kek,meta){var raw=await pfAesDec(kek,pfB64d(meta.wk_pw));return {raw:raw,key:await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt'])};}
 async function pfRsaEnc(pubJwk,u8){var k=await crypto.subtle.importKey('jwk',pubJwk,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);return hsB64(new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},k,u8)));}
 async function pfEmEnc(em){try{var pb=await pfCall('/pub');if(pb&&pb.pub)return await pfRsaEnc(pb.pub,pfEnc(JSON.stringify({e:em})));}catch(e){}return '';}
-var APPV='v100';
+var APPV='v101';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
