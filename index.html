@@ -177,6 +177,10 @@ body{zoom:var(--fs,1)}
 .cb{padding:8px 10px;border-radius:12px;max-width:92%;line-height:1.35;overflow-wrap:anywhere}.cb b{display:block;font-size:.72rem;opacity:.75;margin-bottom:2px}
 .cb.t{background:rgba(47,111,237,.14);align-self:flex-start}.cb.me{background:rgba(46,160,67,.18);align-self:flex-end}
 .qhu .qsay{float:right;margin:0 0 4px 8px;width:34px;height:34px}
+.pmbox{position:relative;display:flex;gap:10px;align-items:flex-start}.pmcol{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.pmsvg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;overflow:visible}.pmsvg line{stroke:var(--fg);stroke-width:3;stroke-linecap:round}
+.pmb{font:inherit;font-size:.95rem;line-height:1.25;color:var(--fg);background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:10px 8px;min-height:48px;display:flex;align-items:center;justify-content:center;text-align:center;overflow-wrap:anywhere;cursor:pointer;touch-action:pan-y;-webkit-user-select:none;user-select:none;transition:opacity .3s}
+.pmb.sel{outline:2px solid var(--fg)}.pmb.ok{background:var(--ok);border-color:var(--ok);color:#fff}.pmb.bad{background:var(--red);border-color:var(--red);color:#fff}.pmb.lock{pointer-events:none}.pmb.gone{visibility:hidden;opacity:0;pointer-events:none}
 .qbtns{display:flex;gap:8px}.qbtns .hb{justify-content:center;font-size:1rem;padding:12px}
 .qo{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
 .qo>div{background:var(--card);border-radius:12px;padding:22px;max-width:360px;width:100%;display:flex;flex-direction:column;gap:12px;text-align:center}
@@ -228,6 +232,7 @@ body:has(.rw) #kBars{display:none!important}
   <div id="home"></div>
   <div id="qview" hidden></div>
   <div id="lview" hidden></div>
+  <div id="pview" hidden></div>
   <div id="fview" hidden></div>
   <div id="study" hidden>
   <div id="stage"></div>
@@ -4739,6 +4744,8 @@ function buildHome(){
   var nn=Math.min(na,un);
   function b(m,col,t,sub,n,cls){return '<div class="hr"><button type="button" class="hb'+(cls||'')+'" data-m="'+m+'"><i style="background:'+col+'"></i><span>'+t+'</span><em>'+n+'</em></button>'+(m.indexOf('cat:')===0?'<label class="pk"><input type="checkbox" data-k="'+m.slice(4)+'" aria-label="Kijelölés"'+(PICK.indexOf(m.slice(4))>=0?' checked':'')+'></label>':'')+'</div>';}
   var o=b('learn','var(--fg)','Tanulás','Esedékes ismétlések és mai új szavak',du+' + '+(nn===Infinity?un:nn),' main');
+  var pmN=0;try{pmN=pmElig({src:'l'}).length;}catch(e){}
+  o+=ah('p','Gyakorlás',pmN+' megtanult szó')+'<div class="hr"><button type="button" class="hb" data-p="1"><i style="background:#d9822b"></i><span>Szópárosítás<small>Húzd össze az angol szót a magyar jelentésével</small></span><em>'+pmN+'</em></button></div>'+ae();
   o+=ah('t','Témakörök',Object.keys(cnt).length+' db');o+='<p class="hint">Koppints egy témakörre, vagy jelölj ki többet a négyzettel, és indítsd el őket együtt. Ugyanúgy tanulás, mint a Tanulás gomb (Újra, Nehéz, Jó, Könnyű, 15 nap, 30 nap), csak a választott témakör szavaival, véletlen sorrendben.</p><button type="button" class="hb main" id="goPick" '+(PICK.length?'':'hidden ')+'><span>Kijelölt témakörök indítása<small>Véletlen sorrend</small></span><em>'+DATA.filter(function(d){return PICK.indexOf(d.cat)>=0;}).length+'</em></button>';
   Object.keys(CATS).forEach(function(k){if(cnt[k])o+=b('cat:'+k,CATS[k].c,esc(CATS[k].n),'',cnt[k]);});
   o+=ae()+ah('q','Beszélgetés',Object.keys(QT).length+' db');o+='<p class="hint">Szóbeli témakártyák: kérdések magyar magyarázattal és szósegítővel.</p>'+Object.keys(QT).map(function(k){return '<div class="hr"><button type="button" class="hb" data-q="'+k+'"><i style="background:'+QT[k].c+'"></i><span>'+esc(QT[k].n)+'<small>'+esc(QT[k].hu)+'</small></span><em>'+QT[k].items.length+'</em></button></div>';}).join('');
@@ -4751,15 +4758,16 @@ function buildHome(){
   h.querySelectorAll('.hb[data-m]').forEach(function(x){x.addEventListener('click',function(){MODE=x.dataset.m;QUEUE=null;showView('study');});});
   h.querySelectorAll('.pk input').forEach(function(x){x.addEventListener('change',function(){var k=x.dataset.k,i=PICK.indexOf(k);if(x.checked&&i<0)PICK.push(k);if(!x.checked&&i>=0)PICK.splice(i,1);buildHome();});});
   h.querySelectorAll('.hb[data-f]').forEach(function(x){x.addEventListener('click',function(){showView('free');});});
+  h.querySelectorAll('.hb[data-p]').forEach(function(x){x.addEventListener('click',function(){showView('pair');});});
   h.querySelectorAll('.hb[data-l]').forEach(function(x){x.addEventListener('click',function(){showView('listen');});});
   h.querySelectorAll('.hb[data-q]').forEach(function(x){x.addEventListener('click',function(){openQ(x.dataset.q);});});
   var gp=document.getElementById('goPick');if(gp)gp.addEventListener('click',function(){if(!PICK.length)return;MODE=PICK.length===1?'cat:'+PICK[0]:'cats:'+PICK.join(',');QUEUE=null;showView('study');});
 }
 function showView(v){
   var pv=VIEW;VIEW=v;if(v==='home'&&pv!=='home')HOMEOPEN=null;if(pv!==v){try{var sw0=document.getElementById('setWrap');if(sw0)Array.prototype.forEach.call(sw0.querySelectorAll('details.backup'),function(d){d.open=false;});}catch(e){}}if(pv==='free'&&v!=='free'&&window.fStopAll)window.fStopAll();
-  document.getElementById('home').hidden=v!=='home';document.getElementById('study').hidden=v!=='study';document.getElementById('qview').hidden=v!=='q';document.getElementById('lview').hidden=v!=='listen';document.getElementById('fview').hidden=v!=='free';if(v!=='listen'&&typeof L!=='undefined'&&L.on)lsStop();
+  document.getElementById('home').hidden=v!=='home';document.getElementById('study').hidden=v!=='study';document.getElementById('qview').hidden=v!=='q';document.getElementById('lview').hidden=v!=='listen';document.getElementById('pview').hidden=v!=='pair';if(pv==='pair'&&v!=='pair'){try{pmStop();PM.st='set';}catch(e){}}document.getElementById('fview').hidden=v!=='free';if(v!=='listen'&&typeof L!=='undefined'&&L.on)lsStop();
   if(v==='study'){var nm=document.getElementById('modeName'),s=document.getElementById('modeSel');buildModeSel();var op=s.options[s.selectedIndex];nm.textContent=op?op.textContent.replace(/\s*\(\d+\)$/,''):'';}
-  if(v==='q'){renderQ();}else if(v==='listen'){renderL();}else if(v==='free'){renderF();}else render();try{window.scrollTo(0,0);}catch(e){}
+  if(v==='q'){renderQ();}else if(v==='listen'){renderL();}else if(v==='free'){renderF();}else if(v==='pair'){PM.st='set';renderP();}else render();try{window.scrollTo(0,0);}catch(e){}
 }
 /* ===== v93: koppintható példamondat + előre generált szófordítás ===== */
 var WTON=lsGet('szokartya-wt')!=='0',TR=null,WT={ok:0,sel:-1,map:[],e:null,cores:[]};
@@ -4804,7 +4812,7 @@ async function trFetch(force){if(!WTON)return 0;var k=dkey(Date.now());if(!force
   var buf=await hsFetch('b_ford.bin',true);lsSet('szokartya-trd',k);var o=await trUnpack(buf);if(!o||!o.c)return 0;if(TR&&TR.t&&o.t&&TR.t>=o.t)return 0;
   TR=o;await gtPutC('tr|v1',trAb(new Uint8Array(buf)));wtLate();return Object.keys(o.c).length;}
 function render(){
-  if(VIEW==='q'||VIEW==='listen'){return;}
+  if(VIEW==='q'||VIEW==='listen'||VIEW==='pair'){return;}
   if(VIEW==='home'){stats();buildHome();return;}
   stats();flipped=false;busy=false;TYPED=null;cur=pick();
   if(cur<0){
@@ -6126,7 +6134,73 @@ async function pfOpen(key,u8){return JSON.parse(new TextDecoder().decode(await p
 async function pfDK(kek,meta){var raw=await pfAesDec(kek,pfB64d(meta.wk_pw));return {raw:raw,key:await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt'])};}
 async function pfRsaEnc(pubJwk,u8){var k=await crypto.subtle.importKey('jwk',pubJwk,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);return hsB64(new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},k,u8)));}
 async function pfEmEnc(em){try{var pb=await pfCall('/pub');if(pb&&pb.pub)return await pfRsaEnc(pb.pub,pfEnc(JSON.stringify({e:em})));}catch(e){}return '';}
-var APPV='v101';
+/* ===== v102: Gyakorlás – szópárosítás ===== */
+var PMK='szokartya-pm',PMSEL=[],PM={st:'set',tok:0,pool:[],rd:0,err:0,ok:0,left:0,sel:null,words:[],drag:null};
+function pmCfg(){var o={src:'l',n:'8',dir:'en'};try{var x=JSON.parse(lsGet(PMK)||'{}')||{};Object.keys(o).forEach(function(k){if(x[k])o[k]=String(x[k]);});}catch(e){}return o;}
+function pmSave(o){lsSet(PMK,JSON.stringify(o));}
+function pmLearned(i){var c=SI(i);return !!(c.seen&&(c.ivl||0)>=1);}
+function pmElig(cfg){var r=[];DATA.forEach(function(d,i){if(cfg.src==='l'&&!pmLearned(i))return;r.push(i);});return r;}
+function pmEn(d){return plain(d.en||'');}function pmHu(d){return plain(d.hu||'');}
+function pmStop(){PM.tok++;PM.sel=null;PM.drag=null;}
+function pmPickWords(cfg,ids){var n=+cfg.n,out=[],seen={};var guard=0;
+  while(out.length<n&&guard++<5000){if(!PM.pool.length){PM.pool=shuffle(ids);if(!PM.pool.length)break;}
+    var i=PM.pool.pop(),d=DATA[i],a=pmEn(d).toLowerCase(),b=pmHu(d).toLowerCase();if(seen['e'+a]||seen['h'+b])continue;seen['e'+a]=seen['h'+b]=1;out.push(i);
+    if(!PM.pool.length&&out.length<n&&out.length>=ids.length)break;}
+  return out;}
+function pmStart(){var cfg=pmCfg(),ids=pmElig(cfg).filter(function(i){return !PMSEL.length||PMSEL.indexOf(DATA[i].cat)>=0;});if(ids.length<2)return;
+  PM.pool=[];PM.rd=0;PM.err=0;PM.ok=0;pmRound(cfg,ids);}
+function pmRound(cfg,ids){PM.tok++;PM.rd++;PM.words=pmPickWords(cfg,ids);PM.left=PM.words.length;PM.sel=null;PM.st='play';PM.ids=ids;renderP();}
+function pmTxt(cfg,i,side){var d=DATA[i],en=cfg.dir!=='hu';return (side==='l')===en?pmEn(d):pmHu(d);}
+function pmLine(x1,y1,x2,y2){var s=document.querySelector('#pmBox .pmsvg');if(!s)return;s.innerHTML=x1==null?'':'<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'"/>';}
+function pmBtn(side,k){return document.querySelector('#pmBox .pmb[data-s="'+side+'"][data-k="'+k+'"]');}
+function pmTry(a,b){ /* a, b: {side,k} */
+  var L=a.side==='l'?a:b,R=a.side==='l'?b:a,bl=pmBtn('l',L.k),br=pmBtn('r',R.k);if(!bl||!br||bl.classList.contains('lock')||br.classList.contains('lock'))return;
+  var di=PM.words[L.k],dj=PM.words[R.k],good=L.k===R.k||pmHu(DATA[di]).toLowerCase()===pmHu(DATA[dj]).toLowerCase()&&pmEn(DATA[di]).toLowerCase()===pmEn(DATA[dj]).toLowerCase();
+  PM.sel=null;[bl,br].forEach(function(x){x.classList.remove('sel');x.classList.add('lock',good?'ok':'bad');});pmLine();
+  if(good)PM.ok++;else PM.err++;var tok=PM.tok;
+  setTimeout(function(){if(tok!==PM.tok)return;
+    if(good){bl.classList.add('gone');br.classList.add('gone');PM.left--;pmCnt();if(PM.left<=0)pmEnd();}
+    else{[bl,br].forEach(function(x){x.classList.remove('lock','bad');});}},2000);}
+function pmCnt(){var e=document.getElementById('pmCnt');if(e)e.textContent=PM.rd+'. kör · hátra: '+PM.left;}
+function pmEnd(){PM.st='end';var tok=PM.tok;setTimeout(function(){if(tok===PM.tok&&VIEW==='pair')renderP();},350);}
+function pmTap(side,k){var el=pmBtn(side,k);if(!el||el.classList.contains('lock')||el.classList.contains('gone'))return;
+  if(PM.sel&&PM.sel.side!==side){pmTry(PM.sel,{side:side,k:k});return;}
+  var old=document.querySelector('#pmBox .pmb.sel');if(old)old.classList.remove('sel');
+  if(PM.sel&&PM.sel.side===side&&PM.sel.k===k){PM.sel=null;return;}PM.sel={side:side,k:k};el.classList.add('sel');}
+function pmBind(){var box=document.getElementById('pmBox');if(!box)return;
+  function ctr(el){var r=el.getBoundingClientRect(),b=box.getBoundingClientRect();return [r.left+r.width/2-b.left,r.top+r.height/2-b.top];}
+  box.addEventListener('pointerdown',function(e){var el=e.target.closest&&e.target.closest('.pmb');if(!el||el.classList.contains('lock')||el.classList.contains('gone'))return;PM.drag={side:el.dataset.s,k:+el.dataset.k,x:e.clientX,y:e.clientY,mv:false,el:el};});
+  box.addEventListener('pointermove',function(e){var d=PM.drag;if(!d)return;if(!d.mv&&Math.abs(e.clientX-d.x)+Math.abs(e.clientY-d.y)>10)d.mv=true;if(d.mv){var c=ctr(d.el),b=box.getBoundingClientRect();pmLine(c[0],c[1],e.clientX-b.left,e.clientY-b.top);}});
+  function up(e,cancel){var d=PM.drag;PM.drag=null;if(!d)return;pmLine();if(cancel)return;
+    if(!d.mv){pmTap(d.side,d.k);return;}
+    var t=document.elementFromPoint(e.clientX,e.clientY),tb=t&&t.closest&&t.closest('.pmb');if(tb&&tb.dataset.s!==d.side&&!tb.classList.contains('gone'))pmTry({side:d.side,k:d.k},{side:tb.dataset.s,k:+tb.dataset.k});}
+  box.addEventListener('pointerup',function(e){up(e,false);});box.addEventListener('pointercancel',function(e){up(e,true);});
+  box.addEventListener('keydown',function(e){if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('pmb')){e.preventDefault();pmTap(e.target.dataset.s,+e.target.dataset.k);}});}
+function renderP(){var v=document.getElementById('pview');if(!v)return;var cfg=pmCfg(),COL='#d9822b';
+  if(PM.st==='play'){var ws=PM.words,en=cfg.dir!=='hu';var Lk=ws.map(function(_,k){return k;}),Rk=shuffle(Lk);
+    function col(side,ks){return ks.map(function(k){return '<button type="button" class="pmb" data-s="'+side+'" data-k="'+k+'">'+esc(pmTxt(cfg,ws[k],side))+'</button>';}).join('');}
+    v.innerHTML='<div class="qc"><div class="qh" style="background:'+COL+'"><span>Párosítás</span><span id="pmCnt"></span></div><div class="qb"><p class="hint">Húzd össze a szót a párjával, vagy koppints az egyikre, aztán a párjára. Jó páros: zöld, majd eltűnik. Rossz: piros, majd visszaáll.</p>'+
+    '<div class="pmbox" id="pmBox"><svg class="pmsvg" aria-hidden="true"></svg><div class="pmcol">'+col('l',Lk)+'</div><div class="pmcol">'+col('r',Rk)+'</div></div>'+
+    '<div class="qbtns"><button type="button" class="reset" id="pmBack">‹ Beállítások</button><button type="button" class="reset" id="pmHome">‹ Főoldal</button></div></div></div>';
+    pmBind();pmCnt();document.getElementById('pmBack').addEventListener('click',function(){pmStop();PM.st='set';renderP();});document.getElementById('pmHome').addEventListener('click',function(){pmStop();PM.st='set';showView('home');});return;}
+  if(PM.st==='end'){v.innerHTML='<div class="qc"><div class="qh" style="background:'+COL+'"><span>Kör kész</span><span>'+PM.rd+'. kör</span></div><div class="qb"><p class="qen">Szép munka!</p><p class="hint">Összesen '+PM.ok+' jó páros, '+PM.err+' hibás próbálkozás.</p>'+
+    '<button type="button" class="hb main" id="pmNext"><span style="text-align:center">Következő kör</span></button><div class="qbtns"><button type="button" class="reset" id="pmBack">‹ Beállítások</button><button type="button" class="reset" id="pmHome">‹ Főoldal</button></div></div></div>';
+    document.getElementById('pmNext').addEventListener('click',function(){pmRound(cfg,PM.ids||pmElig(cfg));});document.getElementById('pmBack').addEventListener('click',function(){PM.st='set';renderP();});document.getElementById('pmHome').addEventListener('click',function(){PM.st='set';showView('home');});return;}
+  var el=pmElig(cfg),cnt={};el.forEach(function(i){cnt[DATA[i].cat]=(cnt[DATA[i].cat]||0)+1;});PMSEL=PMSEL.filter(function(k){return cnt[k];});
+  var tot=PMSEL.length?PMSEL.reduce(function(a,k){return a+(cnt[k]||0);},0):el.length;
+  var chips=Object.keys(CATS).filter(function(k){return cnt[k];}).map(function(k){return '<button type="button" class="chip'+(PMSEL.indexOf(k)>=0?' used':'')+'" data-k="'+k+'">'+esc(CATS[k].n)+' ('+cnt[k]+')</button>';}).join('');
+  v.innerHTML='<div class="qc"><div class="qh" style="background:'+COL+'"><span>Gyakorlás: párosítás</span><span>'+tot+' szó</span></div><div class="qb"><p class="hint">Bal oldalon az angol szavak, jobb oldalon a magyar jelentések, véletlen sorrendben. Kösd össze a párokat. A gyakorlás nem változtatja az ismétlési ütemezést.</p>'+
+  '<div class="vrow"><select id="pmSrc" aria-label="Mely szavakkal"><option value="l">Szavak: csak a megtanultak</option><option value="a">Szavak: minden szó</option></select></div>'+
+  '<div class="chips" id="pmChips"><button type="button" class="chip'+(PMSEL.length?'':' used')+'" data-k="">Minden témakör</button>'+chips+'</div>'+
+  '<div class="vrow"><select id="pmN" aria-label="Párok száma"><option value="5">Egy körben: 5 pár</option><option value="8">Egy körben: 8 pár</option><option value="10">Egy körben: 10 pár</option></select></div>'+
+  '<div class="vrow"><select id="pmDir" aria-label="Oldalak"><option value="en">Bal oldal: angol, jobb oldal: magyar</option><option value="hu">Bal oldal: magyar, jobb oldal: angol</option></select></div>'+
+  '<button type="button" class="hb main" id="pmGo"'+(tot>=2?'':' disabled')+'><span style="text-align:center">▶ Indítás</span></button>'+(tot>=2?'':'<p class="msg">'+(cfg.src==='l'?'Még nincs elég megtanult szavad ebben a körben. Válaszd a „minden szó” lehetőséget, vagy tanulj még.':'Nincs elég szó.')+'</p>')+
+  '<div class="qbtns"><button type="button" class="reset" id="pmHome">‹ Főoldal</button></div></div></div>';
+  ['pmSrc:src','pmN:n','pmDir:dir'].forEach(function(x){var a=x.split(':'),s=document.getElementById(a[0]);s.value=cfg[a[1]];s.addEventListener('change',function(){var o=pmCfg();o[a[1]]=s.value;pmSave(o);renderP();});});
+  v.querySelectorAll('#pmChips .chip').forEach(function(b){b.addEventListener('click',function(){var k=b.dataset.k;if(!k)PMSEL=[];else{var i=PMSEL.indexOf(k);if(i>=0)PMSEL.splice(i,1);else PMSEL.push(k);}renderP();});});
+  document.getElementById('pmGo').addEventListener('click',pmStart);document.getElementById('pmHome').addEventListener('click',function(){showView('home');});}
+
+var APPV='v102';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
