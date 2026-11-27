@@ -3674,7 +3674,7 @@ function purgeDropped(){
 applyEdits();
 function mergeSt(a){var n=0;Object.keys(a||{}).forEach(function(k){var x=a[k],y=st[k];if(!x||typeof x!=='object')return;if(!y||(x.t||0)>(y.t||0)){st[k]=x;n++;}});return n;}
 function saveLocal(){if(window.PFWIPE)return;try{localStorage.setItem(KEY,JSON.stringify(st));}catch(e){}}
-var SET={limit:5,t:0,xd:'',x:0,rw:'rand',rm:5,rd:0,rs:1,days:[],lg:{},cl:0,ord:'new',rc:20,rvd:'',rvn:0,rvi:{},rx:0,rxd:''};
+var SET={limit:5,t:0,xd:'',x:0,rw:'rand',rm:5,rd:0,rs:1,days:[],lg:{},cl:0,ord:'new',rc:20,rvd:'',rvn:0,rvi:{},rx:0,rxd:'',pr:{}};
 function adoptSet(s){
   if(!s||typeof s!=='object')return false;var ch=false;
   var zc=s.cl||0;if(zc>SET.cl){SET.cl=zc;SET.lg={};SET.days=[];SET.rd=0;ch=true;}var skip=zc<SET.cl;
@@ -3682,6 +3682,7 @@ function adoptSet(s){
     if(['rand','fw','cf','st','off'].indexOf(s.rw)>=0)SET.rw=s.rw;if([5,10,15,20,30,50].indexOf(+s.rm)>=0)SET.rm=+s.rm;SET.rs=s.rs===0?0:1;
     if(['rev','new','mix'].indexOf(s.ord)>=0)SET.ord=s.ord;if(s.rc!=null&&[0,20,30,40,50,80,100,150].indexOf(+s.rc)>=0)SET.rc=+s.rc;SET.rx=+s.rx||0;SET.rxd=s.rxd||'';ch=true;}
   if(s.rvd){if(s.rvd===SET.rvd){if((s.rvn||0)>SET.rvn){SET.rvn=s.rvn;ch=true;}if(s.rvi&&typeof s.rvi==='object')Object.keys(s.rvi).forEach(function(k){if(!SET.rvi[k]){SET.rvi[k]=1;ch=true;}});}else if(s.rvd>SET.rvd){SET.rvd=s.rvd;SET.rvn=s.rvn||0;SET.rvi=(s.rvi&&typeof s.rvi==='object')?s.rvi:{};ch=true;}}
+  if(s.pr&&typeof s.pr==='object'){SET.pr=SET.pr||{};Object.keys(s.pr).forEach(function(k){var a=s.pr[k],b=SET.pr[k];if(!a||!Array.isArray(a.s))return;var better=!b;if(b){for(var i=0;i<a.s.length;i++){if(a.s[i]<b.s[i]){better=true;break;}if(a.s[i]>b.s[i])break;}}if(better){SET.pr[k]=a;ch=true;}});}
   if(!skip&&(s.rd||0)>SET.rd){SET.rd=s.rd;ch=true;}
   if(!skip&&s.lg&&typeof s.lg==='object'){Object.keys(s.lg).forEach(function(k){var a=s.lg[k],b=SET.lg[k];if(Array.isArray(a)&&(!b||a[0]>b[0])){SET.lg[k]=a;ch=true;}});}
   if(!skip&&Array.isArray(s.days)){var m={};SET.days.concat(s.days).forEach(function(d){if(typeof d==='string')m[d]=1;});
@@ -4912,12 +4913,12 @@ function rwSound(kind){
   setTimeout(stop,5000);
   return {stop:stop};
 }
-function showReward(kind){
+function showReward(kind,box){
   if(kind==='rand'||!kind)kind=['fw','cf','st'][Math.floor(Math.random()*3)];
   var old=document.getElementById('rwov');if(old)old.remove();
   var seen=0;DATA.forEach(function(d,i){if(SI(i).seen)seen++;});
   var ov=document.createElement('div');ov.className='rw';ov.id='rwov';
-  ov.innerHTML='<canvas></canvas><div class="rwbox" role="dialog" aria-label="Jutalom"><h2>Szép munka!</h2><p class="big">Ma '+newDone()+' új szót tanultál.</p><p>'+streak()+' napja tanulsz egymás után.</p><p>Összesen '+seen+' szót ismersz már.</p><button class="reset" type="button">Tovább</button></div>';
+  ov.innerHTML='<canvas></canvas><div class="rwbox" role="dialog" aria-label="Jutalom">'+(box||('<h2>Szép munka!</h2><p class="big">Ma '+newDone()+' új szót tanultál.</p><p>'+streak()+' napja tanulsz egymás után.</p><p>Összesen '+seen+' szót ismersz már.</p><button class="reset" type="button">Tovább</button>'))+'</div>';
   document.body.appendChild(ov);
   if(kind==='off'){var cvx=ov.querySelector('canvas');if(cvx)cvx.remove();ov.querySelector('button').addEventListener('click',function(){ov.remove();});return;}
   var snd=SET.rs===0?null:rwSound(kind);
@@ -6145,7 +6146,7 @@ async function pfDK(kek,meta){var raw=await pfAesDec(kek,pfB64d(meta.wk_pw));ret
 async function pfRsaEnc(pubJwk,u8){var k=await crypto.subtle.importKey('jwk',pubJwk,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);return hsB64(new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},k,u8)));}
 async function pfEmEnc(em){try{var pb=await pfCall('/pub');if(pb&&pb.pub)return await pfRsaEnc(pb.pub,pfEnc(JSON.stringify({e:em})));}catch(e){}return '';}
 /* ===== v102: Gyakorlás – szópárosítás ===== */
-var PMK='szokartya-pm',PMSEL=[],PM={g:'pair',st:'set',tok:0,pool:[],rd:0,err:0,ok:0,left:0,sel:null,words:[],drag:null};
+var PMK='szokartya-pm',PMSEL=[],PM={g:'pair',st:'set',tok:0,t0:0,wrong:[],retry:false,rerr:0,rt:0,pool:[],rd:0,err:0,ok:0,left:0,sel:null,words:[],drag:null};
 function pmCfg(){var o={src:'l',n:'8',dir:'en',qd:'en'};try{var x=JSON.parse(lsGet(PMK)||'{}')||{};Object.keys(x).forEach(function(k){if(x[k])o[k]=String(x[k]);});}catch(e){}return o;}
 function pmSave(o){lsSet(PMK,JSON.stringify(o));}
 function pmLearned(i){var c=SI(i);return !!(c.seen&&(c.ivl||0)>=1);}
@@ -6159,7 +6160,7 @@ function pmPickWords(cfg,ids){var n=+cfg.n,out=[],seen={};var guard=0;
   return out;}
 function pmStart(){var cfg=pmCfg(),ids=pmElig(cfg).filter(function(i){return !PMSEL.length||PMSEL.indexOf(DATA[i].cat)>=0;});if(ids.length<2)return;cfg.n=cfg.n_pair||cfg.n||'8';
   PM.pool=[];PM.rd=0;PM.err=0;PM.ok=0;pmRound(cfg,ids);}
-function pmRound(cfg,ids){PM.tok++;PM.rd++;PM.words=pmPickWords(cfg,ids);PM.left=PM.words.length;PM.sel=null;PM.st='play';PM.ids=ids;renderP();}
+function pmRound(cfg,ids){PM.t0=Date.now();PM.rerr=0;PM.tok++;PM.rd++;PM.words=pmPickWords(cfg,ids);PM.left=PM.words.length;PM.sel=null;PM.st='play';PM.ids=ids;renderP();}
 function pmTxt(cfg,i,side){var d=DATA[i],en=cfg.dir!=='hu';return (side==='l')===en?pmEn(d):pmHu(d);}
 function pmLine(x1,y1,x2,y2){var s=document.querySelector('#pmBox .pmsvg');if(!s)return;s.innerHTML=x1==null?'':'<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'"/>';}
 function pmBtn(side,k){return document.querySelector('#pmBox .pmb[data-s="'+side+'"][data-k="'+k+'"]');}
@@ -6167,12 +6168,12 @@ function pmTry(a,b){ /* a, b: {side,k} */
   var L=a.side==='l'?a:b,R=a.side==='l'?b:a,bl=pmBtn('l',L.k),br=pmBtn('r',R.k);if(!bl||!br||bl.classList.contains('lock')||br.classList.contains('lock'))return;
   var di=PM.words[L.k],dj=PM.words[R.k],good=L.k===R.k||pmHu(DATA[di]).toLowerCase()===pmHu(DATA[dj]).toLowerCase()&&pmEn(DATA[di]).toLowerCase()===pmEn(DATA[dj]).toLowerCase();
   PM.sel=null;[bl,br].forEach(function(x){x.classList.remove('sel');x.classList.add('lock',good?'ok':'bad');});pmLine();
-  if(good)PM.ok++;else PM.err++;var tok=PM.tok;
+  if(good)PM.ok++;else{PM.err++;PM.rerr++;}var tok=PM.tok;
   setTimeout(function(){if(tok!==PM.tok)return;
     if(good){bl.classList.add('gone');br.classList.add('gone');PM.left--;pmCnt();if(PM.left<=0)pmEnd();}
     else{[bl,br].forEach(function(x){x.classList.remove('lock','bad');});}},2000);}
 function pmCnt(){var e=document.getElementById('pmCnt');if(e)e.textContent=PM.rd+'. kör · hátra: '+PM.left;}
-function pmEnd(){PM.st='end';var tok=PM.tok;setTimeout(function(){if(tok===PM.tok&&VIEW==='pair')renderP();},350);}
+function pmEnd(){PM.st='end';PM.rt=Date.now()-PM.t0;var tok=PM.tok;setTimeout(function(){if(tok===PM.tok&&VIEW==='pair'){renderP();try{gRec([PM.rerr,PM.rt],PM.rerr+' hiba, idő: '+fmtT(PM.rt)+' ('+(PM.words||[]).length+' pár)');}catch(e){}}},350);}
 function pmTap(side,k){var el=pmBtn(side,k);if(!el||el.classList.contains('lock')||el.classList.contains('gone'))return;
   if(PM.sel&&PM.sel.side!==side){pmTry(PM.sel,{side:side,k:k});return;}
   var old=document.querySelector('#pmBox .pmb.sel');if(old)old.classList.remove('sel');
@@ -6200,10 +6201,27 @@ function pmNorm(s){return pmClean(s).toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' 
 function gShell(d,right,inner){return '<div class="qc"><div class="qh" style="background:'+GM[PM.g].c+'"><span>'+GM[PM.g].t+'</span><span id="gR">'+right+'</span></div><div class="qb">'+inner+'<div class="qbtns"><button type="button" class="reset" id="pmBack">‹ Beállítások</button><button type="button" class="reset" id="pmHome">‹ Főoldal</button></div></div></div>';}
 function gNav(){var b=document.getElementById('pmBack'),h=document.getElementById('pmHome');if(b)b.addEventListener('click',function(){pmStop();PM.st='set';renderP();});if(h)h.addEventListener('click',function(){pmStop();PM.st='set';showView('home');});}
 function gIds(cfg){return pmElig(cfg).filter(function(i){return !PMSEL.length||PMSEL.indexOf(DATA[i].cat)>=0;});}
-function gOver(sum){PM.sum=sum;PM.st='end';PM.tok++;renderP();}
+function fmtT(ms){var s=Math.max(0,Math.round(ms/1000));return Math.floor(s/60)+':'+('0'+(s%60)).slice(-2);}
+function gCmp(a,b){for(var i=0;i<a.length;i++){if(a[i]<b[i])return -1;if(a[i]>b[i])return 1;}return 0;}
+function gRec(score,txt){var cfg=pmCfg(),g=PM.g,key=g+'|'+(cfg['n_'+g]||GM[g].nd)+'|'+(g==='pair'?cfg.dir:g==='quiz'?cfg.qd:'')+'|'+cfg.src;
+  SET.pr=SET.pr||{};var old=SET.pr[key];
+  if(old&&gCmp(score,old.s)>=0)return;
+  SET.pr[key]={s:score,x:txt,d:Date.now()};try{saveSet();}catch(e){}
+  if(!old)return;
+  var h='<h2>Új rekord!</h2><p class="big">'+esc(GM[g].t)+'</p><p>Legjobb eredményed: '+esc(txt)+'.</p><button class="reset" type="button">Tovább</button>';
+  setTimeout(function(){if(VIEW==='pair')showReward(SET.rw,h);},500);}
+function gOver(sum){var el=Date.now()-PM.t0,g=PM.g,n=PM.q?PM.q.length:0,cfg=pmCfg();PM.el=el;
+  PM.sum=(PM.retry?'Javítókör. ':'')+sum+(g==='tf'?'':' Idő: '+fmtT(el)+'.');PM.st='end';PM.tok++;renderP();
+  if(PM.retry)return;
+  try{if(g==='quiz'&&PM.ok>0)gRec([-PM.ok,el],PM.ok+' / '+n+' jó válasz, idő: '+fmtT(el));
+    else if(g==='mem')gRec([PM.moves,el],PM.moves+' lépés, idő: '+fmtT(el)+' ('+n+' pár)');
+    else if(g==='scr'&&PM.ok>0)gRec([-PM.ok,PM.err,el],PM.ok+' / '+n+' szó, '+PM.err+' hibás próbálkozás, idő: '+fmtT(el));
+    else if(g==='dict'&&PM.ok>0)gRec([-PM.ok,el],PM.ok+' / '+n+' jó szó, idő: '+fmtT(el));
+    else if(g==='tf'&&PM.ok>0)gRec([-PM.ok,PM.err],PM.ok+' jó válasz '+(cfg.n_tf||'60')+' másodperc alatt, '+PM.err+' hibával');}catch(e){}}
+function gRetry(){var w=PM.wrong.slice();if(!w.length)return;PM.tok++;PM.q=w;PM.wrong=[];PM.i=0;PM.ok=0;PM.err=0;PM.retry=true;PM.t0=Date.now();PM.st='play';renderP();}
 function gDelay(f,ms){var t=PM.tok;setTimeout(function(){if(t===PM.tok&&VIEW==='pair')f();},ms);}
 function gFlash(els,cls,ms,after){els.forEach(function(x){x.classList.add('lock',cls);});gDelay(function(){after&&after();},ms);}
-function gStart(){var cfg=pmCfg(),ids=gIds(cfg);if(ids.length<2)return;PM.tok++;PM.ids=ids;PM.ok=0;PM.err=0;PM.i=0;PM.rd=1;PM.sel=null;
+function gStart(){var cfg=pmCfg(),ids=gIds(cfg);if(ids.length<2)return;PM.tok++;PM.ids=ids;PM.ok=0;PM.err=0;PM.i=0;PM.rd=1;PM.sel=null;PM.t0=Date.now();PM.wrong=[];PM.retry=false;
   var n=+(cfg['n_'+PM.g]||GM[PM.g].nd);
   if(PM.g==='pair'){PM.pool=[];PM.rd=0;pmRound(cfg,ids);return;}
   if(PM.g==='tf'){PM.pool=[];PM.tend=Date.now()+n*1000;}
@@ -6219,7 +6237,7 @@ function gQuiz(){var cfg=pmCfg(),qd=cfg.qd||'en',n=PM.q.length;if(PM.i>=n){gOver
   v.innerHTML=gShell(d,(PM.i+1)+' / '+n,'<p class="qen" id="gQ">'+(qd==='au'?'Hallgasd meg a szót':esc(q))+(qd!=='hu'?' <button type="button" class="say" id="gSay" aria-label="Felolvasás">&#128266;</button>':'')+'</p><div class="gopts">'+opts.map(function(k){return '<button type="button" class="pmb" data-k="'+k+'">'+esc(en2hu?pmHu(DATA[k]):pmEn(DATA[k]))+'</button>';}).join('')+'</div><p class="hint">Helyes: '+PM.ok+' · hibás: '+PM.err+'</p>');
   gNav();var sy=document.getElementById('gSay');var say=function(){try{speak(sayText(d));}catch(e){}};if(sy)sy.addEventListener('click',say);if(qd==='au')setTimeout(say,350);
   var locked=false;v.querySelectorAll('.gopts .pmb').forEach(function(b){b.addEventListener('click',function(){if(locked)return;locked=true;var good=+b.dataset.k===i;
-    if(good){PM.ok++;b.classList.add('ok');}else{PM.err++;b.classList.add('bad');var c=v.querySelector('.gopts .pmb[data-k="'+i+'"]');if(c)c.classList.add('ok');}
+    if(good){PM.ok++;b.classList.add('ok');}else{PM.err++;PM.wrong.push(i);b.classList.add('bad');var c=v.querySelector('.gopts .pmb[data-k="'+i+'"]');if(c)c.classList.add('ok');}
     v.querySelectorAll('.gopts .pmb').forEach(function(x){x.classList.add('lock');});if(qd==='au'){var qq=document.getElementById('gQ');if(qq)qq.firstChild.nodeValue=pmEn(d)+' ';}
     gDelay(function(){PM.i++;gQuiz();},good?1100:2000);});});}
 /* --- 2. memória --- */
@@ -6241,7 +6259,7 @@ function gScr(){var n=PM.q.length;if(PM.i>=n){gOver('Kirakva: '+PM.ok+' / '+n+' 
   function show(){bt.textContent=PM.built.length?PM.built.map(function(k){return tiles[k];}).join(wm?' ':''):' ';}
   function finish(good,skip){lock=true;var all=v.querySelectorAll('#sT .pmb');all.forEach(function(x){x.classList.add('lock');});
     if(good){PM.ok++;bt.classList.add('okt');gDelay(function(){PM.i++;gScr();},1100);}
-    else{PM.err++;bt.classList.add('badt');if(skip)bt.textContent=ex;gDelay(function(){if(skip){PM.i++;gScr();}else{PM.built=[];lock=false;bt.classList.remove('badt');v.querySelectorAll('#sT .pmb').forEach(function(x){x.classList.remove('lock','gone');});show();}},2000);}}
+    else{PM.err++;if(PM.wrong.indexOf(i)<0)PM.wrong.push(i);bt.classList.add('badt');if(skip)bt.textContent=ex;gDelay(function(){if(skip){PM.i++;gScr();}else{PM.built=[];lock=false;bt.classList.remove('badt');v.querySelectorAll('#sT .pmb').forEach(function(x){x.classList.remove('lock','gone');});show();}},2000);}}
   v.querySelectorAll('#sT .pmb').forEach(function(b){b.addEventListener('click',function(){if(lock||b.classList.contains('gone'))return;PM.built.push(+b.dataset.k);b.classList.add('gone');show();
     if(PM.built.length===tiles.length){var got=PM.built.map(function(k){return tiles[k];}).join(wm?' ':'');finish(pmNorm(got)===pmNorm(ex),false);}});});
   document.getElementById('sUndo').addEventListener('click',function(){if(lock||!PM.built.length)return;var k=PM.built.pop();var b=v.querySelector('#sT .pmb[data-k="'+k+'"]');if(b)b.classList.remove('gone');show();});
@@ -6253,7 +6271,7 @@ function gDict(){var n=PM.q.length;if(PM.i>=n){gOver('Eredmény: '+PM.ok+' / '+n
   gNav();var say=function(){try{speak(sayText(d));}catch(e){}};document.getElementById('gSay').addEventListener('click',say);setTimeout(say,350);
   var inp=document.getElementById('dIn'),fb=document.getElementById('dFb'),lock=false;try{inp.focus();}catch(e){}
   function check(){if(lock)return;var got=pmNorm(inp.value);if(!got)return;lock=true;inp.disabled=true;var good=got===pmNorm(pmEn(d));
-    if(good){PM.ok++;inp.classList.add('okt');fb.textContent='Helyes!';fb.className='dfb okx';}else{PM.err++;inp.classList.add('badt');fb.textContent='A helyes: '+pmClean(pmEn(d));fb.className='dfb badx';}
+    if(good){PM.ok++;inp.classList.add('okt');fb.textContent='Helyes!';fb.className='dfb okx';}else{PM.err++;PM.wrong.push(i);inp.classList.add('badt');fb.textContent='A helyes: '+pmClean(pmEn(d));fb.className='dfb badx';}
     gDelay(function(){PM.i++;gDict();},good?1100:2800);}
   document.getElementById('dOk').addEventListener('click',check);inp.addEventListener('keydown',function(e){if(e.key==='Enter')check();});}
 /* --- 5. igaz vagy hamis --- */
@@ -6274,9 +6292,9 @@ function renderP(){var v=document.getElementById('pview');if(!v)return;var cfg=p
     '<div class="pmbox" id="pmBox"><svg class="pmsvg" aria-hidden="true"></svg><div class="pmcol">'+col('l',Lk)+'</div><div class="pmcol">'+col('r',Rk)+'</div></div>'+
     '<div class="qbtns"><button type="button" class="reset" id="pmBack">‹ Beállítások</button><button type="button" class="reset" id="pmHome">‹ Főoldal</button></div></div></div>';
     pmBind();pmCnt();gNav();return;}
-  if(PM.st==='end'){var isP=g==='pair';v.innerHTML='<div class="qc"><div class="qh" style="background:'+COL+'"><span>'+(isP?'Kör kész':G.t)+'</span><span>'+(isP?PM.rd+'. kör':'Kész')+'</span></div><div class="qb"><p class="qen">Szép munka!</p><p class="hint">'+esc(isP?'Összesen '+PM.ok+' jó páros, '+PM.err+' hibás próbálkozás.':PM.sum||'')+'</p>'+
+  if(PM.st==='end'){var isP=g==='pair';v.innerHTML='<div class="qc"><div class="qh" style="background:'+COL+'"><span>'+(isP?'Kör kész':G.t)+'</span><span>'+(isP?PM.rd+'. kör':'Kész')+'</span></div><div class="qb"><p class="qen">Szép munka!</p><p class="hint">'+esc(isP?'Ez a kör: '+PM.rerr+' hiba, idő: '+fmtT(PM.rt)+'. Összesen '+PM.ok+' jó páros, '+PM.err+' hibás próbálkozás.':PM.sum||'')+'</p>'+(!isP&&PM.wrong&&PM.wrong.length&&g!=='mem'&&g!=='tf'?'<button type="button" class="hb main" id="pmFix"><span style="text-align:center">'+(g==='dict'?'Hibás szavak újra beírása':'Hibás szavak újra')+' ('+PM.wrong.length+')</span></button>':'')+
     '<button type="button" class="hb main" id="pmNext"><span style="text-align:center">'+(isP?'Következő kör':'Újra')+'</span></button><div class="qbtns"><button type="button" class="reset" id="pmBack">‹ Beállítások</button><button type="button" class="reset" id="pmHome">‹ Főoldal</button></div></div></div>';
-    document.getElementById('pmNext').addEventListener('click',function(){if(isP)pmRound(cfg,PM.ids||pmElig(cfg));else gStart();});
+    var fx=document.getElementById('pmFix');if(fx)fx.addEventListener('click',gRetry);document.getElementById('pmNext').addEventListener('click',function(){if(isP)pmRound(cfg,PM.ids||pmElig(cfg));else gStart();});
     var b=document.getElementById('pmBack'),h=document.getElementById('pmHome');b.addEventListener('click',function(){PM.st='set';renderP();});h.addEventListener('click',function(){PM.st='set';showView('home');});return;}
   var el=pmElig(cfg),cnt={};el.forEach(function(i){cnt[DATA[i].cat]=(cnt[DATA[i].cat]||0)+1;});PMSEL=PMSEL.filter(function(k){return cnt[k];});
   var tot=PMSEL.length?PMSEL.reduce(function(a,k){return a+(cnt[k]||0);},0):el.length;
@@ -6295,7 +6313,7 @@ function renderP(){var v=document.getElementById('pview');if(!v)return;var cfg=p
   v.querySelectorAll('#pmChips .chip').forEach(function(b){b.addEventListener('click',function(){var k=b.dataset.k;if(!k)PMSEL=[];else{var i=PMSEL.indexOf(k);if(i>=0)PMSEL.splice(i,1);else PMSEL.push(k);}renderP();});});
   document.getElementById('pmGo').addEventListener('click',function(){if(g==='pair'){var o=pmCfg();o.n=o['n_pair']||'8';pmSave(o);pmStart();}else gStart();});document.getElementById('pmHome').addEventListener('click',function(){showView('home');});}
 
-var APPV='v104';
+var APPV='v105';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
