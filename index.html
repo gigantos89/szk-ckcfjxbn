@@ -41,7 +41,7 @@ h1{font-size:1.2rem;margin:0}
 .hint{align-self:flex-end;color:var(--muted);font-size:1rem;margin-top:auto}
 .ans{font-weight:700;color:var(--red)}
 .wtk{display:inline-block;vertical-align:top;cursor:pointer}.wtk::after{content:attr(data-t);display:block;height:0;overflow:hidden;visibility:hidden;font-weight:700}.wtk.wtsel{font-weight:700}.wtk.wtsel .wtc{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
-.wbar{height:2.8em;margin:.45rem 0;text-align:center;line-height:1.4;overflow:hidden}.wbar .w1,.wbar .w2{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wbar .w2{font-size:.85rem;color:var(--muted)}
+.wbar{min-height:2.8em;margin:.45rem 0;text-align:center;line-height:1.4}.wbar .w1,.wbar .w2{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere}.wbar .w2{font-size:.85rem;color:var(--muted)}
 .note{background:var(--note-bg);border-radius:6px;padding:10px 12px;font-size:.95rem;line-height:1.45}
 .note .irr{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}
 .note small{display:block;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-size:.72rem;margin-bottom:2px}
@@ -276,7 +276,7 @@ body:has(.rw) #kBars{display:none!important}
     <div class="vrow"><select id="enWSel" aria-label="Szavak és kifejezések hangja"><option value="a">Szavak, kifejezések: automatikus letöltés</option><option value="m">Szavak, kifejezések: kézi letöltés</option><option value="o">Szavak, kifejezések: a telefon hangja</option></select></div>
     <div class="vrow"><select id="enSSel" aria-label="Példamondatok hangja"><option value="a">Példamondatok: automatikus letöltés</option><option value="m">Példamondatok: kézi letöltés</option><option value="o">Példamondatok: a telefon hangja</option></select></div>
     <div class="vrow"><select id="bgSel" aria-label="Háttérzene"><option value="1">Piper és Gemini hang: a háttérzene (pl. Spotify) tovább szól</option><option value="0">Piper és Gemini hang: szokásos lejátszó (a zene elhalkulhat vagy megállhat)</option></select></div>
-    <div class="vrow"><select id="gnSel" aria-label="Hang erőssége"><option value="1">Hang erőssége a zenéhez képest: normál</option><option value="1.6">Hang erőssége a zenéhez képest: erősebb</option><option value="2.2">Hang erőssége a zenéhez képest: nagyon erős</option></select></div>
+    <div class="vrow"><select id="gnSel" aria-label="Hang erőssége"><option value="1">Hangerő a telefon hangjához képest: 100%</option><option value="1.25">Hangerő a telefon hangjához képest: 125%</option><option value="1.5">Hangerő a telefon hangjához képest: 150%</option></select></div>
     <div class="vrow"><button class="reset" id="enDl" type="button">Angol hangok letöltése most</button></div>
     <p class="msg" id="enMsg" role="status">A Piper hangok kész hangfájlok, a Hangtárból töltődnek le. Wifin automatikusan, mobilneten előbb rákérdez. Ha egy hang nincs meg, a telefon hangja szól.</p>
     <div id="enPh">
@@ -4113,7 +4113,7 @@ function enNeed(t){var vid=enVid();if(!vid)return null;if(!ENMAP)enBuild();var m
 /* --- lejátszás Web Audióval: a Chrome nem kér hangfókuszt, így a háttérzene (Spotify) tovább szól --- */
 var BGK='szokartya-bgm',VGK='szokartya-vgn',WAC=null;
 function bgOn(){return lsGet(BGK)!=='0'&&!!(window.AudioContext||window.webkitAudioContext);}
-function vGain(){var g=parseFloat(lsGet(VGK));return g>=1&&g<=3?g:1.6;}
+function vGain(){var g=parseFloat(lsGet(VGK));return g>=1&&g<=3?Math.min(g,1.5):1.5;}
 function waCtx(){if(WAC)return WAC;var AC=window.AudioContext||window.webkitAudioContext;WAC=new AC();var gn=WAC.createGain();gn.gain.value=vGain();var cp=WAC.createDynamicsCompressor();gn.connect(cp);cp.connect(WAC.destination);WAC._g=gn;return WAC;}
 function wavPcm(buf){try{var dv=new DataView(buf),off=12,tag=1,sr=22050,ch=1,bits=16,dOff=-1,dLen=0;
   if(buf.byteLength<44||dv.getUint32(0,false)!==0x52494646)return null;
@@ -4781,8 +4781,9 @@ function wtInit(d,dir){WT={ok:0,sel:-1,map:[],e:null,cores:[]};if(!WTON||!TR||!T
   var ps=[stage.querySelector('.face.back .sent')];if(dir==='en')ps.push(stage.querySelector('.face.front .sent'));var done=0;
   ps.forEach(function(p){if(!p||p.querySelector('.wtk'))return;var h0=p.innerHTML,n=wtWrap(p);if(n!==N){p.innerHTML=h0;return;}var b=document.createElement('div');b.className='wbar';b.setAttribute('aria-live','polite');p.parentNode.insertBefore(b,p);done++;});
   if(done){WT={ok:1,sel:-1,map:map,e:e,cores:cores};fit();}}
+function wtOff(){WT.ok=0;WT.sel=-1;try{stage.querySelectorAll('.wbar').forEach(function(b){b.remove();});stage.querySelectorAll('.wtk').forEach(function(k){k.replaceWith(document.createTextNode(k.getAttribute('data-t')||k.textContent));});stage.querySelectorAll('.sent').forEach(function(p){p.normalize();});}catch(e){}try{fit();}catch(e){}}
 function wtClear(){WT.sel=-1;stage.querySelectorAll('.wtk.wtsel').forEach(function(x){x.classList.remove('wtsel');});stage.querySelectorAll('.wbar').forEach(function(b){b.innerHTML='';});}
-function wtTap(el){if(!WT.ok)return;var i=+el.getAttribute('data-i'),k=WT.map[i];if(k==null)return;
+function wtTap(el){if(!WT.ok||!WTON)return;var i=+el.getAttribute('data-i'),k=WT.map[i];if(k==null)return;
   var face=stage.querySelector(flipped?'.face.back':'.face.front');if(!face)return;var was=WT.sel===k;wtClear();if(was){fit();return;}
   WT.sel=k;var u=WT.e.u[k];face.querySelectorAll('.wtk').forEach(function(x){if(u[0].indexOf(+x.getAttribute('data-i'))>=0)x.classList.add('wtsel');});
   var b=face.querySelector('.wbar');if(b){var ph=wtPhraseOf(WT.cores,u[0]),lm=u[1]&&u[1].toLowerCase()!==ph.toLowerCase()?esc(u[1])+' · ':'';
@@ -5842,7 +5843,7 @@ async function hsDelEn(st){if(!isAdm())throw new Error('törölni csak az admin 
   function sh(){if(ph)ph.style.display=enVoiceSel()==='ph'?'':'none';}
   ev.value=enVoiceSel();ew.value=enMode('w');es.value=enMode('s');sh();
   ev.addEventListener('change',function(){lsSet(ENV,ev.value);sh();if(ev.value!=='ph'){try{kRun('angol hang választva');}catch(e){}}});
-  (function(){var bs=document.getElementById('bgSel'),gs=document.getElementById('gnSel');if(bs){bs.value=lsGet(BGK)==='0'?'0':'1';bs.addEventListener('change',function(){lsSet(BGK,bs.value);});}if(gs){gs.value=String(vGain());if(['1','1.6','2.2'].indexOf(gs.value)<0)gs.value='1.6';gs.addEventListener('change',function(){lsSet(VGK,gs.value);});}})();
+  (function(){var bs=document.getElementById('bgSel'),gs=document.getElementById('gnSel');if(bs){bs.value=lsGet(BGK)==='0'?'0':'1';bs.addEventListener('change',function(){lsSet(BGK,bs.value);});}if(gs){var gv=vGain();gs.value=gv<1.125?'1':gv<1.375?'1.25':'1.5';gs.addEventListener('change',function(){lsSet(VGK,gs.value);try{if(WAC&&WAC._g)WAC._g.gain.value=vGain();}catch(e){}});}})();
   ew.addEventListener('change',function(){lsSet(ENW,ew.value);try{kRun('angol beállítás');}catch(e){}});
   es.addEventListener('change',function(){lsSet(ENS,es.value);try{kRun('angol beállítás');}catch(e){}});
   document.getElementById('enVTest').addEventListener('click',function(){var t=sayText(DATA[0]);if(!enNeed(t)){speak('Good morning. This is a pronunciation test.');return;}
@@ -5952,7 +5953,7 @@ async function hLoad(fl,over,prog){var dec=new TextDecoder(),have=over?null:new 
   dl.addEventListener('click',async function(){if(PG.run)return;if(!armed||Date.now()-armed>4000){armed=Date.now();msg.textContent='Biztosan törlöd az összes elkészített Piper hangot? Nyomd meg még egyszer.';return;}armed=0;var n=await pgClearAll(false);try{lsSet('szokartya-pn','0');}catch(e){}msg.textContent=n+' hang törölve, a hely felszabadult.';});
 })();
 (function(){
-  var ws=document.getElementById('wtSel');if(ws){ws.value=WTON?'1':'0';ws.addEventListener('change',function(){WTON=ws.value==='1';lsSet('szokartya-wt',WTON?'1':'0');if(!WTON){try{wtClear();}catch(e){}}});}
+  var ws=document.getElementById('wtSel');if(ws){ws.value=WTON?'1':'0';ws.addEventListener('change',function(){WTON=ws.value==='1';lsSet('szokartya-wt',WTON?'1':'0');if(!WTON){try{wtOff();}catch(e){}}else{try{wtLate();}catch(e){}}});}
   trLoad().then(function(){wtLate();try{stat();}catch(e){}setTimeout(function(){trFetch(false).catch(function(){});},7000);});
   var box=document.getElementById('trBox');if(!box)return;
   var lim=document.getElementById('trLim'),go=document.getElementById('trGo'),sp=document.getElementById('trStop'),bar=document.getElementById('trBar'),msg=document.getElementById('trMsg'),st=document.getElementById('trStat'),xl=document.getElementById('trXls'),im=document.getElementById('trImp'),imi=document.getElementById('trImpIn'),up=document.getElementById('trUp'),dl=document.getElementById('trDl');
@@ -6124,7 +6125,7 @@ async function pfOpen(key,u8){return JSON.parse(new TextDecoder().decode(await p
 async function pfDK(kek,meta){var raw=await pfAesDec(kek,pfB64d(meta.wk_pw));return {raw:raw,key:await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt'])};}
 async function pfRsaEnc(pubJwk,u8){var k=await crypto.subtle.importKey('jwk',pubJwk,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);return hsB64(new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},k,u8)));}
 async function pfEmEnc(em){try{var pb=await pfCall('/pub');if(pb&&pb.pub)return await pfRsaEnc(pb.pub,pfEnc(JSON.stringify({e:em})));}catch(e){}return '';}
-var APPV='v97';
+var APPV='v98';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
