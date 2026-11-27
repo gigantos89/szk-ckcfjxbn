@@ -226,7 +226,7 @@ body{zoom:var(--fs,1)}
 .hu2{font-size:1.15rem;margin:6px 0 0;text-align:center}
 .lis{text-align:center;color:var(--muted)}
 .stsum{font-size:.9rem;line-height:1.5}
-.stsum svg{width:100%;height:auto;display:block}
+.stsum svg{width:100%;height:auto;display:block}.wkl{margin:4px 0 10px;padding-left:18px}.wkl li{margin:2px 0}
 
 body:has(.rw) #kBars{display:none!important}
 @media all{.svbar{display:flex;gap:8px;margin:8px 0}.svbar button{flex:1;font-size:.9rem;padding:9px 6px;margin:0}.svbar small{opacity:.75}.svbar .svph{flex:1;display:flex;align-items:center;justify-content:center;font-size:.9rem;opacity:.8;text-align:center}.svbar .dot{color:#e67e22}}
@@ -377,7 +377,7 @@ body:has(.rw) #kBars{display:none!important}
     <div class="vrow"><select id="gFlu" aria-label="Szószint"><option value="0">Szósegítő szavak ellenőrzése: nem</option><option value="1">Szósegítő szavak ellenőrzése: igen (jelzi, ha jól használtál a témakör szavaiból)</option></select></div>
     <p class="msg" id="gMsg" role="status"></p>
   </details>
-  <details class="backup" id="statBox"><summary>Statisztika (7 nap)</summary><div class="stsum" id="statBody"></div></details>
+  <details class="backup" id="statBox"><summary>Statisztika (heti)</summary><div class="stsum" id="statBody"></div></details>
 
   <details class="backup"><summary>Biztonsági mentés (nem kötelező)</summary>
     <p>A haladásod és a beállításaid (a Google-kulcs kivételével) a telefonon magától mentődnek. Biztonsági másolathoz vagy másik böngészőbe, címre való átvitelhez használd ezeket. A fájl a Letöltések mappába kerül. Vasárnap este 8 után belépéskor emlékeztetőt kapsz.</p>
@@ -4957,7 +4957,7 @@ function showReward(kind,box){
   ov.querySelector('button').addEventListener('click',close);
 }
 function logRate(r,isNew){var k=dkey(Date.now()),e=SET.lg[k]||(SET.lg[k]=[0,0,0]);e[0]++;if(r>=2)e[1]++;if(isNew)e[2]++;
-  var ks=Object.keys(SET.lg).sort();while(ks.length>60)delete SET.lg[ks.shift()];}
+  var ks=Object.keys(SET.lg).sort();while(ks.length>400)delete SET.lg[ks.shift()];}
 function toTop(){try{var w=document.querySelector('.wrap');if(w&&w.scrollIntoView)w.scrollIntoView({block:'start'});window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;}catch(e){}}
 function rate(r){
   if(!flipped||busy||cur<0)return;busy=true;
@@ -5259,20 +5259,33 @@ try{if(localStorage.getItem('szokartya-ed-prev'))$('xUndo').hidden=false;}catch(
   da.addEventListener('change',ch);ty.addEventListener('change',ch);
   var sb=document.getElementById('statBox');
   function statsPanel(){
-    var W=300,H=120,days=[],i,mx=5,tn=0,tok=0,tnew=0,wd=['V','H','K','Sze','Cs','P','Szo'],t=Date.now();
-    for(i=6;i>=0;i--){var tt=t-i*DAY,e=SET.lg[dkey(tt)]||[0,0,0];days.push({e:e,l:wd[new Date(tt).getDay()]});tn+=e[0];tok+=e[1];tnew+=e[2];mx=Math.max(mx,e[0]);}
-    var svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Elmúlt 7 nap ismétlései">';
+    var W=300,H=120,days=[],i,mx=5,tn=0,tok=0,tnew=0,wd=['H','K','Sze','Cs','P','Szo','V'],t=Date.now();
+    function mdate(ms){var d=new Date(ms);d.setHours(12,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));return d.getTime();}
+    function ymd(k){var a=k.split('-');return new Date(+a[0],+a[1]-1,+a[2],12).getTime();}
+    function sh(ms){var d=new Date(ms);return ('0'+(d.getMonth()+1)).slice(-2)+'.'+('0'+d.getDate()).slice(-2);}
+    var mon=mdate(t),todayK=dkey(t);
+    for(i=0;i<7;i++){var tt=mon+i*DAY,k=dkey(tt),e=(k<=todayK&&SET.lg[k])?SET.lg[k]:[0,0,0];days.push({e:e,l:wd[i],today:k===todayK});tn+=e[0];tok+=e[1];tnew+=e[2];mx=Math.max(mx,e[0]);}
+    var svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Ez a hét ismétlései (hétfőtől vasárnapig)">';
     days.forEach(function(d,k){var x=k*42+8,bh=Math.round(d.e[0]/mx*70),oh=Math.round(d.e[1]/mx*70);
       svg+='<rect x="'+x+'" y="'+(88-bh)+'" width="30" height="'+bh+'" rx="3" style="fill:var(--red)"/>';
       svg+='<rect x="'+x+'" y="'+(88-oh)+'" width="30" height="'+oh+'" rx="3" style="fill:var(--ok)"/>';
       svg+='<text x="'+(x+15)+'" y="'+(82-bh)+'" text-anchor="middle" style="fill:var(--fg);font:12px var(--font-body)">'+(d.e[0]||'')+'</text>';
-      svg+='<text x="'+(x+15)+'" y="108" text-anchor="middle" style="fill:var(--muted);font:12px var(--font-body)">'+d.l+'</text>';});
+      svg+='<text x="'+(x+15)+'" y="108" text-anchor="middle" style="fill:var(--'+(d.today?'fg':'muted')+');font:'+(d.today?'700 ':'')+'12px var(--font-body)">'+d.l+'</text>';});
     svg+='<path d="M4 88H296" style="stroke:var(--line);stroke-width:1.5"/></svg>';
+    var wk={};Object.keys(SET.lg||{}).forEach(function(k){var m=mdate(ymd(k));if(m===mon)return;var e=SET.lg[k]||[0,0,0],w=wk[m]||(wk[m]=[0,0,0]);w[0]+=e[0]||0;w[1]+=e[1]||0;w[2]+=e[2]||0;});
+    var wks=Object.keys(wk).map(Number).sort(function(a,b){return b-a;}).filter(function(m){return wk[m][0]>0;});
+    function wl(m){var w=wk[m];return '<li>'+sh(m)+'–'+sh(m+6*DAY)+': <b>'+w[0]+'</b> ismétlés, ebből '+w[2]+' új szó, pontosság '+(w[0]?Math.round(w[1]/w[0]*100):0)+'%</li>';}
     var learned=0,hard=DATA.map(function(d,i){var c=SI(i);if(c.ivl>=1)learned++;return {en:d.en,l:c.lap||0};}).filter(function(x){return x.l>0;}).sort(function(a,b){return b.l-a.l;}).slice(0,5);
     var h2='<p>'+svg+'</p><p><span style="color:var(--ok)">■</span> jó válasz, <span style="color:var(--red)">■</span> újra</p>';
-    h2+='<p>7 nap: <b>'+tn+'</b> ismétlés, ebből <b>'+tnew+'</b> új szó, pontosság: <b>'+(tn?Math.round(tok/tn*100):0)+'%</b>.</p>';
+    h2+='<p>Ez a hét ('+sh(mon)+'–'+sh(mon+6*DAY)+', hétfőtől vasárnapig): <b>'+tn+'</b> ismétlés, ebből <b>'+tnew+'</b> új szó, pontosság: <b>'+(tn?Math.round(tok/tn*100):0)+'%</b>.</p>';
     h2+='<p>Sorozat: <b>'+streak()+'</b> nap egymás után. Tanult szavak: <b>'+learned+'</b> / '+DATA.length+'.</p>';
     h2+=hard.length?'<p>Ahol a legtöbbször akadtál el: '+hard.map(function(x){return esc(x.en)+' ('+x.l+'×)';}).join(', ')+'.</p>':'<p>Még nincs olyan szó, amelynél elakadtál volna.</p>';
+    if(wks.length){h2+='<p><b>Korábbi hetek</b></p><ul class="wkl">'+wks.slice(0,4).map(wl).join('')+'</ul>';if(wks.length>4)h2+='<details class="backup"><summary>Régebbi hetek ('+(wks.length-4)+')</summary><ul class="wkl">'+wks.slice(4).map(wl).join('')+'</ul></details>';}
+    var PRK=Object.keys(SET.pr||{}).filter(function(k){return GM[k.split('|')[0]];});
+    if(PRK.length){PRK.sort(function(a,b){return (SET.pr[b].d||0)-(SET.pr[a].d||0);});
+      h2+='<p><b>Gyakorlás: legjobb eredményeid</b></p><ul class="wkl">'+PRK.map(function(k){var a=k.split('|'),g=GM[a[0]],no='';g.n.forEach(function(o){if(o[0]===a[1])no=o[1];});
+        var vr={en:a[0]==='pair'?'bal oldalt angol':'angol → magyar',hu:a[0]==='pair'?'bal oldalt magyar':'magyar → angol',au:'hallás → magyar'}[a[2]]||'';
+        var r=SET.pr[k];return '<li><b>'+esc(g.t)+'</b> ('+esc(no)+(vr?', '+vr:'')+', '+(a[3]==='a'?'minden szó':'megtanult szavak')+'): '+esc(r.x)+' · '+dkey(r.d||0).replace(/-/g,'.')+'</li>';}).join('')+'</ul>';}
     document.getElementById('statBody').innerHTML=h2;}
   sb.addEventListener('toggle',function(){if(sb.open)statsPanel();});
   window.statsPanel=statsPanel;
@@ -6313,7 +6326,7 @@ function renderP(){var v=document.getElementById('pview');if(!v)return;var cfg=p
   v.querySelectorAll('#pmChips .chip').forEach(function(b){b.addEventListener('click',function(){var k=b.dataset.k;if(!k)PMSEL=[];else{var i=PMSEL.indexOf(k);if(i>=0)PMSEL.splice(i,1);else PMSEL.push(k);}renderP();});});
   document.getElementById('pmGo').addEventListener('click',function(){if(g==='pair'){var o=pmCfg();o.n=o['n_pair']||'8';pmSave(o);pmStart();}else gStart();});document.getElementById('pmHome').addEventListener('click',function(){showView('home');});}
 
-var APPV='v105';
+var APPV='v106';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
