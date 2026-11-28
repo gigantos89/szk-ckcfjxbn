@@ -191,7 +191,7 @@ body{zoom:var(--fs,1)}
 .dfb{min-height:1.4em;font-weight:600}.dfb.okx{color:var(--ok)}.dfb.badx{color:var(--red)}
 .tfcard{text-align:center;padding:14px 8px;background:var(--bg);border:1px solid var(--line);border-radius:10px}.tfeq{margin:4px 0;color:var(--muted);font-size:1.4rem}
 .tfb .hb{justify-content:center;font-size:1.1rem}.hb.okb{background:var(--ok);border-color:var(--ok);color:#fff}.hb.badb{background:var(--red);border-color:var(--red);color:#fff}.hb.lock{pointer-events:none}
-.pic.pimg img{width:100%;height:auto;display:block;border-radius:10px}.piclab{text-align:center;font-weight:800;letter-spacing:.08em;font-size:1.3rem;margin:.1rem 0 .4rem;line-height:1.15}.imgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}.imgi{margin:0;text-align:center;font-size:.8rem}.imgi img{width:100%;height:auto;border-radius:8px;display:block}.imgi figcaption{margin-top:3px}
+.pic.pimg img{width:100%;height:auto;display:block;border-radius:10px}.piclab{text-align:center;font-weight:800;letter-spacing:.08em;font-size:1.3rem;margin:.1rem 0 .4rem;line-height:1.15}#imBox select,#imBox input{max-width:100%;box-sizing:border-box}.imgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}.imgi{margin:0;text-align:center;font-size:.8rem}.imgi img{width:100%;height:auto;border-radius:8px;display:block}.imgi figcaption{margin-top:3px}
 .imre{display:block;margin:.3rem auto 0;font:inherit;font-size:.75rem;padding:3px 10px;border:1px solid var(--line);border-radius:999px;background:var(--bg);color:var(--muted);cursor:pointer}
 .qbtns{display:flex;gap:8px}.qbtns .hb{justify-content:center;font-size:1rem;padding:12px}
 .qo{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
@@ -432,7 +432,7 @@ body:has(.rw) #kBars{display:none!important}
     <div class="vrow"><input class="hsin" type="text" id="imModel" aria-label="Képmodell neve" placeholder="gemini-2.5-flash-image" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
     <div class="vrow"><input class="hsin" type="text" id="imStyle" aria-label="Stílus megjegyzés" placeholder="Stílus megjegyzés a Gemininek (nem kötelező), pl. több szín, kevesebb részlet" autocomplete="off" spellcheck="false"></div>
     <div class="vrow"><select id="imLim" aria-label="Napi képlimit"><option value="10">Naponta legfeljebb 10 kép</option><option value="25">Naponta legfeljebb 25 kép</option><option value="50">Naponta legfeljebb 50 kép (ingyenes keret)</option><option value="100">Naponta legfeljebb 100 kép</option><option value="0">Nincs saját limit (a Google kerete szab határt)</option></select></div>
-    <div class="vrow"><select id="imAuto" aria-label="Automatikus indítás"><option value="1">Automatikus indítás adminként: bekapcsolva (a fordítás után a Karmester indítja)</option><option value="0">Automatikus indítás: kikapcsolva (csak a Generálás gombbal)</option></select></div>
+    <div class="vrow"><select id="imAuto" aria-label="Automatikus indítás"><option value="1">Automatikus indítás: be (a fordítás után)</option><option value="0">Automatikus indítás: ki (csak gombbal)</option></select></div>
     <p class="msg" id="imStat"></p>
     <div class="vrow"><button class="reset" id="imGo" type="button">Generálás</button><button class="reset" id="imStop" type="button" disabled>Leállítás</button></div>
     <progress id="imBar" max="100" value="0" hidden style="width:100%"></progress>
@@ -6391,28 +6391,31 @@ async function imMake(d,key,model){var r=await imGen(d,key,model),blob=await imS
   await gtPutC('im|'+d.id,{b:ab,m:blob.type,v:ts});if(IM[d.id]){try{URL.revokeObjectURL(IM[d.id]);}catch(e){}}IM[d.id]=URL.createObjectURL(new Blob([ab],{type:blob.type}));
   IMX.h[d.id]=ts;var p=imPending();if(p.indexOf(d.id)<0){p.push(d.id);imPendSet(p);}await imxSave();imRefresh(d.id);try{if(window.imGridR)window.imGridR();}catch(e){}return ab.byteLength;}
 function imErrKind(e){var s=e&&e.status,m=String((e&&e.message)||'');if(s===429||/quota|RESOURCE_EXHAUSTED|rate/i.test(m))return 'quota';if(s===401||s===403||/API key|key not valid|permission/i.test(m)||(e&&e.code==='nokey'))return 'key';if(e&&(e.bad||s===400))return 'bad';return 'tmp';}
-function imDone(n,why){var d=imDay();d.n+=n;if(why==='quota')d.q=1;imDaySet(d);}
+function imDone(n,why,qm){var d=imDay();d.n+=n;if(why==='quota'){d.q=1;d.qm=String(qm||'').slice(0,300);}imDaySet(d);}
+function imQHint(m){m=String(m||'');return /limit:\s*0/i.test(m)?' Ehhez a modellhez a kulcsodnak nincs képkerete (limit: 0). Írj a modell mezőbe másik képmodellt (pl. gemini-3.1-flash-image), vagy kapcsold be a számlázást a Google AI Studióban.':'';}
 window.imMsgHook=null;
 async function imRun(auto,ui){if(IMR.run||!isAdm())return;ui=ui||{msg:function(){},bar:function(){},stat:function(){}};
+  if(!auto){var dq=imDay();if(dq.q){dq.q=0;imDaySet(dq);}}
   var key=gGet().key,cfg=imCfg();if(!key){ui.msg('A képekhez Gemini kulcs kell (Beállítások, Gemini).');return;}
   var room=imRoom(),c=imCands(),list=c.slice(0,Math.min(room,c.length));
   if(!c.length){ui.msg('Minden kártyához van kép.');return;}
   if(!list.length&&cfg.ok!=='1'&&!imDay().q){ui.msg('A 3 próbakép kész. Nézd át őket lent, és ha tetszenek, nyomd meg a „Jóváhagyom” gombot.');return;}
-  if(!list.length){ui.msg('A mai keret elfogyott ('+imDay().n+' kép), a Karmester holnap folytatja.');return;}
+  if(!list.length){var dm=imDay();ui.msg('A mai keret elfogyott ('+dm.n+' kép), a Karmester holnap folytatja. A Generálás gombbal újra próbálhatod.'+(dm.qm?' A Gemini válasza: „'+dm.qm+'”':'')+imQHint(dm.qm));return;}
   IMR.run=true;IMR.ctl={cancel:0};window.__imRun=true;try{wake();}catch(e){}
   if(auto){try{toast5('Képek készülnek a háttérben: legfeljebb '+list.length);}catch(e){}}
-  var done=0,fail=0,why='',t0=Date.now();try{klog('képek','indul: '+list.length+' kártya');}catch(e){}
+  var done=0,fail=0,why='',et='',t0=Date.now();try{klog('képek','indul: '+list.length+' kártya');}catch(e){}
   for(var i=0;i<list.length&&!IMR.ctl.cancel&&!why;i++){var d=list[i],ok=false;
     for(var at=0;at<3&&!ok&&!why&&!IMR.ctl.cancel;at++){
       try{await imMake(d,key,cfg.model);ok=true;done++;imDone(1);}
-      catch(e){var k=imErrKind(e);if(k==='quota'){why='quota';imDone(0,'quota');}else if(k==='key')why='key';else if(k==='bad'){fail++;try{klog('képek','kihagyva ('+d.id+'): '+String(e.message).slice(0,80));}catch(x){}break;}else{await new Promise(function(r){setTimeout(r,8000*(at+1));});}}}
+      catch(e){var k=imErrKind(e);et=String(e&&e.message||e).slice(0,260);if(k==='quota'){why='quota';imDone(0,'quota',et);}else if(k==='key')why='key';else if(k==='bad'){fail++;try{klog('képek','kihagyva ('+d.id+'): '+String(e.message).slice(0,80));}catch(x){}break;}else{await new Promise(function(r){setTimeout(r,8000*(at+1));});}}}
     ui.bar(100*(i+1)/list.length);var el=Date.now()-t0;ui.msg('Képek: '+(i+1)+' / '+list.length+(fail?' · kihagyva: '+fail:'')+(i>1?' · még kb. '+Math.round(el/(i+1)*(list.length-i-1)/60000)+' perc':''));
     if(done&&done%10===0){try{await imUpload();}catch(e){}}}
   var tx='';try{var ue=await imUpload();tx=ue?' '+ue:(done?' A Hangtárba feltöltve.':'');}catch(e){tx=' Feltöltési hiba: '+String(e&&e.message||e).slice(0,100)+' (a képek megvannak ezen az eszközön, a következő futásnál újra próbálja).';}
   IMR.run=false;window.__imRun=false;ui.bar(-1);
-  var rest=imCands().length,txt=(why==='quota'?'Megállt: elfogyott a napi keret. ':why==='key'?'Megállt: a Gemini kulcs nem jó vagy nincs jogosultsága. ':IMR.ctl.cancel?'Leállítva. ':'Kész. ')+done+' kép elkészült'+(fail?', '+fail+' kihagyva':'')+'. Hátra: '+rest+' kártya.'+tx;
+  var rest=imCands().length,txt=(why==='quota'?'Megállt: elfogyott a napi keret. ':why==='key'?'Megállt: a Gemini kulcs nem jó vagy nincs jogosultsága. ':IMR.ctl.cancel?'Leállítva. ':'Kész. ')+done+' kép elkészült'+(fail?', '+fail+' kihagyva':'')+'. Hátra: '+rest+' kártya.'+(why||(fail&&!done)?' A Gemini válasza: „'+et+'”.':'')+(why==='quota'?imQHint(et):'')+tx;
   ui.msg(txt);ui.stat();try{klog('képek','vége: '+done+' kész'+(why?'; '+why:''));}catch(e){}
-  if(auto&&done){try{var t2=imCfg().ok!=='1'?'Elkészült a '+done+' próbakép. Nézd át őket a Beállítások → Képek résznél. Ha tetszenek, nyomd meg a „Jóváhagyom” gombot, és a Karmester elkészíti a többit.':'Képek: '+done+' új kép kész'+(rest?', még '+rest+' kártyára vár a következő napokban.':', minden kártyának van képe.');if(!kModal('imdone','Kész',t2,[{t:'Rendben',fn:function(){}}]))toast5(t2);}catch(e){}}}
+  if(auto&&done){try{var t2=imCfg().ok!=='1'?'Elkészült a '+done+' próbakép. Nézd át őket a Beállítások → Képek résznél. Ha tetszenek, nyomd meg a „Jóváhagyom” gombot, és a Karmester elkészíti a többit.':'Képek: '+done+' új kép kész'+(rest?', még '+rest+' kártyára vár a következő napokban.':', minden kártyának van képe.');if(!kModal('imdone','Kész',t2,[{t:'Rendben',fn:function(){}}]))toast5(t2);}catch(e){}}
+  else if(auto&&why){try{var t3='A képek készítése megállt. '+(why==='quota'?'A Gemini szerint elfogyott a keret.':'A Gemini kulcs nem jó.')+' '+et.slice(0,160)+imQHint(et);if(!kModal('imerr','Képek',t3,[{t:'Rendben',fn:function(){}}]))toast5(t3);}catch(e){}}}
 window.imChain=function(why,tries){var cfg=imCfg();if(cfg.auto==='0'||!isAdm()||IMR.run||window.__trRun||KRUN)return;
   if(PG.run||PPBUSY){if(tries<40)setTimeout(function(){window.imChain(why,tries+1);},45000);return;}
   if(navigator.onLine===false||!gGet().key||imRoom()<=0||!imCands().length)return;if(Date.now()-(window.__imLast||0)<1800000)return;
@@ -6420,7 +6423,7 @@ window.imChain=function(why,tries){var cfg=imCfg();if(cfg.auto==='0'||!isAdm()||
 document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.imre');if(!b||!isAdm())return;e.stopPropagation();e.preventDefault();
   var id=b.dataset.id,d=null;DATA.forEach(function(x){if(x.id===id)d=x;});if(!d||IMR.run)return;var key=gGet().key;if(!key){toast5('A kép újragenerálásához Gemini kulcs kell.');return;}
   if(imDay().q){toast5('A mai képkeret elfogyott, holnap újra próbálhatod.');return;}
-  b.disabled=true;b.textContent='Készül...';IMR.run=true;imMake(d,key,imCfg().model).then(function(){imDone(1);return imUpload();}).then(function(m){toast5('Új kép kész.'+(m?' '+m:''));}).catch(function(er){if(imErrKind(er)==='quota')imDone(0,'quota');toast5('Nem sikerült: '+String(er&&er.message||er).slice(0,90));try{imRefresh(id);}catch(x){}}).then(function(){IMR.run=false;});},true);
+  b.disabled=true;b.textContent='Készül...';IMR.run=true;imMake(d,key,imCfg().model).then(function(){imDone(1);return imUpload();}).then(function(m){toast5('Új kép kész.'+(m?' '+m:''));}).catch(function(er){if(imErrKind(er)==='quota')imDone(0,'quota',String(er&&er.message||er));toast5('Nem sikerült: '+String(er&&er.message||er).slice(0,90));try{imRefresh(id);}catch(x){}}).then(function(){IMR.run=false;});},true);
 (function(){var box=document.getElementById('imBox');if(!box)return;
   var mo=document.getElementById('imModel'),li=document.getElementById('imLim'),au=document.getElementById('imAuto'),st=document.getElementById('imStat'),go=document.getElementById('imGo'),sp=document.getElementById('imStop'),bar=document.getElementById('imBar'),ms=document.getElementById('imMsg');
   var cfg=imCfg();mo.value=cfg.model;li.value=cfg.lim;au.value=cfg.auto;var sy=document.getElementById('imStyle'),gr=document.getElementById('imGrid'),ok=document.getElementById('imOk');sy.value=cfg.style||'';sy.addEventListener('change',function(){imCfgSet('style',sy.value.trim());});
@@ -6438,7 +6441,7 @@ document.addEventListener('click',function(e){var b=e.target.closest&&e.target.c
   imxLoad().then(function(){stat();setTimeout(function(){imxFetch(false).then(function(){stat();}).catch(function(){});},6000);});
 })();
 
-var APPV='v108';
+var APPV='v109';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
