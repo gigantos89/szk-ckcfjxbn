@@ -437,6 +437,11 @@ body:has(.rw) #kBars{display:none!important}
     <div class="vrow"><button class="reset" id="imGo" type="button">Generálás</button><button class="reset" id="imStop" type="button" disabled>Leállítás</button></div>
     <progress id="imBar" max="100" value="0" hidden style="width:100%"></progress>
     <p class="msg" id="imMsg" role="status"></p>
+    <p class="msg">Ha a Gemini-alkalmazásban (Pro fiók) szeretnél képeket készíteni, nem az API-val: töltsd le a promptokat, másold be őket a Gemini alkalmazásba, tölts le a képeket, és töltsd be ide. A képek sorrendben kerülnek a kártyákhoz, mentés előtt látod a párosítást.</p>
+    <div class="vrow"><select id="imBatch" aria-label="Hány kártya promptja"><option value="10">Promptok: 10 kártyához</option><option value="20">Promptok: 20 kártyához</option><option value="50">Promptok: 50 kártyához</option></select></div>
+    <div class="vrow"><button class="reset" id="imPr" type="button">Promptok letöltése</button><button class="reset" id="imFl" type="button">Képek betöltése (fájlokból)</button><input type="file" id="imFlIn" accept="image/*" multiple hidden></div>
+    <div class="imgrid" id="imImp"></div>
+    <div class="vrow"><button class="reset" id="imSave" type="button" hidden>Mentés</button><button class="reset" id="imCancel" type="button" hidden>Mégse</button></div>
     <div class="imgrid" id="imGrid"></div>
     <div class="vrow"><button class="reset" id="imOk" type="button" hidden>Jóváhagyom, mehet az összes</button></div>
     <div class="vrow"><button class="reset" id="imUp" type="button">Feltöltés a Hangtárba</button><button class="reset" id="imDl" type="button">Jegyzék frissítése a Hangtárból</button></div>
@@ -6376,7 +6381,8 @@ async function imUpload(){var ids=imPending();if(!ids.length)return '';if(imCfg(
       var f=imFile(id),s=await sha(f);await hsPut(f,new Uint8Array(rec.b),s,'kép');left=left.filter(function(x){return x!==id;});imPendSet(left);}
     var u8=await trPack(IMX),s2=await sha('b_kepek.bin');await hsPut('b_kepek.bin',u8,s2,'képek jegyzéke');return '';});
   HSQ=r.then(function(){},function(){});return r;}
-async function imShrink(b64,mime){var blob=await (await fetch('data:'+(mime||'image/png')+';base64,'+b64)).blob(),bm=await createImageBitmap(blob),W=640,s=Math.min(1,W/bm.width),w=Math.round(bm.width*s),h=Math.round(bm.height*s),cv=document.createElement('canvas');cv.width=w;cv.height=h;var cx=cv.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,w,h);cx.drawImage(bm,0,0,w,h);
+async function imShrink(b64,mime){var blob=await (await fetch('data:'+(mime||'image/png')+';base64,'+b64)).blob();return imShrinkBlob(blob);}
+async function imShrinkBlob(blob){var bm=await createImageBitmap(blob),W=640,s=Math.min(1,W/bm.width),w=Math.round(bm.width*s),h=Math.round(bm.height*s),cv=document.createElement('canvas');cv.width=w;cv.height=h;var cx=cv.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,w,h);cx.drawImage(bm,0,0,w,h);
   var out=await new Promise(function(r){cv.toBlob(r,'image/webp',0.82);});if(!out||out.type!=='image/webp')out=await new Promise(function(r){cv.toBlob(r,'image/jpeg',0.86);});return out;}
 function imPrompt(d){return 'Create a clean, friendly flat-vector cartoon illustration in a consistent style: thick dark outlines, soft pastel colours, gentle shading, a plain white background and a thin ground line. It is a memory-trick picture for a Hungarian learner of the English expression "'+plain(d.en||'')+'" (meaning in Hungarian: '+plain(d.hu||'')+'). One simple, funny scene that is easy to read at small size, landscape 3:2 format, family-friendly, characters fully clothed. IMPORTANT: absolutely no text, no letters, no numbers, no captions and no labels anywhere in the picture. Scene to draw (described in Hungarian): '+plain(d.cap||'')+(d.t1?' Memory idea: '+plain(d.t1):'')+(imCfg().style?' Additional style instructions from the app owner: '+imCfg().style:'');}
 async function imGen(d,key,model){var url='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent',
@@ -6387,7 +6393,8 @@ async function imGen(d,key,model){var url='https://generativelanguage.googleapis
   var parts=[];try{parts=j.candidates[0].content.parts||[];}catch(e){}
   for(var i=0;i<parts.length;i++){var x=parts[i].inlineData||parts[i].inline_data;if(x&&x.data)return {b64:x.data,m:x.mimeType||x.mime_type||'image/png'};}
   var e2=new Error((j.promptFeedback&&j.promptFeedback.blockReason)||(j.candidates&&j.candidates[0]&&j.candidates[0].finishReason)||'a modell nem adott képet');e2.bad=1;throw e2;}
-async function imMake(d,key,model){var r=await imGen(d,key,model),blob=await imShrink(r.b64,r.m),ab=await blob.arrayBuffer(),ts=Date.now();
+async function imMake(d,key,model){var r=await imGen(d,key,model),blob=await imShrink(r.b64,r.m);return imStore(d,blob);}
+async function imStore(d,blob){var ab=await blob.arrayBuffer(),ts=Date.now();
   await gtPutC('im|'+d.id,{b:ab,m:blob.type,v:ts});if(IM[d.id]){try{URL.revokeObjectURL(IM[d.id]);}catch(e){}}IM[d.id]=URL.createObjectURL(new Blob([ab],{type:blob.type}));
   IMX.h[d.id]=ts;var p=imPending();if(p.indexOf(d.id)<0){p.push(d.id);imPendSet(p);}await imxSave();imRefresh(d.id);try{if(window.imGridR)window.imGridR();}catch(e){}return ab.byteLength;}
 function imErrKind(e){var s=e&&e.status,m=String((e&&e.message)||'');if(s===429||/quota|RESOURCE_EXHAUSTED|rate/i.test(m))return 'quota';if(s===401||s===403||/API key|key not valid|permission/i.test(m)||(e&&e.code==='nokey'))return 'key';if(e&&(e.bad||s===400))return 'bad';return 'tmp';}
@@ -6436,12 +6443,36 @@ document.addEventListener('click',function(e){var b=e.target.closest&&e.target.c
   go.addEventListener('click',function(){if(KRUN||PG.run||PPBUSY||window.__trRun){ms.textContent='Most más folyamat fut (hangok vagy fordítás), a képek utánuk indulnak. Próbáld újra később, vagy hagyd a Karmesterre.';return;}go.disabled=true;sp.disabled=false;imRun(false,ui).then(function(){go.disabled=false;sp.disabled=true;stat();});});
   sp.addEventListener('click',function(){if(IMR.ctl)IMR.ctl.cancel=1;});
   ok.addEventListener('click',function(){imCfgSet('ok','1');ms.textContent='Jóváhagyva. A Karmester elkészíti a többit; a próbaképek feltöltése...';stat();imUpload().then(function(m){ms.textContent=m||'A próbaképek feltöltve, a többi a Karmesterrel folytatódik.';try{window.imChain&&window.imChain('jóváhagyás után',0);}catch(e){}}).catch(function(e){ms.textContent='Feltöltési hiba: '+String(e&&e.message||e).slice(0,100);});});
+  var imp=document.getElementById('imImp'),isv=document.getElementById('imSave'),ic=document.getElementById('imCancel'),IMPI=[];
+  function impClear(){IMPI.forEach(function(x){try{URL.revokeObjectURL(x.url);}catch(e){}});IMPI=[];imp.innerHTML='';isv.hidden=true;ic.hidden=true;}
+  document.getElementById('imPr').addEventListener('click',function(){var n=+document.getElementById('imBatch').value,c=imCands().slice(0,n);if(!c.length){ms.textContent='Minden kártyához van kép.';return;}
+    lsSet('szokartya-imbatch',JSON.stringify(c.map(function(d){return d.id;})));
+    var t='Másold be a Gemini alkalmazásba. Kérd meg, hogy minden számozott leírásból külön képet rajzoljon, sorban, és a képeket ugyanebben a sorrendben töltsd le. Utána töltsd be őket az appban (Képek betöltése).\r\n\r\n'+c.map(function(d,i){return (i+1)+') ['+d.id+'] '+imPrompt(d);}).join('\r\n\r\n');
+    var bl=new Blob(['\ufeff'+t],{type:'text/plain;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download='kep_promptok_'+dkey(Date.now())+'.txt';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},4000);
+    ms.textContent='Letöltve: '+c.length+' kártya promptja. A képeket ugyanebben a sorrendben töltsd le, és úgy töltsd be.';});
+  document.getElementById('imFl').addEventListener('click',function(){document.getElementById('imFlIn').click();});
+  document.getElementById('imFlIn').addEventListener('change',function(){var fl=[].slice.call(this.files||[]);this.value='';if(!fl.length)return;impClear();
+    function fn(f){var m=/^\D*(\d+)/.exec(f.name.replace(/\.[^.]+$/,''));return m?+m[1]:null;}
+    var nums=fl.map(fn),byNum=nums.every(function(x){return x!=null;})&&new Set(nums).size===nums.length;
+    if(byNum)fl.sort(function(a,b){return fn(a)-fn(b);});else fl.sort(function(a,b){return (a.lastModified-b.lastModified)||a.name.localeCompare(b.name);});
+    var batch=[];try{batch=JSON.parse(lsGet('szokartya-imbatch')||'[]')||[];}catch(e){}batch=batch.filter(function(id){return !IMX.h[id];});if(!batch.length)batch=imCands().map(function(d){return d.id;});
+    var byId={};DATA.forEach(function(d){byId[d.id]=d;});var used={},as=fl.map(function(f){var nm=f.name.toLowerCase(),hit=null;Object.keys(byId).forEach(function(id){if(!hit&&id.length>=4&&nm.indexOf(id.toLowerCase())>=0)hit=id;});if(hit)used[hit]=1;return hit;});
+    var q=batch.filter(function(id){return !used[id];}),qi=0;fl.forEach(function(f,i){if(!as[i]&&qi<q.length)as[i]=q[qi++];});
+    var extra=0;fl.forEach(function(f,i){if(as[i])IMPI.push({id:as[i],file:f,url:URL.createObjectURL(f)});else extra++;});
+    imp.innerHTML=IMPI.map(function(x){var d=byId[x.id];return '<figure class="imgi"><img src="'+x.url+'" alt=""><figcaption>'+esc(plain(d.en))+'</figcaption></figure>';}).join('');
+    isv.textContent='Mentés ('+IMPI.length+' kép)';isv.hidden=!IMPI.length;ic.hidden=false;
+    ms.textContent='Nézd át a párosítást: minden kép alatt a kártya angol szava áll.'+(extra?' '+extra+' kép nem kapott kártyát (több kép, mint kártya), ezek kimaradnak.':'');});
+  ic.addEventListener('click',function(){impClear();ms.textContent='Megszakítva.';});
+  isv.addEventListener('click',async function(){var n=0,bad=0;isv.disabled=true;var byId={};DATA.forEach(function(d){byId[d.id]=d;});
+    for(var i=0;i<IMPI.length;i++){try{ms.textContent='Mentés: '+(i+1)+' / '+IMPI.length;await imStore(byId[IMPI[i].id],await imShrinkBlob(IMPI[i].file));n++;}catch(e){bad++;}}
+    imCfgSet('ok','1');impClear();isv.disabled=false;stat();ms.textContent='Elmentve: '+n+' kép'+(bad?', hibás: '+bad:'')+'. Feltöltés...';
+    imUpload().then(function(m){ms.textContent='Elmentve: '+n+' kép.'+(m?' '+m:' A Hangtárba feltöltve.');}).catch(function(e){ms.textContent='Elmentve: '+n+' kép. Feltöltési hiba: '+String(e&&e.message||e).slice(0,100);});});
   document.getElementById('imUp').addEventListener('click',function(){ms.textContent='Feltöltés...';imUpload().then(function(m){ms.textContent=m||'Feltöltve.';}).catch(function(e){ms.textContent='Feltöltési hiba: '+String(e&&e.message||e).slice(0,100);});});
   document.getElementById('imDl').addEventListener('click',function(){ms.textContent='Letöltés...';imxFetch(true).then(function(n){ms.textContent=n?'A jegyzék frissült: '+n+' új vagy módosult kép.':'Nincs újabb kép a Hangtárban.';stat();}).catch(function(e){ms.textContent='Letöltési hiba: '+String(e&&e.message||e).slice(0,100);});});
   imxLoad().then(function(){stat();setTimeout(function(){imxFetch(false).then(function(){stat();}).catch(function(){});},6000);});
 })();
 
-var APPV='v109';
+var APPV='v111';
 var PFRA='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function pfRecGen(){var u=crypto.getRandomValues(new Uint8Array(16)),k='';for(var i=0;i<16;i++)k+=PFRA[u[i]&31];return k;}
 function pfRecFmt(k){return String(k).replace(/(.{4})(?=.)/g,'$1-');}
